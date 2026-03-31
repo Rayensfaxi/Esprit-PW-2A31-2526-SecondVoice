@@ -1,0 +1,48 @@
+<svg width="1200" height="340" viewBox="0 0 1200 340" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <rect width="1200" height="340" rx="28" fill="url(#bg)"/>
+  <g opacity="0.58">
+    <path d="M-45 234C82 152 159 164 278 221C398 278 493 284 611 180C744 63 863 80 1005 187C1075 240 1136 248 1248 201" stroke="url(#line1)" stroke-width="5"/>
+    <path d="M-35 264C101 184 196 197 319 243C432 285 507 278 630 196C758 111 887 120 1016 225C1095 290 1152 296 1266 247" stroke="url(#line2)" stroke-width="4"/>
+    <path d="M-46 295C99 219 183 233 310 277C437 321 539 319 655 236C790 141 904 150 1041 259C1116 319 1176 324 1279 283" stroke="url(#line3)" stroke-width="4"/>
+  </g>
+  <g filter="url(#sparkle)">
+    <circle cx="755" cy="92" r="6" fill="#FFDE85"/>
+    <circle cx="798" cy="118" r="4" fill="#FFD4FF"/>
+    <circle cx="862" cy="103" r="5" fill="#7BE8FF"/>
+    <circle cx="834" cy="138" r="3.5" fill="#FFE47B"/>
+    <circle cx="892" cy="132" r="4.5" fill="#F4C0FF"/>
+  </g>
+  <circle cx="870" cy="215" r="144" fill="url(#orb)" fill-opacity="0.42"/>
+  <defs>
+    <linearGradient id="bg" x1="52" y1="16" x2="1128" y2="302" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#091427"/>
+      <stop offset="0.52" stop-color="#081A3A"/>
+      <stop offset="1" stop-color="#121030"/>
+    </linearGradient>
+    <linearGradient id="line1" x1="87" y1="110" x2="1098" y2="211" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#0B64FF" stop-opacity="0"/>
+      <stop offset="0.38" stop-color="#5B3FFF"/>
+      <stop offset="0.72" stop-color="#A13CFF"/>
+      <stop offset="1" stop-color="#6AD7FF" stop-opacity="0.3"/>
+    </linearGradient>
+    <linearGradient id="line2" x1="32" y1="157" x2="1083" y2="242" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#3AD7FF" stop-opacity="0"/>
+      <stop offset="0.43" stop-color="#234BFF"/>
+      <stop offset="0.76" stop-color="#7A4CFF"/>
+      <stop offset="1" stop-color="#D66BFF" stop-opacity="0.28"/>
+    </linearGradient>
+    <linearGradient id="line3" x1="34" y1="216" x2="1055" y2="286" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#32E1C5" stop-opacity="0"/>
+      <stop offset="0.44" stop-color="#1D6EFF"/>
+      <stop offset="0.76" stop-color="#8A48FF"/>
+      <stop offset="1" stop-color="#FF7BEA" stop-opacity="0.24"/>
+    </linearGradient>
+    <radialGradient id="orb" cx="0" cy="0" r="1" gradientUnits="userSpaceOnUse" gradientTransform="translate(870 215) rotate(90) scale(144)">
+      <stop stop-color="#9D7BFF"/>
+      <stop offset="1" stop-color="#9D7BFF" stop-opacity="0"/>
+    </radialGradient>
+    <filter id="sparkle" x="739" y="83" width="165" height="64" filterUnits="userSpaceOnUse" color-interpolation-filters="sRGB">
+      <feDropShadow dx="0" dy="0" stdDeviation="5" flood-color="#FFFFFF" flood-opacity="0.35"/>
+    </filter>
+  </defs>
+</svg>

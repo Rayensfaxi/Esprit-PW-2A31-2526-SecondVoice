@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Blog | Gridtech</title>
+    <script>
+      const savedTheme = localStorage.getItem("theme");
+      const initialTheme =
+        savedTheme || (window.matchMedia("(prefers-color-scheme: light)").matches ? "light" : "dark");
+      document.documentElement.dataset.theme = initialTheme;
+    </script>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=Space+Grotesk:wght@500;700&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="assets/css/style.css" />
+  </head>
+  <body>
+    <div class="page-shell">
+      <header class="site-header">
+        <div class="container nav-inner">
+          <a class="brand" href="index.html"><span class="brand-mark"></span><span>Gridtech</span></a>
+          <button class="menu-toggle" type="button" data-menu-toggle aria-label="Toggle menu">
+            <span class="icon-lines"></span>
+          </button>
+          <div class="nav" data-nav>
+            <nav>
+              <ul class="nav-links">
+                <li><a href="index.html">Home</a></li>
+                <li><a href="about.html">About Us</a></li>
+                <li><a href="services.html">Services</a></li>
+                <li><a href="faq.html">Pages</a></li>
+                <li><a class="is-active" href="blog.html">Blog</a></li>
+                <li><a href="contact.html">Contact Us</a></li>
+              </ul>
+            </nav>
+            <div class="header-actions">
+              <button class="icon-btn theme-toggle" type="button" data-theme-toggle aria-label="Toggle color theme">
+                <span class="theme-toggle-label" data-theme-label>Light</span>
+              </button>
+              <div class="user-shell" data-user-shell>
+                <button class="icon-btn user-trigger" type="button" data-user-toggle aria-label="Open user window">
+                  <span>JT</span>
+                </button>
+                <div class="user-backdrop"></div>
+                <div class="user-panel">
+                  <div class="user-panel-head">
+                    <div class="user-panel-intro">
+                      <div class="user-avatar">JT</div>
+                      <div>
+                        <p class="user-panel-title">Welcome back</p>
+                        <p class="user-modal-copy">Sign in to access your projects, invoices, and support.</p>
+                      </div>
+                    </div>
+                    <button class="icon-btn user-close" type="button" data-user-close aria-label="Close user window">X</button>
+                  </div>
+                  <div class="auth-tabs">
+                    <button class="auth-tab is-active" type="button" data-auth-tab="login">Login</button>
+                    <button class="auth-tab" type="button" data-auth-tab="register">Register</button>
+                  </div>
+                  <section class="auth-panel is-active" data-auth-panel="login">
+                    <h3 class="auth-title">Client Login</h3>
+                    <p class="auth-helper">Use your email and password to continue into the portal preview.</p>
+                    <form class="auth-form">
+                      <input class="field" type="email" placeholder="Email address" />
+                      <input class="field" type="password" placeholder="Password" />
+                      <div class="auth-options">
+                        <label class="check-row"><input type="checkbox" /> Remember me</label>
+                        <a href="contact.html">Forgot password?</a>
+                      </div>
+                      <button class="btn btn-primary" type="button">Login Now</button>
+                    </form>
+                    <div class="user-panel-footer">
+                      <a class="btn btn-secondary" href="contact.html">Client support</a>
+                    </div>
+                  </section>
+                  <section class="auth-panel" data-auth-panel="register">
+                    <h3 class="auth-title">Create Account</h3>
+                    <p class="auth-helper">Register a demo client account for onboarding, support, and project tracking.</p>
+                    <form class="auth-form">
+                      <input class="field" type="text" placeholder="Full name" />
+                      <input class="field" type="email" placeholder="Business email" />
+                      <input class="field" type="password" placeholder="Create password" />
+                      <button class="btn btn-primary" type="button">Create Account</button>
+                    </form>
+                    <ul class="auth-links">
+                      <li><a href="services.html">View service plans</a></li>
+                      <li><a href="contact.html">Request enterprise access</a></li>
+                    </ul>
+                  </section>
+                </div>
+              </div>
+              <a class="btn btn-primary" href="contact.html">Start project</a>
+            </div>
+          </div>
+        </div>
+      </header>
+
+      <main>
+        <section class="page-hero">
+          <div class="container">
+            <div class="page-hero-card fade-up">
+              <div class="breadcrumbs"><span>Home</span><span>/</span><span>Blog</span></div>
+              <h1>Insights for teams building modern digital services.</h1>
+              <p>
+                A clean blog archive with categories, featured cards, and a sidebar for search and newsletter capture.
+              </p>
+            </div>
+          </div>
+        </section>
+
+        <section class="section">
+          <div class="container blog-layout">
+            <div class="post-grid">
+              <article class="blog-card fade-up">
+                <div class="blog-art"></div>
+                <div class="post-meta"><span class="tag">AI</span><span>23 Mar 2026</span></div>
+                <h3><a href="blog-details.html">How to make AI product interfaces feel legible and trustworthy</a></h3>
+                <p>Patterns for explaining automation, confidence, and review steps without overwhelming users.</p>
+              </article>
+              <article class="blog-card fade-up">
+                <div class="blog-art"></div>
+                <div class="post-meta"><span class="tag">Operations</span><span>19 Mar 2026</span></div>
+                <h3><a href="blog-details.html">The real cost of fragmented front-office systems</a></h3>
+                <p>What happens when sales, onboarding, and support use disconnected experiences.</p>
+              </article>
+              <article class="blog-card fade-up">
+                <div class="blog-art"></div>
+                <div class="post-meta"><span class="tag">Security</span><span>14 Mar 2026</span></div>
+                <h3><a href="blog-details.html">Security messaging that wins enterprise confidence</a></h3>
+                <p>Use plain language, visible controls, and evidence-backed service design.</p>
+              </article>
+            </div>
+            <aside class="sidebar">
+              <div class="sidebar-card fade-up">
+                <h3>Search</h3>
+                <form class="search-form">
+                  <input type="search" placeholder="Search articles" />
+                </form>
+              </div>
+              <div class="sidebar-card fade-up">
+                <h3>Categories</h3>
+                <ul class="footer-list">
+                  <li><a href="#">AI systems</a></li>
+                  <li><a href="#">Digital operations</a></li>
+                  <li><a href="#">Cyber readiness</a></li>
+                  <li><a href="#">UX strategy</a></li>
+                </ul>
+              </div>
+              <div class="sidebar-card fade-up">
+                <h3>Newsletter</h3>
+                <form class="newsletter-form">
+                  <input type="email" placeholder="Your email" />
+                  <a class="btn btn-primary" href="contact.html">Subscribe</a>
+                </form>
+              </div>
+            </aside>
+          </div>
+        </section>
+      </main>
+
+      <footer class="footer">
+        <div class="container">
+          <div class="footer-bottom">
+            <span>&copy; 2026 Gridtech. All rights reserved.</span>
+            <div class="footer-links"><a href="blog-details.html">Featured post</a><a href="contact.html">Contact</a></div>
+          </div>
+        </div>
+      </footer>
+    </div>
+    <script src="assets/js/main.js"></script>
+  </body>
+</html>

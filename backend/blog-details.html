@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Blog Details | Gridtech</title>
+    <script>
+      const savedTheme = localStorage.getItem("theme");
+      const initialTheme =
+        savedTheme || (window.matchMedia("(prefers-color-scheme: light)").matches ? "light" : "dark");
+      document.documentElement.dataset.theme = initialTheme;
+    </script>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=Space+Grotesk:wght@500;700&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="assets/css/style.css" />
+  </head>
+  <body>
+    <div class="page-shell">
+      <header class="site-header">
+        <div class="container nav-inner">
+          <a class="brand" href="index.html"><span class="brand-mark"></span><span>Gridtech</span></a>
+          <button class="menu-toggle" type="button" data-menu-toggle aria-label="Toggle menu">
+            <span class="icon-lines"></span>
+          </button>
+          <div class="nav" data-nav>
+            <nav>
+              <ul class="nav-links">
+                <li><a href="index.html">Home</a></li>
+                <li><a href="about.html">About Us</a></li>
+                <li><a href="services.html">Services</a></li>
+                <li><a href="faq.html">Pages</a></li>
+                <li><a class="is-active" href="blog.html">Blog</a></li>
+                <li><a href="contact.html">Contact Us</a></li>
+              </ul>
+            </nav>
+            <div class="header-actions">
+              <button class="icon-btn theme-toggle" type="button" data-theme-toggle aria-label="Toggle color theme">
+                <span class="theme-toggle-label" data-theme-label>Light</span>
+              </button>
+              <div class="user-shell" data-user-shell>
+                <button class="icon-btn user-trigger" type="button" data-user-toggle aria-label="Open user window">
+                  <span>JT</span>
+                </button>
+                <div class="user-backdrop"></div>
+                <div class="user-panel">
+                  <div class="user-panel-head">
+                    <div class="user-panel-intro">
+                      <div class="user-avatar">JT</div>
+                      <div>
+                        <p class="user-panel-title">Welcome back</p>
+                        <p class="user-modal-copy">Sign in to access your projects, invoices, and support.</p>
+                      </div>
+                    </div>
+                    <button class="icon-btn user-close" type="button" data-user-close aria-label="Close user window">X</button>
+                  </div>
+                  <div class="auth-tabs">
+                    <button class="auth-tab is-active" type="button" data-auth-tab="login">Login</button>
+                    <button class="auth-tab" type="button" data-auth-tab="register">Register</button>
+                  </div>
+                  <section class="auth-panel is-active" data-auth-panel="login">
+                    <h3 class="auth-title">Client Login</h3>
+                    <p class="auth-helper">Use your email and password to continue into the portal preview.</p>
+                    <form class="auth-form">
+                      <input class="field" type="email" placeholder="Email address" />
+                      <input class="field" type="password" placeholder="Password" />
+                      <div class="auth-options">
+                        <label class="check-row"><input type="checkbox" /> Remember me</label>
+                        <a href="contact.html">Forgot password?</a>
+                      </div>
+                      <button class="btn btn-primary" type="button">Login Now</button>
+                    </form>
+                    <div class="user-panel-footer">
+                      <a class="btn btn-secondary" href="contact.html">Client support</a>
+                    </div>
+                  </section>
+                  <section class="auth-panel" data-auth-panel="register">
+                    <h3 class="auth-title">Create Account</h3>
+                    <p class="auth-helper">Register a demo client account for onboarding, support, and project tracking.</p>
+                    <form class="auth-form">
+                      <input class="field" type="text" placeholder="Full name" />
+                      <input class="field" type="email" placeholder="Business email" />
+                      <input class="field" type="password" placeholder="Create password" />
+                      <button class="btn btn-primary" type="button">Create Account</button>
+                    </form>
+                    <ul class="auth-links">
+                      <li><a href="services.html">View service plans</a></li>
+                      <li><a href="contact.html">Request enterprise access</a></li>
+                    </ul>
+                  </section>
+                </div>
+              </div>
+              <a class="btn btn-primary" href="contact.html">Start project</a>
+            </div>
+          </div>
+        </div>
+      </header>
+
+      <main>
+        <section class="page-hero">
+          <div class="container">
+            <div class="page-hero-card fade-up">
+              <div class="breadcrumbs"><span>Home</span><span>/</span><span>Blog Details</span></div>
+              <h1>Building AI interfaces that preserve user trust from day one.</h1>
+              <p>Use this page template for long-form articles, case studies, and insight posts.</p>
+            </div>
+          </div>
+        </section>
+
+        <section class="section">
+          <div class="container blog-layout">
+            <article class="post-content fade-up">
+              <div class="post-banner">
+                <div class="post-banner-content">
+                  <div class="post-meta"><span class="tag">AI</span><span>23 Mar 2026</span><span>6 min read</span></div>
+                  <h2>Trust is not a feature you add at the end. It is a system decision.</h2>
+                </div>
+              </div>
+              <p>
+                When teams launch AI-enabled interfaces, they often focus on capability before legibility.
+                Users need to understand what the system is doing, what it might get wrong, and how they
+                stay in control when stakes are high.
+              </p>
+              <h3>1. Make the system state obvious</h3>
+              <p>
+                Clarify when a response is generated, reviewed, pending approval, or partially inferred.
+                Small labels, structured summaries, and visible next steps reduce hesitation.
+              </p>
+              <h3>2. Show the review loop</h3>
+              <p>
+                Buyers trust AI more when human oversight is clearly part of the interaction model. This
+                is especially important in consulting, security, and operations-heavy experiences.
+              </p>
+              <blockquote>
+                Strong AI interfaces do not hide uncertainty. They frame it, contain it, and keep the user moving.
+              </blockquote>
+              <h3>3. Align visuals with seriousness</h3>
+              <p>
+                A premium visual system signals maturity, but it still needs disciplined hierarchy. Clear
+                spacing, concise copy, and consistent UI patterns matter more than decorative complexity.
+              </p>
+            </article>
+            <aside class="sidebar">
+              <div class="sidebar-card fade-up">
+                <h3>Recent posts</h3>
+                <ul class="footer-list">
+                  <li><a href="blog-details.html">The real cost of fragmented front-office systems</a></li>
+                  <li><a href="blog-details.html">Security messaging that wins enterprise confidence</a></li>
+                  <li><a href="blog-details.html">Automation-first service operations</a></li>
+                </ul>
+              </div>
+              <div class="sidebar-card fade-up">
+                <h3>Need a content refresh?</h3>
+                <p>Pair this article layout with conversion-oriented service pages and a sharper homepage.</p>
+                <a class="btn btn-primary" href="contact.html">Contact us</a>
+              </div>
+            </aside>
+          </div>
+        </section>
+      </main>
+
+      <footer class="footer">
+        <div class="container">
+          <div class="footer-bottom">
+            <span>&copy; 2026 Gridtech. All rights reserved.</span>
+            <div class="footer-links"><a href="blog.html">Back to blog</a><a href="contact.html">Contact</a></div>
+          </div>
+        </div>
+      </footer>
+    </div>
+    <script src="assets/js/main.js"></script>
+  </body>
+</html>

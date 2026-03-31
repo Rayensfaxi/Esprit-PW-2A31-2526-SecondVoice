@@ -1,0 +1,173 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Contact Us | Gridtech</title>
+    <script>
+      const savedTheme = localStorage.getItem("theme");
+      const initialTheme =
+        savedTheme || (window.matchMedia("(prefers-color-scheme: light)").matches ? "light" : "dark");
+      document.documentElement.dataset.theme = initialTheme;
+    </script>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=Space+Grotesk:wght@500;700&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="assets/css/style.css" />
+  </head>
+  <body>
+    <div class="page-shell">
+      <header class="site-header">
+        <div class="container nav-inner">
+          <a class="brand" href="index.html"><span class="brand-mark"></span><span>Gridtech</span></a>
+          <button class="menu-toggle" type="button" data-menu-toggle aria-label="Toggle menu">
+            <span class="icon-lines"></span>
+          </button>
+          <div class="nav" data-nav>
+            <nav>
+              <ul class="nav-links">
+                <li><a href="index.html">Home</a></li>
+                <li><a href="about.html">About Us</a></li>
+                <li><a href="services.html">Services</a></li>
+                <li><a href="faq.html">Pages</a></li>
+                <li><a href="blog.html">Blog</a></li>
+                <li><a class="is-active" href="contact.html">Contact Us</a></li>
+              </ul>
+            </nav>
+            <div class="header-actions">
+              <button class="icon-btn theme-toggle" type="button" data-theme-toggle aria-label="Toggle color theme">
+                <span class="theme-toggle-label" data-theme-label>Light</span>
+              </button>
+              <div class="user-shell" data-user-shell>
+                <button class="icon-btn user-trigger" type="button" data-user-toggle aria-label="Open user window">
+                  <span>JT</span>
+                </button>
+                <div class="user-backdrop"></div>
+                <div class="user-panel">
+                  <div class="user-panel-head">
+                    <div class="user-panel-intro">
+                      <div class="user-avatar">JT</div>
+                      <div>
+                        <p class="user-panel-title">Welcome back</p>
+                        <p class="user-modal-copy">Sign in to access your projects, invoices, and support.</p>
+                      </div>
+                    </div>
+                    <button class="icon-btn user-close" type="button" data-user-close aria-label="Close user window">X</button>
+                  </div>
+                  <div class="auth-tabs">
+                    <button class="auth-tab is-active" type="button" data-auth-tab="login">Login</button>
+                    <button class="auth-tab" type="button" data-auth-tab="register">Register</button>
+                  </div>
+                  <section class="auth-panel is-active" data-auth-panel="login">
+                    <h3 class="auth-title">Client Login</h3>
+                    <p class="auth-helper">Use your email and password to continue into the portal preview.</p>
+                    <form class="auth-form">
+                      <input class="field" type="email" placeholder="Email address" />
+                      <input class="field" type="password" placeholder="Password" />
+                      <div class="auth-options">
+                        <label class="check-row"><input type="checkbox" /> Remember me</label>
+                        <a href="contact.html">Forgot password?</a>
+                      </div>
+                      <button class="btn btn-primary" type="button">Login Now</button>
+                    </form>
+                    <div class="user-panel-footer">
+                      <a class="btn btn-secondary" href="contact.html">Client support</a>
+                    </div>
+                  </section>
+                  <section class="auth-panel" data-auth-panel="register">
+                    <h3 class="auth-title">Create Account</h3>
+                    <p class="auth-helper">Register a demo client account for onboarding, support, and project tracking.</p>
+                    <form class="auth-form">
+                      <input class="field" type="text" placeholder="Full name" />
+                      <input class="field" type="email" placeholder="Business email" />
+                      <input class="field" type="password" placeholder="Create password" />
+                      <button class="btn btn-primary" type="button">Create Account</button>
+                    </form>
+                    <ul class="auth-links">
+                      <li><a href="services.html">View service plans</a></li>
+                      <li><a href="contact.html">Request enterprise access</a></li>
+                    </ul>
+                  </section>
+                </div>
+              </div>
+              <a class="btn btn-primary" href="contact.html">Contact now</a>
+            </div>
+          </div>
+        </div>
+      </header>
+
+      <main>
+        <section class="page-hero">
+          <div class="container">
+            <div class="page-hero-card fade-up">
+              <div class="breadcrumbs"><span>Home</span><span>/</span><span>Contact</span></div>
+              <h1>Ready to get started?</h1>
+              <p>Use this contact page for direct inquiries, discovery calls, or proposal requests.</p>
+            </div>
+          </div>
+        </section>
+
+        <section class="section">
+          <div class="container contact-grid">
+            <article class="contact-card fade-up">
+              <h3>Stay tuned and get in touch with us.</h3>
+              <p>
+                A structured contact layout for tech service businesses that need premium presentation
+                and clear intake fields.
+              </p>
+              <form>
+                <div class="input-row">
+                  <input class="field" type="text" placeholder="Your Name" />
+                  <input class="field" type="email" placeholder="Your Email" />
+                </div>
+                <div class="input-row">
+                  <input class="field" type="text" placeholder="Subject" />
+                  <input class="field" type="tel" placeholder="Phone Number" />
+                </div>
+                <textarea class="field" placeholder="Write your message"></textarea>
+                <button class="btn btn-primary" type="submit">Send Message</button>
+              </form>
+            </article>
+            <div class="map-card fade-up">
+              <div class="map-grid">
+                <span class="map-pin one"></span>
+                <span class="map-pin two"></span>
+                <span class="map-pin three"></span>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <section class="section">
+          <div class="container grid-3">
+            <article class="detail-card fade-up">
+              <h3>Head office</h3>
+              <p>Les Berges du Lac 2, Tunis, Tunisia</p>
+            </article>
+            <article class="detail-card fade-up">
+              <h3>Email address</h3>
+              <p>hello@gridtech.local</p>
+            </article>
+            <article class="detail-card fade-up">
+              <h3>Telephone</h3>
+              <p>+216 70 000 000</p>
+            </article>
+          </div>
+        </section>
+      </main>
+
+      <footer class="footer">
+        <div class="container">
+          <div class="footer-bottom">
+            <span>&copy; 2026 Gridtech. All rights reserved.</span>
+            <div class="footer-links"><a href="index.html">Home</a><a href="services.html">Services</a></div>
+          </div>
+        </div>
+      </footer>
+    </div>
+    <script src="assets/js/main.js"></script>
+  </body>
+</html>
