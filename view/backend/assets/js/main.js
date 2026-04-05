@@ -18,7 +18,7 @@ const INTEGRATION_KEYS = {
 };
 
 const INTEGRATION_ROUTES = {
-  backOfficeHome: "../template back office/index.html"
+  backOfficeHome: "../frontend/index.html"
 };
 
 function getStorageItem(key) {
