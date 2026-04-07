@@ -1,0 +1,176 @@
+﻿<!DOCTYPE html>
+<html lang="fr">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Pages | SecondVoice</title>
+    <link rel="icon" type="image/png" sizes="32x32" href="assets/media/favicon-32.png" />
+    <link rel="icon" type="image/png" sizes="16x16" href="assets/media/favicon-16.png" />
+    <link rel="apple-touch-icon" href="assets/media/apple-touch-icon.png" />
+    <link rel="shortcut icon" href="assets/media/favicon.png" />
+    <script>
+      const savedTheme = localStorage.getItem("theme");
+      const initialTheme =
+        savedTheme || (window.matchMedia("(prefers-color-scheme: light)").matches ? "light" : "dark");
+      document.documentElement.dataset.theme = initialTheme;
+    </script>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=Space+Grotesk:wght@500;700&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="assets/css/style.css" />
+  </head>
+  <body>
+    <div class="page-shell">
+      <header class="site-header">
+        <div class="container nav-inner">
+          <a class="brand" href="index.html"><img class="brand-logo" src="assets/media/secondvoice-logo.png" alt="SecondVoice logo" /></a>
+          <button class="menu-toggle" type="button" data-menu-toggle aria-label="Ouvrir le menu">
+            <span class="icon-lines"></span>
+          </button>
+          <div class="nav" data-nav>
+            <nav>
+              <ul class="nav-links">
+                <li><a href="index.html">Accueil</a></li>
+                <li><a href="about.html">A propos</a></li>
+                <li><a href="services.html">Services</a></li>
+                <li><a class="is-active" href="faq.html">Pages</a></li>
+                <li><a href="blog.html">Blog</a></li>
+                <li><a href="contact.html">Contact</a></li>
+              </ul>
+            </nav>
+            <div class="header-actions">
+              <button class="icon-btn theme-toggle" type="button" data-theme-toggle aria-label="Changer le theme">
+                <span class="theme-toggle-label" data-theme-label>Clair</span>
+              </button>
+              <div class="user-shell" data-user-shell>
+                <a class="icon-btn user-trigger" href="login.html" aria-label="Ouvrir la page de connexion"><span>Profil</span></a>
+                <div class="user-backdrop"></div>
+                <div class="user-panel">
+                  <div class="user-panel-head">
+                    <div class="user-panel-intro">
+                      <div class="user-avatar">JT</div>
+                      <div>
+                        <p class="user-panel-title">Bon retour</p>
+                        <p class="user-modal-copy">Connectez-vous pour acceder a vos projets, factures et demandes de support.</p>
+                      </div>
+                    </div>
+                    <button class="icon-btn user-close" type="button" data-user-close aria-label="Fermer la fenetre utilisateur">X</button>
+                  </div>
+                  <div class="auth-tabs">
+                    <a class="auth-tab is-active" href="login.html">Connexion</a>
+                    <a class="auth-tab" href="register.html">Inscription</a>
+                  </div>
+                  <section class="auth-panel is-active" data-auth-panel="login">
+                    <h3 class="auth-title">Connexion Client</h3>
+                    <p class="auth-helper">Utilisez votre e-mail et mot de passe pour continuer.</p>
+                    <form class="auth-form">
+                      <input class="field" type="email" placeholder="Adresse e-mail" />
+                      <input class="field" type="password" placeholder="Mot de passe" />
+                      <div class="auth-options">
+                        <label class="check-row"><input type="checkbox" /> Se souvenir de moi</label>
+                        <a href="contact.html">Mot de passe oublie ?</a>
+                      </div>
+                      <button class="btn btn-primary" type="button">Se connecter</button>
+                    </form>
+                    <div class="user-panel-footer">
+                      <a class="btn btn-secondary" href="contact.html">Support client</a>
+                    </div>
+                  </section>
+                  <section class="auth-panel" data-auth-panel="register">
+                    <h3 class="auth-title">Creer un compte</h3>
+                    <p class="auth-helper">Creez un compte de demonstration pour le suivi, le support et la gestion de vos demandes.</p>
+                    <form class="auth-form">
+                      <input class="field" type="text" placeholder="Nom complet" />
+                      <input class="field" type="email" placeholder="E-mail professionnel" />
+                      <input class="field" type="password" placeholder="Creer un mot de passe" />
+                      <button class="btn btn-primary" type="button">Creer un compte</button>
+                    </form>
+                    <ul class="auth-links">
+                      <li><a href="services.html">Voir les offres de service</a></li>
+                      <li><a href="contact.html">Demander un acces entreprise</a></li>
+                    </ul>
+                  </section>
+                </div>
+              </div>
+              <a class="btn btn-primary" href="contact.html">Poser une question</a>
+            </div>
+          </div>
+        </div>
+      </header>
+
+      <main>
+        <section class="page-hero">
+          <div class="container">
+            <div class="page-hero-card fade-up">
+              <div class="breadcrumbs"><span>Accueil</span><span>/</span><span>Pages</span></div>
+              <h1>Pages secondaires</h1>
+              <p>Acces rapide aux pages utiles : FAQ, profil utilisateur et tableau de bord.</p>
+            </div>
+          </div>
+        </section>
+
+        <section class="section">
+          <div class="container grid-2">
+            <div class="fade-up">
+              <div class="section-kicker">Pages</div>
+              <h2>Menu secondaire pour les informations et le suivi utilisateur.</h2>
+              <p class="section-copy">
+                Cette section regroupe les pages de support et de pilotage de l'experience utilisateur.
+              </p>
+              <ul class="feature-list">
+                <li><a href="faq.html">FAQ</a></li>
+                <li><a href="profile.html">Profil utilisateur</a></li>
+              </ul>
+            </div>
+            <div class="faq-list">
+              <details class="faq-item fade-up" open>
+                <summary>
+                  A quoi sert la page FAQ ?
+                  <span class="faq-icon">+</span>
+                </summary>
+                <p>Elle repond aux questions frequentes pour eviter les blocages et accelerer l'adoption.</p>
+              </details>
+              <details class="faq-item fade-up">
+                <summary>
+                  Que trouve-t-on dans le profil utilisateur ?
+                  <span class="faq-icon">+</span>
+                </summary>
+                <p>Les informations personnelles, l'historique des demandes et les preferences de suivi.</p>
+              </details>
+              <details class="faq-item fade-up">
+                <summary>
+                  A quoi sert le tableau de bord ?
+                  <span class="faq-icon">+</span>
+                </summary>
+                <p>Le tableau de bord donne une vue globale des actions en cours, des statuts et des priorites.</p>
+              </details>
+              <details class="faq-item fade-up">
+                <summary>
+                  Peut-on ajouter d'autres pages plus tard ?
+                  <span class="faq-icon">+</span>
+                </summary>
+                <p>Oui, la structure est extensible pour ajouter des pages metier sans casser la mise en page.</p>
+              </details>
+            </div>
+          </div>
+        </section>
+      </main>
+
+      <footer class="footer">
+        <div class="container">
+          <div class="footer-bottom">
+            <span>&copy; 2026 SecondVoice. Tous droits reserves.</span>
+            <div class="footer-links"><a href="services.html">Services</a><a href="contact.html">Contact</a></div>
+          </div>
+        </div>
+      </footer>
+    </div>
+    <script src="assets/js/main.js"></script>
+  </body>
+</html>
+
+
+

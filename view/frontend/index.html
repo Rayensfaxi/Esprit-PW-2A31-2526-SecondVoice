@@ -1,201 +1,547 @@
-<!DOCTYPE html>
-<html lang="en">
+﻿<!DOCTYPE html>
+<html lang="fr">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>IntellectAI | Home</title>
+    <title>SecondVoice | Accueil</title>
+    <link rel="icon" type="image/png" sizes="32x32" href="assets/media/favicon-32.png" />
+    <link rel="icon" type="image/png" sizes="16x16" href="assets/media/favicon-16.png" />
+    <link rel="apple-touch-icon" href="assets/media/apple-touch-icon.png" />
+    <link rel="shortcut icon" href="assets/media/favicon.png" />
+    <meta
+      name="description"
+      content="Modele front office multi-pages pour une plateforme IA, cybersecurite et innovation numerique."
+    />
+    <script>
+      const savedTheme = localStorage.getItem("theme");
+      const initialTheme =
+        savedTheme || (window.matchMedia("(prefers-color-scheme: light)").matches ? "light" : "dark");
+      document.documentElement.dataset.theme = initialTheme;
+    </script>
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
-    <link rel="stylesheet" href="assets/style.css" />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=Space+Grotesk:wght@500;700&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="assets/css/style.css" />
   </head>
-  <body data-page="home">
-    <div class="overlay" data-overlay></div>
-    <div class="shell">
-      <aside class="sidebar">
-        <div class="sidebar-panel">
-          <div class="brand-row">
-            <a class="brand" href="index.html">
-              <span class="brand-mark"></span>
-              <span>INTELLECTAI</span>
-            </a>
-            <button class="collapse-button" aria-label="Collapse sidebar"></button>
-          </div>
-
-          <div class="sidebar-scroll">
-            <div class="nav-section">
-              <div class="nav-title">Workspace</div>
-              <a class="nav-link" href="index.html" data-nav="home"><span class="nav-icon icon-home"></span><span>Home</span></a>
-              <a class="nav-link" href="profile.html" data-nav="profile"><span class="nav-icon icon-profile"></span><span>Profile</span></a>
-              <a class="nav-link" href="community.html" data-nav="community"><span class="nav-icon icon-community"></span><span>Community Feed Details</span></a>
-              <a class="nav-link" href="subscription.html" data-nav="subscription"><span class="nav-icon icon-card"></span><span>Manage Subscription</span></a>
-              <a class="nav-link" href="chatbot.html" data-nav="chatbot"><span class="nav-icon icon-chat"></span><span>AI Chat Bot</span></a>
-              <a class="nav-link" href="images.html" data-nav="images"><span class="nav-icon icon-image"></span><span>Image Generator</span></a>
-              <a class="nav-link" href="voice.html" data-nav="voice"><span class="nav-icon icon-mic"></span><span>Voice Generate</span></a>
-              <a class="nav-link" href="settings.html" data-nav="settings"><span class="nav-icon icon-settings"></span><span>Settings</span></a>
-            </div>
-          </div>
-
-          <div class="sidebar-profile">
-            <div class="profile-top">
-              <div class="avatar">MG</div>
-              <div class="profile-copy">
-                <strong>Mack Gok</strong>
-                <span>intellectai@net.com</span>
-              </div>
-            </div>
-            <div class="plan-row">
-              <span class="plan-chip">Free</span>
-              <a href="subscription.html">Upgrade To Pro</a>
-            </div>
-          </div>
-        </div>
-      </aside>
-
-      <main class="page">
-        <div class="topbar">
-          <div>
-            <button class="mobile-toggle" data-nav-toggle aria-label="Open navigation">=</button>
-            <h1 class="page-title">IntellectAI Studio</h1>
-            <div class="page-subtitle">Creator back office styled after the template you showed.</div>
-          </div>
-          <div class="toolbar-actions">
-            <button class="update-button">Update</button>
-            <button class="icon-button icon-search" aria-label="Search"></button>
-            <button class="icon-button icon-bell" aria-label="Notifications"></button>
-            <button class="icon-button icon-globe" aria-label="Language"></button>
-            <button class="icon-button icon-moon" data-theme-toggle aria-label="Switch theme"></button>
-            <div class="profile-menu-wrap" data-profile-wrap>
-              <button class="profile-trigger" data-profile-toggle aria-label="Open profile menu">
-                <img class="topbar-avatar" src="assets/media/profile-avatar.svg" alt="Mack Gok profile" />
+  <body>
+    <div class="page-shell">
+      <header class="site-header">
+        <div class="container nav-inner">
+          <a class="brand" href="index.html"><img class="brand-logo" src="assets/media/secondvoice-logo.png" alt="SecondVoice logo" /></a>
+          <button class="menu-toggle" type="button" data-menu-toggle aria-label="Ouvrir le menu">
+            <span class="icon-lines"></span>
+          </button>
+          <div class="nav" data-nav>
+            <nav>
+              <ul class="nav-links">
+                <li><a class="is-active" href="index.html">Accueil</a></li>
+                <li><a href="about.html">A propos</a></li>
+                <li><a href="services.html">Services</a></li>
+                <li><a href="faq.html">Pages</a></li>
+                <li><a href="blog.html">Blog</a></li>
+                <li><a href="contact.html">Contact</a></li>
+              </ul>
+            </nav>
+            <div class="header-actions">
+              <button class="icon-btn theme-toggle" type="button" data-theme-toggle aria-label="Changer le theme">
+                <span class="theme-toggle-label" data-theme-label>Clair</span>
               </button>
-              <div class="profile-dropdown" data-profile-menu>
-                <div class="profile-dropdown-card">
-                  <div class="profile-thumb"><img src="assets/media/profile-avatar.svg" alt="Profile avatar" /></div>
-                  <div>
-                    <strong>MR. Crow Kader</strong>
-                    <span>CEO, Valo How Masud</span>
+              <div class="user-shell" data-user-shell>
+                <a class="icon-btn user-trigger" href="login.html" aria-label="Ouvrir la page de connexion"><span>Profil</span></a>
+                <div class="user-backdrop"></div>
+                <div class="user-panel">
+                  <div class="user-panel-head">
+                    <div class="user-panel-intro">
+                      <div class="user-avatar">JT</div>
+                      <div>
+                        <p class="user-panel-title">Bon retour</p>
+                        <p class="user-modal-copy">Connectez-vous pour acceder a vos projets, factures et demandes de support.</p>
+                      </div>
+                    </div>
+                    <button class="icon-btn user-close" type="button" data-user-close aria-label="Fermer la fenetre utilisateur">X</button>
                   </div>
+                  <div class="auth-tabs">
+                    <a class="auth-tab is-active" href="login.html">Connexion</a>
+                    <a class="auth-tab" href="register.html">Inscription</a>
+                  </div>
+                  <section class="auth-panel is-active" data-auth-panel="login">
+                    <h3 class="auth-title">Connexion Client</h3>
+                    <p class="auth-helper">Utilisez votre e-mail et mot de passe pour continuer.</p>
+                    <form class="auth-form">
+                      <input class="field" type="email" placeholder="Adresse e-mail" />
+                      <input class="field" type="password" placeholder="Mot de passe" />
+                      <div class="auth-options">
+                        <label class="check-row"><input type="checkbox" /> Se souvenir de moi</label>
+                        <a href="contact.html">Mot de passe oublie ?</a>
+                      </div>
+                      <button class="btn btn-primary" type="button">Se connecter</button>
+                    </form>
+                    <div class="user-panel-footer">
+                      <a class="btn btn-secondary" href="contact.html">Support client</a>
+                    </div>
+                  </section>
+                  <section class="auth-panel" data-auth-panel="register">
+                    <h3 class="auth-title">Creer un compte</h3>
+                    <p class="auth-helper">Creez un compte de demonstration pour le suivi, le support et la gestion de vos demandes.</p>
+                    <form class="auth-form">
+                      <input class="field" type="text" placeholder="Nom complet" />
+                      <input class="field" type="email" placeholder="E-mail professionnel" />
+                      <input class="field" type="password" placeholder="Creer un mot de passe" />
+                      <button class="btn btn-primary" type="button">Creer un compte</button>
+                    </form>
+                    <ul class="auth-links">
+                      <li><a href="services.html">Voir les offres de service</a></li>
+                      <li><a href="contact.html">Demander un acces entreprise</a></li>
+                    </ul>
+                  </section>
                 </div>
-                <div class="profile-menu-list">
-                  <a class="menu-link" href="profile.html"><span class="menu-icon icon-profile"></span><span>Profile</span></a>
-                  <a class="menu-link" href="settings.html"><span class="menu-icon icon-settings"></span><span>Settings</span></a>
-                  <a class="menu-link" href="subscription.html"><span class="menu-icon icon-card"></span><span>Billing</span></a>
-                  <a class="menu-link" href="community.html"><span class="menu-icon icon-activity"></span><span>Activity</span></a>
-                  <a class="menu-link" href="chatbot.html"><span class="menu-icon icon-help"></span><span>Help</span></a>
-                </div>
-                <button class="logout-button" type="button">Logout <span class="logout-arrow">-></span></button>
               </div>
+              <a class="btn btn-primary" href="../backend/index.html">Tableau de bord</a>
             </div>
           </div>
         </div>
+      </header>
 
-        <div class="page-grid">
-          <section class="hero-banner">
-            <div class="hero-inner">
-              <div class="hero-copy">
-                <div class="badge">Featured Workspace</div>
-                <h1>Generate New Ideas for Your Content</h1>
-                <p>
-                  IntellectAI is the place to create, publish, and monetize content with AI. Use the studio to produce images,
-                  scripted replies, marketing copy, and voice assets from one dark back-office dashboard.
-                </p>
-                <button class="cta-button">Try Now</button>
+      <main>
+        <section class="hero">
+          <div class="container hero-grid">
+            <div class="fade-up">
+              <div class="eyebrow">
+                <span class="eyebrow-dot"></span>
+                <span>Plateforme d'assistance vocale et administrative</span>
               </div>
-              <div class="hero-visual">
-                <div class="device-stack">
-                  <img class="hero-art" src="assets/media/hero-collage.svg" alt="IntellectAI creator studio collage" />
-                </div>
+              <h1>SecondVoice simplifie vos demarches du quotidien.</h1>
+              <p class="hero-copy">
+                Une solution unique pour envoyer des demandes administratives, prendre des rendez-vous,
+                suivre vos reclamations et etre accompagne etape par etape.
+              </p>
+              <div class="hero-actions">
+                <a class="btn btn-primary" href="services.html">Voir les services</a>
+                <a class="btn btn-secondary" href="contact.html">Contacter l'equipe</a>
+              </div>
+              <div class="hero-metrics">
+                <article class="metric-card">
+                  <strong>98%</strong>
+                  <span>fiabilite de l'automatisation sur les processus geres</span>
+                </article>
+                <article class="metric-card">
+                  <strong>42</strong>
+                  <span>lancements reussis pour des equipes SaaS, fintech et cyber</span>
+                </article>
+                <article class="metric-card">
+                  <strong>24/7</strong>
+                  <span>supervision operationnelle et couverture de reponse</span>
+                </article>
               </div>
             </div>
-          </section>
 
-          <section class="content-section">
-            <div class="welcome-row">
-              <div class="wave-hand">👋</div>
+            <div class="hero-visual fade-up">
+              <div class="floating-chip chip-top">
+                <span>Startup IA sur le marche</span>
+                <div class="avatar-stack">
+                  <span></span>
+                  <span></span>
+                  <span></span>
+                </div>
+              </div>
+              <div class="orbital"></div>
+              <div class="glow-blob blob-a"></div>
+              <div class="glow-blob blob-b"></div>
+              <div class="glow-blob blob-c"></div>
+              <div class="floating-chip chip-bottom">
+                <strong>+128%</strong>
+                <span>pipeline qualifie apres refonte de la plateforme</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="container panel-grid fade-up">
+            <article class="glass-card">
+              <h3>Notre impact en chiffres</h3>
+              <p>Lancements de plateformes, programmes de securite et automatisations IA avec un ROI mesurable.</p>
+            </article>
+            <article class="glass-card">
+              <h3>Solutions innovantes pour la croissance des entreprises modernes</h3>
+              <p>Nous combinons vision produit, rigueur technique et modeles operationnels clairs.</p>
+            </article>
+            <article class="glass-card">
+              <h3>Systemes centres utilisateur avec resilence niveau entreprise</h3>
+              <p>Langage visuel, infrastructure fiable et modeles de support adaptes a la croissance.</p>
+            </article>
+          </div>
+        </section>
+
+        <section class="section">
+          <div class="container">
+            <div class="section-header fade-up">
               <div>
-                <h2 class="section-title">Welcome, Mack Gok</h2>
-                <div class="helper">Your most used creation tools are pinned below.</div>
+                <div class="section-kicker">Presentation du projet</div>
+                <h2>Un assistant digital pense pour les citoyens et les equipes de support.</h2>
+              </div>
+              <p class="section-copy">
+                SecondVoice a pour objectif de reduire la complexite des procedures et de fournir
+                des reponses plus rapides, plus claires et plus accessibles.
+              </p>
+            </div>
+            <div class="grid-2">
+              <article class="image-card fade-up">
+                <div class="image-card-content">
+                  <div class="eyebrow">20+ ans d'experience en conseil et produit</div>
+                  <h3>Concu pour la rapidite de lancement, la gouvernance et la maintenabilite long terme.</h3>
+                  <ul class="feature-list">
+                    <li>Copilotes IA et automatisation des workflows</li>
+                    <li>Portails clients et plateformes de service</li>
+                    <li>Modeles de livraison cloud avec observabilite</li>
+                  </ul>
+                </div>
+              </article>
+              <div class="grid-2">
+                <article class="service-card fade-up">
+                  <div class="card-icon"></div>
+                  <h3>Systemes IA appliques</h3>
+                  <p>Copilotes internes, automatisation documentaire et aide a la decision pour les equipes de service.</p>
+                  <a class="service-link" href="service-details.html">En savoir plus</a>
+                </article>
+                <article class="service-card fade-up">
+                  <div class="card-icon"></div>
+                  <h3>Preparation cyber</h3>
+                  <p>Socle de securite, evaluation des risques, gouvernance et deploiements resilients.</p>
+                  <a class="service-link" href="service-details.html">En savoir plus</a>
+                </article>
+                <article class="service-card fade-up">
+                  <div class="card-icon"></div>
+                  <h3>Conception d'experience</h3>
+                  <p>Parcours clairs qui transforment des produits complexes en services numeriques utilisables.</p>
+                  <a class="service-link" href="service-details.html">En savoir plus</a>
+                </article>
+                <article class="service-card fade-up">
+                  <div class="card-icon"></div>
+                  <h3>Analytique de croissance</h3>
+                  <p>Tableaux de bord et reporting pour voir ce qui fonctionne et ce qu'il faut optimiser.</p>
+                  <a class="service-link" href="service-details.html">En savoir plus</a>
+                </article>
               </div>
             </div>
+          </div>
+        </section>
 
-            <div class="card-grid">
-              <article class="tool-card">
-                <div class="tool-visual chat"><img src="assets/media/preview-chat.svg" alt="AI chat workspace preview" /></div>
-                <div class="mini-badge">AI Chat</div>
-                <h3 class="feature-title">AI assistant workspace</h3>
-                <p class="card-copy">Draft captions, product descriptions, and customer responses with reusable prompt blocks.</p>
+        <section class="section">
+          <div class="container">
+            <div class="section-header fade-up">
+              <div>
+                <div class="section-kicker">Services</div>
+                <h2>Solutions numeriques avancees pour les entreprises modernes.</h2>
+              </div>
+              <a class="btn btn-secondary" href="services.html">Explorer tous les services</a>
+            </div>
+            <div class="grid-4">
+              <article class="stat-card fade-up">
+                <strong>01</strong>
+                <h3>Renforcement de la posture cloud</h3>
+                <p class="meta">Architectures securisees, controle d'acces et hygiene de deploiement des le premier jour.</p>
               </article>
-              <article class="tool-card">
-                <div class="tool-visual image"><img src="assets/media/preview-image.svg" alt="Image generator preview" /></div>
-                <div class="mini-badge">Image Lab</div>
-                <h3 class="feature-title">Generate campaign visuals</h3>
-                <p class="card-copy">Build prompt sets, choose ratios, and review image batches from the same control panel.</p>
+              <article class="stat-card fade-up">
+                <strong>02</strong>
+                <h3>Supervision continue</h3>
+                <p class="meta">Tableaux de bord partages, detection d'anomalies et alertes operationnelles sur les systemes critiques.</p>
               </article>
-              <article class="tool-card">
-                <div class="tool-visual voice"><img src="assets/media/preview-voice.svg" alt="Voice generation preview" /></div>
-                <div class="mini-badge">Voice Mix</div>
-                <h3 class="feature-title">Create voice-ready scripts</h3>
-                <p class="card-copy">Tune language, pace, and tone for social clips, explainers, and onboarding audio.</p>
+              <article class="stat-card fade-up">
+                <strong>03</strong>
+                <h3>Pipelines d'automatisation</h3>
+                <p class="meta">Orchestration des workflows pour supprimer les taches repetitives en vente et support.</p>
+              </article>
+              <article class="stat-card fade-up">
+                <strong>04</strong>
+                <h3>Conception de produits numeriques</h3>
+                <p class="meta">Interfaces de confiance pour clients, operateurs et decisionnaires.</p>
               </article>
             </div>
-          </section>
+          </div>
+        </section>
 
-          <section class="dual-grid">
-            <article class="card">
-              <div class="card-header">
-                <div>
-                  <div class="small-label">Studio overview</div>
-                  <h3 class="panel-title">Creator metrics</h3>
-                </div>
-                <span class="status-pill active">Live</span>
+        <section class="section">
+          <div class="container">
+            <div class="section-header fade-up">
+              <div>
+                <div class="section-kicker">Projets</div>
+                <h2>Presentation de systemes cibles pour des equipes a forts enjeux.</h2>
               </div>
-              <div class="stats-grid">
-                <div class="stat-card">
-                  <div class="small-label">Projects</div>
-                  <span class="metric-number">148</span>
-                  <div class="status-note">12 new this week</div>
-                </div>
-                <div class="stat-card">
-                  <div class="small-label">Generated assets</div>
-                  <span class="metric-number">3.2K</span>
-                  <div class="status-note">Across image and voice tools</div>
-                </div>
-                <div class="stat-card">
-                  <div class="small-label">Subscribers</div>
-                  <span class="metric-number">924</span>
-                  <div class="status-note">18% monthly growth</div>
-                </div>
-              </div>
-            </article>
+                            <p class="section-copy">
+                Ce modele inclut des cartes d'etudes de cas reutilisables adaptees aux projets IA,
+                SaaS, cybersecurite et transformation numerique.
+              </p>
+            </div>
+            <div class="grid-3">
+              <article class="project-card fade-up">
+                <div class="tag">Startup</div>
+                <h3>Cockpit de pilotage revenu pour une plateforme IA B2B</h3>
+                <p>Analyse unifiee du pipeline, notes de reunion automatisees et scoring des risques.</p>
+              </article>
+              <article class="project-card fade-up">
+                <div class="tag">Entreprise</div>
+                <h3>Refonte des operations de securite pour une equipe cloud multi-region</h3>
+                <p>Boucles de reponse plus rapides, responsabilites claires et tableaux de bord operationnels simplifies.</p>
+              </article>
+              <article class="project-card fade-up">
+                <div class="tag">Produit</div>
+                <h3>Portail front-office pour l'onboarding des services geres</h3>
+                <p>Experience client moderne avec automatisation de l'intake et suivi en self-service.</p>
+              </article>
+            </div>
+          </div>
+        </section>
 
-            <article class="panel">
-              <div class="panel-header">
-                <div>
-                  <div class="small-label">Queue</div>
-                  <h3 class="panel-title">Recent activity</h3>
-                </div>
+        <section class="section">
+          <div class="container grid-2">
+            <div class="fade-up">
+              <div class="section-kicker">Comment ca marche</div>
+              <h2>Protection de vos operations numeriques, etape par etape.</h2>
+                            <p class="section-copy">
+                Cette mise en page suit une logique de presentation de service : cadrage,
+                conception de la solution et livraison mesurable.
+              </p>
+              <a class="btn btn-primary" href="about.html">En savoir plus</a>
+            </div>
+            <div class="timeline">
+              <article class="timeline-item fade-up">
+                <div class="timeline-step">01</div>
+                <h3>Evaluation complete</h3>
+                <p>Nous cartographions les objectifs, systemes actuels, contraintes de livraison et risques avant de definir le scope.</p>
+              </article>
+              <article class="timeline-item fade-up">
+                <div class="timeline-step">02</div>
+                <h3>Conception du systeme</h3>
+                <p>L'architecture, les parcours utilisateurs, les flux IA et les blocs de contenu sont traduits en plan de livraison.</p>
+              </article>
+              <article class="timeline-item fade-up">
+                <div class="timeline-step">03</div>
+                <h3>Lancer et optimiser</h3>
+                <p>Apres lancement, nous suivons l'usage, ameliorons la conversion et affinons les operations selon les donnees.</p>
+              </article>
+            </div>
+          </div>
+        </section>
+
+        <section class="section">
+          <div class="container">
+            <div class="section-header fade-up">
+              <div>
+                <div class="section-kicker">Temoignages</div>
+                <h2>Retours clients qui renforcent la confiance.</h2>
               </div>
-              <div class="feed-list">
-                <div class="feed-item">
-                  <strong>New brand pack rendered</strong>
-                  <div class="feed-meta"><span>Image Generator</span><span>9 min ago</span></div>
+            </div>
+            <div class="grid-3">
+              <article class="testimonial fade-up">
+                                <p class="quote">"Ce modele nous donne un langage visuel premium sans etre generique. Il est impactant, lisible et oriente conversion."</p>
+                <div class="post-meta">
+                  <span class="tag">Directeur Croissance</span>
+                  <span>Nadia Foster</span>
                 </div>
-                <div class="feed-item">
-                  <strong>Voice preset exported</strong>
-                  <div class="feed-meta"><span>Voice Generate</span><span>24 min ago</span></div>
-                </div>
-                <div class="feed-item">
-                  <strong>Subscription upgraded to Pro</strong>
-                  <div class="feed-meta"><span>Billing</span><span>1 hour ago</span></div>
-                </div>
+              </article>
+            </div>
+          </div>
+        </section>
+
+        <section class="section">
+          <div class="container">
+            <div class="section-header fade-up">
+              <div>
+                <div class="section-kicker">Equipe</div>
+                <h2>Decouvrez les profils derriere notre modele de livraison.</h2>
               </div>
-            </article>
-          </section>
-        </div>
+              <a class="btn btn-secondary" href="about.html">Voir plus de membres</a>
+            </div>
+            <div class="grid-4">
+              <article class="team-card fade-up">
+                <div class="team-art"></div>
+                <h3>Lina Hart</h3>
+                <div class="team-meta">Strategiste Produit</div>
+              </article>
+              <article class="team-card fade-up">
+                <div class="team-art"></div>
+                <h3>Karim Saleh</h3>
+                <div class="team-meta">Architecte Securite</div>
+              </article>
+              <article class="team-card fade-up">
+                <div class="team-art"></div>
+                <h3>Jamie Ortiz</h3>
+                <div class="team-meta">Responsable Systemes IA</div>
+              </article>
+              <article class="team-card fade-up">
+                <div class="team-art"></div>
+                <h3>Sofia Mercer</h3>
+                <div class="team-meta">Designer Experience Client</div>
+              </article>
+            </div>
+          </div>
+        </section>
+
+        <section class="section">
+          <div class="container achievement fade-up">
+            <div class="grid-4">
+              <div>
+                <strong class="price">1400+</strong>
+                <div class="meta">Projets realises en conception et technologies</div>
+              </div>
+              <div>
+                <strong class="price">8M</strong>
+                <div class="meta">Interactions clients optimisees grace a l'automatisation</div>
+              </div>
+              <div>
+                <strong class="price">3K</strong>
+                <div class="meta">Heures operationnelles recuperees via la refonte des workflows</div>
+              </div>
+              <div>
+                <strong class="price">20+</strong>
+                <div class="meta">Annees d'experience cumulee en conseil numerique</div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <section class="section">
+          <div class="container grid-2">
+            <div class="fade-up">
+              <div class="section-kicker">FAQ</div>
+              <h2>Reponses pour les equipes qui preparent leur prochaine evolution numerique.</h2>
+              <p class="section-copy">
+                Utilisez ce bloc pour les objections, questions d'implementation et explications de service.
+              </p>
+              <a class="btn btn-secondary" href="faq.html">Voir la FAQ</a>
+            </div>
+            <div class="faq-list">
+              <details class="faq-item fade-up" open>
+                <summary>
+                  Pourquoi utiliser un site multi-pages plutot qu'une page unique ?
+                  <span class="faq-icon">+</span>
+                </summary>
+                                <p>
+                  Des pages separees permettent de cibler clairement chaque niveau d'intention :
+                  decouverte, evaluation du service, preuves et prise de contact directe.
+                </p>
+              </details>
+              <details class="faq-item fade-up">
+                <summary>
+                  Ce modele peut-il etre adapte a une offre SaaS ou conseil ?
+                  <span class="faq-icon">+</span>
+                </summary>
+                <p>Oui. La structure est suffisamment generique pour les services IT, startups IA, acteurs cyber et agences.</p>
+              </details>
+              <details class="faq-item fade-up">
+                <summary>
+                  La mise en page est-elle responsive desktop et mobile ?
+                  <span class="faq-icon">+</span>
+                </summary>
+                <p>La navigation, les grilles et le hero s'adaptent proprement aux tablettes et mobiles.</p>
+              </details>
+            </div>
+          </div>
+        </section>
+
+        <section class="section">
+          <div class="container">
+            <div class="section-header fade-up">
+              <div>
+                <div class="section-kicker">Blog</div>
+                <h2>Dernieres actualites et insights.</h2>
+              </div>
+              <a class="btn btn-secondary" href="blog.html">Voir tous les articles</a>
+            </div>
+            <div class="grid-3">
+              <article class="blog-card fade-up">
+                <div class="blog-art"></div>
+                <div class="tag">Entreprise</div>
+                <h3><a href="blog-details.html">Construire des interfaces IA qui preservent la confiance des le premier jour</a></h3>
+                <p>Comment clarte visuelle, regles metier et contraintes produit fonctionnent ensemble.</p>
+              </article>
+              <article class="blog-card fade-up">
+                <div class="blog-art"></div>
+                <div class="tag">Startups</div>
+                <h3><a href="blog-details.html">Une stack pratique pour des operations de service pilotees par l'automatisation</a></h3>
+                <p>Reduire la charge manuelle sans creer de processus internes fragiles.</p>
+              </article>
+              <article class="blog-card fade-up">
+                <div class="blog-art"></div>
+                <div class="tag">Securite</div>
+                <h3><a href="blog-details.html">Ce dont les equipes cloud modernes ont vraiment besoin en observabilite</a></h3>
+                <p>Tableaux de bord, responsabilites et escalades que les equipes utiliseront vraiment.</p>
+              </article>
+            </div>
+          </div>
+        </section>
       </main>
+
+      <footer class="footer">
+        <div class="container">
+          <div class="footer-cta fade-up">
+            <div>
+              <div class="section-kicker">Parlons-en</div>
+              <h2>Lancez un front-office clair, moderne et performant.</h2>
+              <p class="section-copy">
+                Ce modele statique fournit une page d'accueil, des pages services, a propos, FAQ, blog et contact.
+              </p>
+            </div>
+            <div class="newsletter-form">
+              <input type="email" placeholder="Votre adresse e-mail" />
+              <a class="btn btn-primary" href="../backend/index.html">Tableau de bord</a>
+            </div>
+          </div>
+
+          <div class="footer-main">
+            <div>
+              <a class="brand" href="index.html"><img class="brand-logo" src="assets/media/secondvoice-logo.png" alt="SecondVoice logo" /></a>
+              <p>
+                Un modele front-office HTML premium pour l'IA, la technologie, la securite
+                et les marques en transformation numerique.
+              </p>
+            </div>
+            <div>
+              <h3 class="footer-title">Solutions</h3>
+              <ul class="footer-list">
+                <li><a href="about.html">A propos</a></li>
+                <li><a href="services.html">Services</a></li>
+                <li><a href="service-details.html">Details du service</a></li>
+                <li><a href="blog.html">Blog</a></li>
+              </ul>
+            </div>
+            <div>
+              <h3 class="footer-title">Entreprise</h3>
+              <ul class="footer-list">
+                <li><a href="faq.html">FAQ</a></li>
+                <li><a href="contact.html">Parler a un expert</a></li>
+                <li><a href="blog-details.html">Analyses</a></li>
+                <li><a href="index.html">Hub solutions IA</a></li>
+              </ul>
+            </div>
+            <div>
+              <h3 class="footer-title">Nous contacter</h3>
+              <ul class="footer-list">
+                <li>lac 2, Tunis, Tunisia</li>
+                <li>+216 70 000 000</li>
+                <li>Lun - Ven 9:00 - 17:00</li>
+                <li>support@secondvoice.app</li>
+              </ul>
+            </div>
+          </div>
+
+          <div class="footer-bottom">
+            <span>&copy; 2026 SecondVoice. Tous droits reserves.</span>
+            <div class="footer-links">
+              <a href="index.html">Confidentialite</a>
+              <a href="index.html">Conditions</a>
+            </div>
+          </div>
+        </div>
+      </footer>
     </div>
 
-    <script src="assets/app.js"></script>
+    <script src="assets/js/main.js"></script>
   </body>
 </html>
+
+
+
+
