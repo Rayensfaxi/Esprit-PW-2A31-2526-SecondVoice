@@ -1660,3 +1660,100 @@ textarea.field {
     font-size: 1.55rem;
   }
 }
+
+
+/* Appointment Cards & Status */
+.appointment-card {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+  padding: 1.5rem;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow);
+  transition: transform 0.3s ease, border-color 0.3s ease;
+}
+
+.appointment-card:hover {
+  transform: translateY(-4px);
+  border-color: var(--primary);
+}
+
+.status-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 6px 14px;
+  border-radius: 99px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+}
+
+.status-badge.confirmed {
+  background: rgba(31, 180, 122, 0.12);
+  color: #1fb47a;
+  border: 1px solid rgba(31, 180, 122, 0.2);
+}
+
+.status-badge.pending {
+  background: rgba(255, 184, 77, 0.12);
+  color: #ffb84d;
+  border: 1px solid rgba(255, 184, 77, 0.2);
+}
+
+.status-badge.cancelled {
+  background: rgba(255, 107, 107, 0.12);
+  color: #ff6b6b;
+  border: 1px solid rgba(255, 107, 107, 0.2);
+}
+
+.appointment-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  flex-wrap: wrap;
+  gap: 1rem;
+}
+
+.appointment-info h4 {
+  margin: 0.5rem 0 0.25rem;
+  font-size: 1.25rem;
+  font-family: 'Space Grotesk', sans-serif;
+}
+
+.appointment-meta {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  text-align: right;
+}
+
+.appointment-footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border-top: 1px solid var(--line);
+  padding-top: 1.25rem;
+  margin-top: 0.5rem;
+}
+
+.appointment-actions {
+  display: flex;
+  gap: 0.75rem;
+}
+
+@media (max-width: 640px) {
+  .appointment-header, .appointment-footer {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  .appointment-meta {
+    align-items: flex-start;
+    text-align: left;
+  }
+  .appointment-actions {
+    margin-top: 1rem;
+    justify-content: flex-end;
+  }
+}

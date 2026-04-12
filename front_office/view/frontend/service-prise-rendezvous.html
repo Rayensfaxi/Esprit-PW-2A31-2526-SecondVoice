@@ -78,20 +78,6 @@
                       <a class="btn btn-secondary" href="contact.html">Support client</a>
                     </div>
                   </section>
-                  <section class="auth-panel" data-auth-panel="register">
-                    <h3 class="auth-title">Creer un compte</h3>
-                    <p class="auth-helper">Creez un compte de demonstration pour le suivi, le support et la gestion de vos demandes.</p>
-                    <form class="auth-form">
-                      <input class="field" type="text" placeholder="Nom complet" />
-                      <input class="field" type="email" placeholder="E-mail professionnel" />
-                      <input class="field" type="password" placeholder="Creer un mot de passe" />
-                      <button class="btn btn-primary" type="button">Creer un compte</button>
-                    </form>
-                    <ul class="auth-links">
-                      <li><a href="services.html">Voir les offres de service</a></li>
-                      <li><a href="contact.html">Demander un acces entreprise</a></li>
-                    </ul>
-                  </section>
                 </div>
               </div>
             </div>
@@ -103,10 +89,10 @@
         <section class="page-hero">
           <div class="container">
             <div class="page-hero-card fade-up">
-              <div class="breadcrumbs"><span>Accueil</span><span>/</span><span>Prise de rendez-vous</span></div>
-              <h1>Prise de rendez-vous rapide et sans erreur.</h1>
+              <div class="breadcrumbs"><span>Accueil</span><span>/</span><span>Services</span><span>/</span><span>Prise de rendez-vous</span></div>
+              <h1>Planifiez votre rendez-vous en quelques clics.</h1>
               <p>
-                Planifiez vos rendez-vous, recevez des rappels et gardez un historique clair.
+                Choisissez votre service, votre assistant et l'horaire qui vous convient le mieux.
               </p>
             </div>
           </div>
@@ -117,44 +103,144 @@
             <div class="post-content fade-up">
               <div class="post-hero">
                 <div class="post-hero-content">
-                  <div class="tag">Service a la une</div>
-                  <h2>Des rendez-vous confirmes avec rappels automatiques.</h2>
+                  <div class="tag">Formulaire de réservation</div>
+                  <h2>Détails du rendez-vous</h2>
                   <p>
-                    Le service gere la disponibilite, la confirmation et les annulations.
+                    Merci de remplir les informations ci-dessous pour confirmer votre demande.
                   </p>
                 </div>
               </div>
-              <h2>Vue d'ensemble du service</h2>
-              <p>
-                Nous mettons en place un calendrier partage, des notifications et un suivi des visites.
-              </p>
-              <h3>Livrables typiques</h3>
-              <ul class="feature-list">
-                <li>Calendrier synchronise</li>
-                <li>Rappels automatiques</li>
-                <li>Gestion des annulations</li>
-                <li>Historique des rendez-vous</li>
-              </ul>
-              <h3>Pourquoi cette page convainc les acheteurs</h3>
-                            <p>
-                Une page detail solide reduit l'ambiguite. Elle montre comment le travail est realise,
-                ce qui est inclus et ou l'impact metier apparait.
-              </p>
+              
+              <form class="auth-form" style="max-width: 100%; margin-top: 2.5rem;">
+                <div class="input-row" style="display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; margin-bottom: 2rem;">
+                  <div>
+                    <label style="display: block; margin-bottom: 0.75rem; font-weight: 600; color: var(--text); opacity: 0.9;">Service souhaité</label>
+                    <select class="field" style="width: 100%;" required>
+                      <option value="" disabled selected>Choisir un service...</option>
+                      <option value="accompagnement">Accompagnement administratif</option>
+                      <option value="suivi">Suivi de dossier</option>
+                      <option value="reclamation">Gestion de réclamation</option>
+                      <option value="support">Support technique</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label style="display: block; margin-bottom: 0.75rem; font-weight: 600; color: var(--text); opacity: 0.9;">Assistant préféré</label>
+                    <select class="field" style="width: 100%;" required>
+                      <option value="" disabled selected>Choisir un assistant...</option>
+                      <option value="amira">Amira Selmi (Administration)</option>
+                      <option value="nour">Nour Kammoun (Social)</option>
+                      <option value="hichem">Hichem Ben Ali (Technique)</option>
+                    </select>
+                  </div>
+                </div>
+
+                <div class="input-row" style="display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; margin-bottom: 2rem;">
+                  <div>
+                    <label style="display: block; margin-bottom: 0.75rem; font-weight: 600; color: var(--text); opacity: 0.9;">Date du rendez-vous</label>
+                    <input class="field" type="date" style="width: 100%;" required />
+                  </div>
+                  <div>
+                    <label style="display: block; margin-bottom: 0.75rem; font-weight: 600; color: var(--text); opacity: 0.9;">Heure du rendez-vous</label>
+                    <input class="field" type="time" style="width: 100%;" required />
+                  </div>
+                </div>
+
+                <div style="margin-bottom: 2rem;">
+                  <label style="display: block; margin-bottom: 0.75rem; font-weight: 600; color: var(--text); opacity: 0.9;">Mode du rendez-vous</label>
+                  <div style="display: flex; gap: 3rem; flex-wrap: wrap;">
+                    <label class="check-row"><input type="radio" name="mode" value="presentiel" checked /> Présentiel</label>
+                    <label class="check-row"><input type="radio" name="mode" value="ligne" /> En ligne (Visioconférence)</label>
+                  </div>
+                </div>
+
+                <div style="margin-bottom: 2.5rem;">
+                  <label style="display: block; margin-bottom: 0.75rem; font-weight: 600; color: var(--text); opacity: 0.9;">Remarques ou précisions</label>
+                  <textarea class="field" placeholder="Expliquez brièvement l'objet de votre rendez-vous..." style="width: 100%; min-height: 140px; resize: vertical;"></textarea>
+                </div>
+
+                <div style="display: flex; justify-content: flex-end; gap: 1rem;">
+                  <button class="btn btn-secondary" type="reset">Réinitialiser</button>
+                  <button class="btn btn-primary" type="submit">Confirmer le rendez-vous</button>
+                </div>
+              </form>
+
+              <!-- Section Mes rendez-vous -->
+              <div style="margin-top: 5rem;">
+                <div class="post-hero">
+                  <div class="post-hero-content">
+                    <div class="tag">Mon Suivi</div>
+                    <h2>Mes rendez-vous</h2>
+                    <p>
+                      Consultez, modifiez ou annulez vos rendez-vous en cours. Seuls les rendez-vous non confirmés sont modifiables.
+                    </p>
+                  </div>
+                </div>
+
+                <div style="display: flex; flex-direction: column; gap: 1.5rem; margin-top: 3rem;">
+                  <!-- RDV 1: Confirmé (Non modifiable) -->
+                  <div class="appointment-card">
+                    <div class="appointment-header">
+                      <div class="appointment-info">
+                        <span class="status-badge confirmed">Confirmé</span>
+                        <h4>Accompagnement administratif</h4>
+                        <p style="margin: 0; color: var(--muted); font-size: 0.95rem;">Assistant : <strong>Nour Kammoun</strong></p>
+                      </div>
+                      <div class="appointment-meta">
+                        <p style="margin: 0; font-weight: 700; font-size: 1.1rem; color: var(--primary);">15 Avril 2026</p>
+                        <p style="margin: 0; font-weight: 600;">14:30</p>
+                        <p style="margin: 0.25rem 0 0; color: var(--muted); font-size: 0.85rem;">Mode : Présentiel</p>
+                      </div>
+                    </div>
+                    <div class="appointment-footer">
+                      <p style="font-size: 0.85rem; color: var(--muted); font-style: italic; margin: 0;">Ce rendez-vous est déjà confirmé.</p>
+                      <div class="appointment-actions">
+                         <button class="btn btn-secondary" type="button" style="padding: 0.5rem 1rem; font-size: 0.85rem; opacity: 0.5; cursor: not-allowed;" disabled>Modifier</button>
+                         <button class="btn btn-secondary" type="button" style="padding: 0.5rem 1rem; font-size: 0.85rem;">Détails</button>
+                      </div>
+                    </div>
+                  </div>
+
+                  <!-- RDV 2: En attente (Modifiable) -->
+                  <div class="appointment-card">
+                    <div class="appointment-header">
+                      <div class="appointment-info">
+                        <span class="status-badge pending">En attente</span>
+                        <h4>Suivi de dossier</h4>
+                        <p style="margin: 0; color: var(--muted); font-size: 0.95rem;">Assistant : <strong>Hichem Ben Ali</strong></p>
+                      </div>
+                      <div class="appointment-meta">
+                        <p style="margin: 0; font-weight: 700; font-size: 1.1rem; color: var(--primary);">18 Avril 2026</p>
+                        <p style="margin: 0; font-weight: 600;">10:00</p>
+                        <p style="margin: 0.25rem 0 0; color: var(--muted); font-size: 0.85rem;">Mode : En ligne</p>
+                      </div>
+                    </div>
+                    <div class="appointment-footer">
+                      <p style="font-size: 0.85rem; color: var(--muted); margin: 0;">Vous pouvez encore modifier ce rendez-vous.</p>
+                      <div class="appointment-actions">
+                        <button class="btn btn-secondary" type="button" style="padding: 0.5rem 1rem; font-size: 0.85rem;">Modifier</button>
+                        <button class="btn btn-primary" type="button" style="padding: 0.5rem 1rem; font-size: 0.85rem; background: #ff6b6b; border-color: #ff6b6b;">Annuler</button>
+                        <button class="btn btn-secondary" type="button" style="padding: 0.5rem 1rem; font-size: 0.85rem;">Détails</button>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
             </div>
+
             <aside class="sidebar">
               <div class="sidebar-card fade-up">
-                <h3>Apercu du projet</h3>
+                <h3>Récapitulatif</h3>
                 <ul class="footer-list">
-                  <li>Delai : 4 a 8 semaines</li>
-                  <li>Format : decouverte + implementation</li>
-                  <li>Ideal pour : operations de service</li>
-                  <li>Support : optimisation continue</li>
+                  <li><strong>Lieu :</strong> Siège Social ou Meet</li>
+                  <li><strong>Durée :</strong> 30 à 45 minutes</li>
+                  <li><strong>Confirmation :</strong> Immédiate par e-mail</li>
+                  <li><strong>Rappel :</strong> 24h avant par SMS</li>
                 </ul>
               </div>
               <div class="sidebar-card fade-up">
-                <h3>Besoin d'adapter cette page ?</h3>
-                <p>Adaptez le contenu a des offres cloud, securite, analytics ou conception produit.</p>
-                <a class="btn btn-primary" href="contact.html">Demander une version personnalisee</a>
+                <h3>Besoin d'aide ?</h3>
+                <p>Si vous ne trouvez pas de créneau disponible, contactez notre support direct.</p>
+                <a class="btn btn-primary" href="contact.html">Contacter le support</a>
               </div>
             </aside>
           </div>
