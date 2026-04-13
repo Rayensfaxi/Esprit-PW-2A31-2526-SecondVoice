@@ -40,17 +40,19 @@ class UtilisateurController
             throw new InvalidArgumentException('Un utilisateur existe deja avec cet e-mail.');
         }
 
+        $utilisateur = $this->buildUtilisateurFromPayload($data);
+
         $sql = 'INSERT INTO utilisateur (nom, prenom, email, mot_de_passe, telephone, role, statut_compte, date_creation)
                 VALUES (:nom, :prenom, :email, :password, :telephone, :role, :statut_compte, :date_creation)';
 
         $stmt = $this->conn->prepare($sql);
         $stmt->execute([
-            ':nom' => $data['nom'],
-            ':prenom' => $data['prenom'],
-            ':email' => $data['email'],
+            ':nom' => $utilisateur->getNom(),
+            ':prenom' => $utilisateur->getPrenom(),
+            ':email' => $utilisateur->getEmail(),
             ':password' => password_hash($data['password'], PASSWORD_DEFAULT),
-            ':telephone' => $data['telephone'],
-            ':role' => $data['role'],
+            ':telephone' => $utilisateur->getTelephone(),
+            ':role' => $utilisateur->getRole(),
             ':statut_compte' => 'actif',
             ':date_creation' => date('Y-m-d')
         ]);
@@ -102,6 +104,12 @@ class UtilisateurController
         return $row ? $this->normalizeUserRow($row) : null;
     }
 
+    public function getUserEntityById(int $id): ?Utilisateur
+    {
+        $row = $this->getUserById($id);
+        return $row ? $this->buildUtilisateurFromRow($row) : null;
+    }
+
     public function authenticateUser(string $email, string $password): ?array
     {
         $stmt = $this->conn->prepare('SELECT id, nom, prenom, email, telephone, role, statut_compte, date_creation, mot_de_passe FROM utilisateur WHERE email = :email');
@@ -144,6 +152,8 @@ class UtilisateurController
             throw new InvalidArgumentException('Cet e-mail est deja utilise par un autre utilisateur.');
         }
 
+        $utilisateur = $this->buildUtilisateurFromPayload($data, $id);
+
         $sql = 'UPDATE utilisateur
                 SET nom = :nom,
                     prenom = :prenom,
@@ -152,11 +162,11 @@ class UtilisateurController
                     role = :role';
 
         $params = [
-            ':nom' => $data['nom'],
-            ':prenom' => $data['prenom'],
-            ':email' => $data['email'],
-            ':telephone' => $data['telephone'],
-            ':role' => $data['role'],
+            ':nom' => $utilisateur->getNom(),
+            ':prenom' => $utilisateur->getPrenom(),
+            ':email' => $utilisateur->getEmail(),
+            ':telephone' => $utilisateur->getTelephone(),
+            ':role' => $utilisateur->getRole(),
             ':id' => $id
         ];
 
@@ -206,10 +216,40 @@ class UtilisateurController
         return $normalized;
     }
 
+    private function buildUtilisateurFromPayload(array $payload, ?int $id = null): Utilisateur
+    {
+        return new Utilisateur(
+            (string) ($payload['nom'] ?? ''),
+            (string) ($payload['prenom'] ?? ''),
+            (string) ($payload['email'] ?? ''),
+            (string) ($payload['password'] ?? ''),
+            (string) ($payload['telephone'] ?? ''),
+            $this->normalizeRole((string) ($payload['role'] ?? 'client')),
+            $id
+        );
+    }
+
+    private function buildUtilisateurFromRow(array $row): Utilisateur
+    {
+        $entity = Utilisateur::fromDatabaseRow($row);
+        $entity->setRole($this->normalizeRole($entity->getRole()));
+        return $entity;
+    }
+
     private function normalizeUserRow(array $row): array
     {
-        $row['role'] = $this->normalizeRole((string) ($row['role'] ?? 'client'));
-        return $row;
+        $entity = $this->buildUtilisateurFromRow($row);
+
+        return [
+            'id' => isset($row['id']) ? (int) $row['id'] : null,
+            'nom' => $entity->getNom(),
+            'prenom' => $entity->getPrenom(),
+            'email' => $entity->getEmail(),
+            'telephone' => $entity->getTelephone(),
+            'role' => $entity->getRole(),
+            'statut_compte' => (string) ($row['statut_compte'] ?? 'actif'),
+            'date_creation' => (string) ($row['date_creation'] ?? '')
+        ];
     }
 
     private function validatePayload(array $payload, bool $isUpdate): array
