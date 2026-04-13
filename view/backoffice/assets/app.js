@@ -122,7 +122,8 @@ function syncThemeToggle() {
 function updateIdentityUI(profile) {
   const displayName = profile.fullName;
   const displayEmail = profile.email;
-  const displayRole = profile.role === "admin" ? "Admin" : "Client";
+  const normalizedRole = String(profile.role || "client").toLowerCase();
+  const displayRole = normalizedRole === "admin" ? "Admin" : (normalizedRole === "agent" ? "Agent" : "Client");
   const initials = createInitials(profile);
 
   document.querySelectorAll(".avatar").forEach((node) => {

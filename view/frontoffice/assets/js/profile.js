@@ -151,8 +151,20 @@
       role: storedProfile.role
     });
 
+    if (!normalized.fullName || normalized.fullName.length < 2) {
+      feedback.textContent = "Veuillez saisir un nom complet valide (2 caracteres minimum).";
+      feedback.classList.add("error");
+      return;
+    }
+
     if (!normalized.email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(normalized.email)) {
       feedback.textContent = "Veuillez saisir une adresse e-mail valide.";
+      feedback.classList.add("error");
+      return;
+    }
+
+    if (normalized.phone && !/^\+?[0-9]{8,15}$/.test(normalized.phone.replace(/\s+/g, ""))) {
+      feedback.textContent = "Le numero de telephone doit contenir entre 8 et 15 chiffres.";
       feedback.classList.add("error");
       return;
     }

@@ -21,18 +21,18 @@ function resolveBackOfficeHome() {
   const pathname = (window.location.pathname || "").replace(/\\/g, "/");
 
   if (pathname.includes("/view/frontoffice/")) {
-    return pathname.replace("/view/frontoffice/", "/view/backoffice/").replace(/\/[^/]*$/, "/index.html");
+    return pathname.replace("/view/frontoffice/", "/view/backoffice/").replace(/\/[^/]*$/, "/index.php");
   }
 
   if (pathname.includes("/frontoffice/")) {
-    return pathname.replace("/frontoffice/", "/backoffice/").replace(/\/[^/]*$/, "/index.html");
+    return pathname.replace("/frontoffice/", "/backoffice/").replace(/\/[^/]*$/, "/index.php");
   }
 
-  return "../backoffice/index.html";
+  return "../backoffice/index.php";
 }
 
 const INTEGRATION_ROUTES = {
-  backOfficeHome: "profile.html"
+  backOfficeHome: "profile.php"
 };
 
 function getStorageItem(key) {

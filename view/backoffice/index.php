@@ -1,3 +1,18 @@
+<?php
+declare(strict_types=1);
+
+session_start();
+
+if (!isset($_SESSION['user_id'])) {
+    header('Location: ../frontoffice/login.php?status=auth_required');
+    exit;
+}
+
+if (!in_array(strtolower((string) ($_SESSION['user_role'] ?? 'client')), ['admin', 'agent'], true)) {
+    header('Location: ../frontoffice/profile.php?status=forbidden');
+    exit;
+}
+?>
 <!DOCTYPE html>
 <html lang="fr">
   <head>
@@ -15,14 +30,14 @@
       <aside class="sidebar">
         <div class="sidebar-panel">
           <div class="brand-row">
-            <a class="brand" href="index.html"><img class="brand-logo" src="assets/media/secondvoice-logo.png" alt="SecondVoice logo" /></a>
+            <a class="brand" href="index.php"><img class="brand-logo" src="assets/media/secondvoice-logo.png" alt="SecondVoice logo" /></a>
 </div>
 
           <div class="sidebar-scroll">
             <div class="nav-section">
               <div class="nav-title">Gestion</div>
-              <a class="nav-link" href="index.html" data-nav="home"><span class="nav-icon icon-home"></span><span>Tableau de bord</span></a>
-              <a class="nav-link" href="gestion-utilisateurs.html" data-nav="profile"><span class="nav-icon icon-profile"></span><span>Gestion des utilisateurs</span></a>
+              <a class="nav-link" href="index.php" data-nav="home"><span class="nav-icon icon-home"></span><span>Tableau de bord</span></a>
+              <a class="nav-link" href="gestion-utilisateurs.php" data-nav="profile"><span class="nav-icon icon-profile"></span><span>Gestion des utilisateurs</span></a>
               <a class="nav-link" href="gestion-demandes.html" data-nav="community"><span class="nav-icon icon-community"></span><span>Gestion des demandes</span></a>
               <a class="nav-link" href="gestion-rendezvous.html" data-nav="subscription"><span class="nav-icon icon-card"></span><span>Gestion des rendez-vous</span></a>
               <a class="nav-link" href="gestion-accompagnements.html" data-nav="chatbot"><span class="nav-icon icon-chat"></span><span>Gestion des accompagnements</span></a>
@@ -45,28 +60,6 @@
           <div class="toolbar-actions">
             <a class="update-button" href="../frontoffice/index.html">Revenir</a>
             <button class="icon-button icon-moon" data-theme-toggle aria-label="Switch theme"></button>
-            <div class="profile-menu-wrap" data-profile-wrap>
-              <button class="profile-trigger" data-profile-toggle aria-label="Open profile menu">
-                <img class="topbar-avatar" src="assets/media/profile-avatar.svg" alt="Mack Gok profile" />
-              </button>
-              <div class="profile-dropdown" data-profile-menu>
-                <div class="profile-dropdown-card">
-                  <div class="profile-thumb"><img src="assets/media/profile-avatar.svg" alt="Profile avatar" /></div>
-                  <div>
-                    <strong>MR. Crow Kader</strong>
-                    <span>CEO, Valo How Masud</span>
-                  </div>
-                </div>
-                <div class="profile-menu-list">
-                  <a class="menu-link" href="gestion-utilisateurs.html"><span class="menu-icon icon-profile"></span><span>Gestion des utilisateurs</span></a>
-                  <a class="menu-link" href="settings.html"><span class="menu-icon icon-settings"></span><span>Parametres</span></a>
-                  <a class="menu-link" href="gestion-rendezvous.html"><span class="menu-icon icon-card"></span><span>Gestion des rendez-vous</span></a>
-                  <a class="menu-link" href="gestion-demandes.html"><span class="menu-icon icon-activity"></span><span>Gestion des demandes</span></a>
-                  <a class="menu-link" href="gestion-accompagnements.html"><span class="menu-icon icon-help"></span><span>Gestion des accompagnements</span></a>
-                </div>
-                <button class="logout-button" type="button">Logout <span class="logout-arrow">-></span></button>
-              </div>
-            </div>
           </div>
         </div>
 

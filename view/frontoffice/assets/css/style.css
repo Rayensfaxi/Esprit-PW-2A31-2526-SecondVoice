@@ -1660,3 +1660,8 @@ textarea.field {
     font-size: 1.55rem;
   }
 }
+
+.profile-feedback.success {
+  color: #7ce9b3;
+}
+
