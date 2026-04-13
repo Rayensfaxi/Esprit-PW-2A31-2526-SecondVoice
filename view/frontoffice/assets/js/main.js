@@ -20,15 +20,15 @@ const INTEGRATION_KEYS = {
 function resolveBackOfficeHome() {
   const pathname = (window.location.pathname || "").replace(/\\/g, "/");
 
-  if (pathname.includes("/view/frontend/")) {
-    return pathname.replace("/view/frontend/", "/view/backend/").replace(/\/[^/]*$/, "/index.html");
+  if (pathname.includes("/view/frontoffice/")) {
+    return pathname.replace("/view/frontoffice/", "/view/backoffice/").replace(/\/[^/]*$/, "/index.html");
   }
 
-  if (pathname.includes("/frontend/")) {
-    return pathname.replace("/frontend/", "/backend/").replace(/\/[^/]*$/, "/index.html");
+  if (pathname.includes("/frontoffice/")) {
+    return pathname.replace("/frontoffice/", "/backoffice/").replace(/\/[^/]*$/, "/index.html");
   }
 
-  return "../../../back_office/view/backend/index.html";
+  return "../backoffice/index.html";
 }
 
 const INTEGRATION_ROUTES = {

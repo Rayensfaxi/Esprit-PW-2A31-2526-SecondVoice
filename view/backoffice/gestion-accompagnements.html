@@ -3,13 +3,13 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>SecondVoice | Dashboard</title>
+    <title>SecondVoice | Gestion des accompagnements</title>
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
     <link rel="stylesheet" href="assets/style.css" />
   </head>
-  <body data-page="home">
+  <body data-page="chatbot">
     <div class="overlay" data-overlay></div>
     <div class="shell">
       <aside class="sidebar">
@@ -39,11 +39,11 @@
         <div class="topbar">
           <div>
             <button class="mobile-toggle" data-nav-toggle aria-label="Open navigation">=</button>
-            <h1 class="page-title">Dashboard</h1>
-            <div class="page-subtitle">Suivez vos demandes, vos rendez-vous et vos documents en un seul endroit.</div>
+            <h1 class="page-title">Gestion des accompagnements</h1>
+            <div class="page-subtitle">Assurez le suivi des accompagnements et des relances.</div>
           </div>
           <div class="toolbar-actions">
-            <a class="update-button" href="../../../front_office/view/frontend/index.html">Revenir</a>
+            <a class="update-button" href="../frontoffice/index.html">Revenir</a>
             <button class="icon-button icon-moon" data-theme-toggle aria-label="Switch theme"></button>
             <div class="profile-menu-wrap" data-profile-wrap>
               <button class="profile-trigger" data-profile-toggle aria-label="Open profile menu">
@@ -74,13 +74,12 @@
           <section class="hero-banner">
             <div class="hero-inner">
               <div class="hero-copy">
-                <div class="badge">Tableau de bord SecondVoice</div>
-                <h1>Bienvenue sur votre espace SecondVoice</h1>
+                <div class="badge">Gestion</div>
+                <h1>Gestion des accompagnements</h1>
                 <p>
-                  Cet espace vous permet de suivre vos demandes, consulter vos documents, gerer vos rendez-vous
-                  et demander un accompagnement.
+                  Assurez le suivi des accompagnements et des relances.
                 </p>
-                <button class="cta-button">Voir mes demandes</button>
+                <a class="cta-button" href="gestion-accompagnements.html">Voir les accompagnements</a>
               </div>
               <div class="hero-visual">
                 <div class="device-stack">
@@ -92,30 +91,31 @@
 
           <section class="content-section">
             <div class="welcome-row">
+              <div class="wave-hand">👋</div>
               <div>
-                <h2 class="section-title">Vue rapide</h2>
-                <div class="helper">Accedez a vos informations essentielles.</div>
+                <h2 class="section-title">Welcome, Mack Gok</h2>
+                <div class="helper">Your most used creation tools are pinned below.</div>
               </div>
             </div>
 
             <div class="card-grid">
               <article class="tool-card">
-                <div class="tool-visual chat"><img src="assets/media/preview-chat.svg" alt="Apercu des demandes" /></div>
-                <div class="mini-badge">Demandes</div>
-                <h3 class="feature-title">Mes demandes</h3>
-                <p class="card-copy">Consultez et suivez l'etat de vos demandes administratives en temps reel.</p>
+                <div class="tool-visual chat"><img src="assets/media/preview-chat.svg" alt="AI chat workspace preview" /></div>
+                <div class="mini-badge">AI Chat</div>
+                <h3 class="feature-title">AI assistant workspace</h3>
+                <p class="card-copy">Draft captions, product descriptions, and customer responses with reusable prompt blocks.</p>
               </article>
               <article class="tool-card">
-                <div class="tool-visual image"><img src="assets/media/preview-image.svg" alt="Apercu des rendez-vous" /></div>
-                <div class="mini-badge">Rendez-vous</div>
-                <h3 class="feature-title">Mes rendez-vous</h3>
-                <p class="card-copy">Planifiez et gerez vos rendez-vous avec les services disponibles.</p>
+                <div class="tool-visual image"><img src="assets/media/preview-image.svg" alt="Image generator preview" /></div>
+                <div class="mini-badge">Image Lab</div>
+                <h3 class="feature-title">Generate campaign visuals</h3>
+                <p class="card-copy">Build prompt sets, choose ratios, and review image batches from the same control panel.</p>
               </article>
               <article class="tool-card">
-                <div class="tool-visual voice"><img src="assets/media/preview-voice.svg" alt="Apercu des documents" /></div>
-                <div class="mini-badge">Documents</div>
-                <h3 class="feature-title">Mes documents</h3>
-                <p class="card-copy">Ajoutez, consultez et gerez vos documents lies a vos demandes.</p>
+                <div class="tool-visual voice"><img src="assets/media/preview-voice.svg" alt="Voice generation preview" /></div>
+                <div class="mini-badge">Voice Mix</div>
+                <h3 class="feature-title">Create voice-ready scripts</h3>
+                <p class="card-copy">Tune language, pace, and tone for social clips, explainers, and onboarding audio.</p>
               </article>
             </div>
           </section>
@@ -124,31 +124,26 @@
             <article class="card">
               <div class="card-header">
                 <div>
-                  <div class="small-label">Statistiques</div>
-                  <h3 class="panel-title">Resume d'activite</h3>
+                  <div class="small-label">Studio overview</div>
+                  <h3 class="panel-title">Creator metrics</h3>
                 </div>
-                <span class="status-pill active">Actif</span>
+                <span class="status-pill active">Live</span>
               </div>
               <div class="stats-grid">
                 <div class="stat-card">
-                  <div class="small-label">Demandes envoyees</div>
-                  <span class="metric-number">12</span>
-                  <div class="status-note">Demandes enregistrees</div>
+                  <div class="small-label">Projects</div>
+                  <span class="metric-number">148</span>
+                  <div class="status-note">12 new this week</div>
                 </div>
                 <div class="stat-card">
-                  <div class="small-label">Rendez-vous</div>
-                  <span class="metric-number">3</span>
-                  <div class="status-note">Rendez-vous planifies</div>
+                  <div class="small-label">Generated assets</div>
+                  <span class="metric-number">3.2K</span>
+                  <div class="status-note">Across image and voice tools</div>
                 </div>
                 <div class="stat-card">
-                  <div class="small-label">Documents</div>
-                  <span class="metric-number">8</span>
-                  <div class="status-note">Documents disponibles</div>
-                </div>
-                <div class="stat-card">
-                  <div class="small-label">Reclamations</div>
-                  <span class="metric-number">2</span>
-                  <div class="status-note">En cours de traitement</div>
+                  <div class="small-label">Subscribers</div>
+                  <span class="metric-number">924</span>
+                  <div class="status-note">18% monthly growth</div>
                 </div>
               </div>
             </article>
@@ -156,22 +151,22 @@
             <article class="panel">
               <div class="panel-header">
                 <div>
-                  <div class="small-label">Activite recente</div>
-                  <h3 class="panel-title">Dernieres actions</h3>
+                  <div class="small-label">Queue</div>
+                  <h3 class="panel-title">Recent activity</h3>
                 </div>
               </div>
               <div class="feed-list">
                 <div class="feed-item">
-                  <strong>Nouvelle demande envoyee</strong>
-                  <div class="feed-meta"><span>Gestion des demandes</span><span>il y a 5 minutes</span></div>
+                  <strong>New brand pack rendered</strong>
+                  <div class="feed-meta"><span>Gestion des documents</span><span>9 min ago</span></div>
                 </div>
                 <div class="feed-item">
-                  <strong>Rendez-vous confirme</strong>
-                  <div class="feed-meta"><span>Gestion des rendez-vous</span><span>il y a 20 minutes</span></div>
+                  <strong>Voice preset exported</strong>
+                  <div class="feed-meta"><span>Gestion des reclamations</span><span>24 min ago</span></div>
                 </div>
                 <div class="feed-item">
-                  <strong>Document ajoute</strong>
-                  <div class="feed-meta"><span>Gestion des documents</span><span>il y a 1 heure</span></div>
+                  <strong>Subscription upgraded to Pro</strong>
+                  <div class="feed-meta"><span>Gestion des rendez-vous</span><span>1 hour ago</span></div>
                 </div>
               </div>
             </article>
@@ -183,6 +178,7 @@
     <script src="assets/app.js"></script>
   </body>
 </html>
+
 
 
 
