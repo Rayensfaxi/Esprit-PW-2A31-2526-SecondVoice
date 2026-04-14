@@ -1,0 +1,276 @@
+﻿<?php
+
+?>
+
+<!DOCTYPE html>
+<html lang="fr">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Prise de rendez-vous | SecondVoice</title>
+    <link
+      rel="icon"
+      type="image/png"
+      sizes="32x32"
+      href="../assets/media/favicon-32.png"
+    />
+    <link
+      rel="icon"
+      type="image/png"
+      sizes="16x16"
+      href="../assets/media/favicon-16.png"
+    />
+    <link rel="apple-touch-icon" href="../assets/media/apple-touch-icon.png" />
+    <link rel="shortcut icon" href="../assets/media/favicon.png" />
+    <script>
+      const savedTheme = localStorage.getItem("theme");
+      const initialTheme =
+        savedTheme ||
+        (window.matchMedia("(prefers-color-scheme: light)").matches
+          ? "light"
+          : "dark");
+      document.documentElement.dataset.theme = initialTheme;
+    </script>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=Space+Grotesk:wght@500;700&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="../assets/css/style.css" />
+  </head>
+  <body>
+    <div class="page-shell">
+      <header class="site-header">
+        <div class="container nav-inner">
+          <a class="brand" href="index.php"
+            ><img
+              class="brand-logo"
+              src="../assets/media/secondvoice-logo.png"
+              alt="SecondVoice logo"
+          /></a>
+          <button
+            class="menu-toggle"
+            type="button"
+            data-menu-toggle
+            aria-label="Ouvrir le menu"
+          >
+            <span class="icon-lines"></span>
+          </button>
+          <div class="nav" data-nav>
+            <nav>
+              <ul class="nav-links">
+                <li><a href="index.php">Accueil</a></li>
+                <li><a href="about.php">A propos</a></li>
+                <li><a class="is-active" href="services.php">Services</a></li>
+                <li><a href="blog.php">Blog</a></li>
+                <li><a href="contact.php">Contact</a></li>
+              </ul>
+            </nav>
+            <div class="header-actions">
+              <button
+                class="icon-btn theme-toggle"
+                type="button"
+                data-theme-toggle
+                aria-label="Changer le theme"
+              >
+                <span class="theme-toggle-label" data-theme-label>Clair</span>
+              </button>
+              <div class="user-shell" data-user-shell>
+                <a
+                  class="icon-btn user-trigger"
+                  href="login.php"
+                  aria-label="Ouvrir la page de connexion"
+                  ><span>Profil</span></a
+                >
+                <div class="user-backdrop"></div>
+                <div class="user-panel">
+                  <div class="user-panel-head">
+                    <div class="user-panel-intro">
+                      <div class="user-avatar">JT</div>
+                      <div>
+                        <p class="user-panel-title">Bon retour</p>
+                        <p class="user-modal-copy">
+                          Connectez-vous pour acceder a vos projets, factures et
+                          demandes de support.
+                        </p>
+                      </div>
+                    </div>
+                    <button
+                      class="icon-btn user-close"
+                      type="button"
+                      data-user-close
+                      aria-label="Fermer la fenetre utilisateur"
+                    >
+                      X
+                    </button>
+                  </div>
+                  <div class="auth-tabs">
+                    <a class="auth-tab is-active" href="login.php"
+                      >Connexion</a
+                    >
+                    <a class="auth-tab" href="register.php">Inscription</a>
+                  </div>
+                  <section class="auth-panel is-active" data-auth-panel="login">
+                    <h3 class="auth-title">Connexion Client</h3>
+                    <p class="auth-helper">
+                      Utilisez votre e-mail et mot de passe pour continuer.
+                    </p>
+                    <form class="auth-form">
+                      <input
+                        class="field"
+                        type="email"
+                        placeholder="Adresse e-mail"
+                      />
+                      <input
+                        class="field"
+                        type="password"
+                        placeholder="Mot de passe"
+                      />
+                      <div class="auth-options">
+                        <label class="check-row"
+                          ><input type="checkbox" /> Se souvenir de moi</label
+                        >
+                        <a href="contact.php">Mot de passe oublie ?</a>
+                      </div>
+                      <button class="btn btn-primary" type="button">
+                        Se connecter
+                      </button>
+                    </form>
+                    <div class="user-panel-footer">
+                      <a class="btn btn-secondary" href="contact.php"
+                        >Support client</a
+                      >
+                    </div>
+                  </section>
+                  <section class="auth-panel" data-auth-panel="register">
+                    <h3 class="auth-title">Creer un compte</h3>
+                    <p class="auth-helper">
+                      Creez un compte de demonstration pour le suivi, le support
+                      et la gestion de vos demandes.
+                    </p>
+                    <form class="auth-form">
+                      <input
+                        class="field"
+                        type="text"
+                        placeholder="Nom complet"
+                      />
+                      <input
+                        class="field"
+                        type="email"
+                        placeholder="E-mail professionnel"
+                      />
+                      <input
+                        class="field"
+                        type="password"
+                        placeholder="Creer un mot de passe"
+                      />
+                      <button class="btn btn-primary" type="button">
+                        Creer un compte
+                      </button>
+                    </form>
+                    <ul class="auth-links">
+                      <li>
+                        <a href="services.php">Voir les offres de service</a>
+                      </li>
+                      <li>
+                        <a href="contact.php">Demander un acces entreprise</a>
+                      </li>
+                    </ul>
+                  </section>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </header>
+
+      <main>
+        <section class="page-hero">
+          <div class="container">
+            <div class="page-hero-card fade-up">
+              <div class="breadcrumbs">
+                <span>Accueil</span><span>/</span
+                ><span>Prise de rendez-vous</span>
+              </div>
+              <h1>Prise de rendez-vous rapide et sans erreur.</h1>
+              <p>
+                Planifiez vos rendez-vous, recevez des rappels et gardez un
+                historique clair.
+              </p>
+            </div>
+          </div>
+        </section>
+
+        <section class="section">
+          <div class="container service-layout">
+            <div class="post-content fade-up">
+              <div class="post-hero">
+                <div class="post-hero-content">
+                  <div class="tag">Service a la une</div>
+                  <h2>Des rendez-vous confirmes avec rappels automatiques.</h2>
+                  <p>
+                    Le service gere la disponibilite, la confirmation et les
+                    annulations.
+                  </p>
+                </div>
+              </div>
+              <h2>Vue d'ensemble du service</h2>
+              <p>
+                Nous mettons en place un calendrier partage, des notifications
+                et un suivi des visites.
+              </p>
+              <h3>Livrables typiques</h3>
+              <ul class="feature-list">
+                <li>Calendrier synchronise</li>
+                <li>Rappels automatiques</li>
+                <li>Gestion des annulations</li>
+                <li>Historique des rendez-vous</li>
+              </ul>
+              <h3>Pourquoi cette page convainc les acheteurs</h3>
+              <p>
+                Une page detail solide reduit l'ambiguite. Elle montre comment
+                le travail est realise, ce qui est inclus et ou l'impact metier
+                apparait.
+              </p>
+            </div>
+            <aside class="sidebar">
+              <div class="sidebar-card fade-up">
+                <h3>Apercu du projet</h3>
+                <ul class="footer-list">
+                  <li>Delai : 4 a 8 semaines</li>
+                  <li>Format : decouverte + implementation</li>
+                  <li>Ideal pour : operations de service</li>
+                  <li>Support : optimisation continue</li>
+                </ul>
+              </div>
+              <div class="sidebar-card fade-up">
+                <h3>Besoin d'adapter cette page ?</h3>
+                <p>
+                  Adaptez le contenu a des offres cloud, securite, analytics ou
+                  conception produit.
+                </p>
+                <a class="btn btn-primary" href="contact.php"
+                  >Demander une version personnalisee</a
+                >
+              </div>
+            </aside>
+          </div>
+        </section>
+      </main>
+
+      <footer class="footer">
+        <div class="container">
+          <div class="footer-bottom">
+            <span>&copy; 2026 SecondVoice. Tous droits reserves.</span>
+            <div class="footer-links">
+              <a href="services.php">Services</a
+              ><a href="contact.php">Contact</a>
+            </div>
+          </div>
+        </div>
+      </footer>
+    </div>
+    <script src="../assets/js/main.js"></script>
+  </body>
+</html>
