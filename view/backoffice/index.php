@@ -38,7 +38,7 @@ if (!in_array(strtolower((string) ($_SESSION['user_role'] ?? 'client')), ['admin
               <div class="nav-title">Gestion</div>
               <a class="nav-link" href="index.php" data-nav="home"><span class="nav-icon icon-home"></span><span>Tableau de bord</span></a>
               <a class="nav-link" href="gestion-utilisateurs.php" data-nav="profile"><span class="nav-icon icon-profile"></span><span>Gestion des utilisateurs</span></a>
-              <a class="nav-link" href="gestion-demandes.html" data-nav="community"><span class="nav-icon icon-community"></span><span>Gestion des demandes</span></a>
+              <a class="nav-link" href="gestion-brainstormings.php" data-nav="community"><span class="nav-icon icon-community"></span><span>Gestion des brainstormings</span></a>
               <a class="nav-link" href="gestion-rendezvous.html" data-nav="subscription"><span class="nav-icon icon-card"></span><span>Gestion des rendez-vous</span></a>
               <a class="nav-link" href="gestion-accompagnements.html" data-nav="chatbot"><span class="nav-icon icon-chat"></span><span>Gestion des accompagnements</span></a>
               <a class="nav-link" href="gestion-documents.html" data-nav="images"><span class="nav-icon icon-image"></span><span>Gestion des documents</span></a>
@@ -156,7 +156,7 @@ if (!in_array(strtolower((string) ($_SESSION['user_role'] ?? 'client')), ['admin
               <div class="feed-list">
                 <div class="feed-item">
                   <strong>Nouvelle demande envoyee</strong>
-                  <div class="feed-meta"><span>Gestion des demandes</span><span>il y a 5 minutes</span></div>
+                  <div class="feed-meta"><span>Gestion des brainstormings</span><span>il y a 5 minutes</span></div>
                 </div>
                 <div class="feed-item">
                   <strong>Rendez-vous confirme</strong>

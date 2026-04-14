@@ -22,6 +22,14 @@ class UtilisateurController
             return;
         }
 
+        if (class_exists('Config') && method_exists('Config', 'getConnexion')) {
+            $configConnection = Config::getConnexion();
+            if ($configConnection instanceof PDO) {
+                $this->conn = $configConnection;
+                return;
+            }
+        }
+
         throw new RuntimeException('Connexion base de donnees indisponible.');
     }
 
