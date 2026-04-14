@@ -1,0 +1,210 @@
+﻿<!DOCTYPE html>
+<html lang="fr">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Services | SecondVoice</title>
+    <link rel="icon" type="image/png" sizes="32x32" href="assets/media/favicon-32.png" />
+    <link rel="icon" type="image/png" sizes="16x16" href="assets/media/favicon-16.png" />
+    <link rel="apple-touch-icon" href="assets/media/apple-touch-icon.png" />
+    <link rel="shortcut icon" href="assets/media/favicon.png" />
+    <script>
+      const savedTheme = localStorage.getItem("theme");
+      const initialTheme =
+        savedTheme || (window.matchMedia("(prefers-color-scheme: light)").matches ? "light" : "dark");
+      document.documentElement.dataset.theme = initialTheme;
+    </script>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=Space+Grotesk:wght@500;700&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="assets/css/style.css" />
+  </head>
+  <body>
+    <div class="page-shell">
+      <header class="site-header">
+        <div class="container nav-inner">
+          <a class="brand" href="index.html"><img class="brand-logo" src="assets/media/secondvoice-logo.png" alt="SecondVoice logo" /></a>
+          <button class="menu-toggle" type="button" data-menu-toggle aria-label="Ouvrir le menu">
+            <span class="icon-lines"></span>
+          </button>
+          <div class="nav" data-nav>
+            <nav>
+              <ul class="nav-links">
+                <li><a href="index.html">Accueil</a></li>
+                <li><a href="about.html">A propos</a></li>
+                <li><a class="is-active" href="services.html">Services</a></li>
+                <li><a href="blog.html">Blog</a></li>
+                <li><a href="contact.html">Contact</a></li>
+              </ul>
+            </nav>
+            <div class="header-actions">
+              <button class="icon-btn theme-toggle" type="button" data-theme-toggle aria-label="Changer le theme">
+                <span class="theme-toggle-label" data-theme-label>Clair</span>
+              </button>
+              <div class="user-shell" data-user-shell>
+                <a class="icon-btn user-trigger" href="login.html" aria-label="Ouvrir la page de connexion"><span>Profil</span></a>
+                <div class="user-backdrop"></div>
+                <div class="user-panel">
+                  <div class="user-panel-head">
+                    <div class="user-panel-intro">
+                      <div class="user-avatar">JT</div>
+                      <div>
+                        <p class="user-panel-title">Bon retour</p>
+                        <p class="user-modal-copy">Connectez-vous pour acceder a vos projets, factures et demandes de support.</p>
+                      </div>
+                    </div>
+                    <button class="icon-btn user-close" type="button" data-user-close aria-label="Fermer la fenetre utilisateur">X</button>
+                  </div>
+                  <div class="auth-tabs">
+                    <a class="auth-tab is-active" href="login.html">Connexion</a>
+                    <a class="auth-tab" href="register.html">Inscription</a>
+                  </div>
+                  <section class="auth-panel is-active" data-auth-panel="login">
+                    <h3 class="auth-title">Connexion Client</h3>
+                    <p class="auth-helper">Utilisez votre e-mail et mot de passe pour continuer.</p>
+                    <form class="auth-form">
+                      <input class="field" type="email" placeholder="Adresse e-mail" />
+                      <input class="field" type="password" placeholder="Mot de passe" />
+                      <div class="auth-options">
+                        <label class="check-row"><input type="checkbox" /> Se souvenir de moi</label>
+                        <a href="contact.html">Mot de passe oublie ?</a>
+                      </div>
+                      <button class="btn btn-primary" type="button">Se connecter</button>
+                    </form>
+                    <div class="user-panel-footer">
+                      <a class="btn btn-secondary" href="contact.html">Support client</a>
+                    </div>
+                  </section>
+                  <section class="auth-panel" data-auth-panel="register">
+                    <h3 class="auth-title">Creer un compte</h3>
+                    <p class="auth-helper">Creez un compte de demonstration pour le suivi, le support et la gestion de vos demandes.</p>
+                    <form class="auth-form">
+                      <input class="field" type="text" placeholder="Nom complet" />
+                      <input class="field" type="email" placeholder="E-mail professionnel" />
+                      <input class="field" type="password" placeholder="Creer un mot de passe" />
+                      <button class="btn btn-primary" type="button">Creer un compte</button>
+                    </form>
+                    <ul class="auth-links">
+                      <li><a href="services.html">Voir les offres de service</a></li>
+                      <li><a href="contact.html">Demander un acces entreprise</a></li>
+                    </ul>
+                  </section>
+                </div>
+              </div>
+              <a class="btn btn-primary" href="service-demande-administrative.html">Voir les details</a>
+            </div>
+          </div>
+        </div>
+      </header>
+
+      <main>
+        <section class="page-hero">
+          <div class="container">
+            <div class="page-hero-card fade-up">
+              <div class="breadcrumbs"><span>Accueil</span><span>/</span><span>Services</span></div>
+              <h1>Nos services pour simplifier vos demarches</h1>
+              <p>
+                Decouvrez les services que nous mettons a votre disposition pour faciliter vos demarches administratives
+                et vous accompagner efficacement.
+              </p>
+            </div>
+          </div>
+        </section>
+
+        <section class="section">
+          <div class="container">
+            <div class="grid-3">
+              <article class="service-card fade-up" data-card-link="service-demande-administrative.html">
+                <div class="card-icon"></div>
+                <h3>Demande administrative</h3>
+                <p>Creez et envoyez vos demandes administratives en toute simplicite depuis votre espace.</p>
+                <a class="service-link" href="service-demande-administrative.html">Details du service</a>
+              </article>
+              <article class="service-card fade-up" data-card-link="service-prise-rendezvous.html">
+                <div class="card-icon"></div>
+                <h3>Prise de rendez-vous</h3>
+                <p>Planifiez facilement vos rendez-vous avec les services concernes et recevez des rappels.</p>
+                <a class="service-link" href="service-prise-rendezvous.html">Details du service</a>
+              </article>
+              <article class="service-card fade-up" data-card-link="service-accompagnement.html">
+                <div class="card-icon"></div>
+                <h3>Accompagnement</h3>
+                <p>Beneficiez d'un accompagnement personnalise pour completer vos demarches.</p>
+                <a class="service-link" href="service-accompagnement.html">Details du service</a>
+              </article>
+              <article class="service-card fade-up" data-card-link="service-reclamations.html">
+                <div class="card-icon"></div>
+                <h3>Reclamations</h3>
+                <p>Deposez vos reclamations et suivez leur traitement en temps reel.</p>
+                <a class="service-link" href="service-reclamations.html">Details du service</a>
+              </article>
+              <article class="service-card fade-up" data-card-link="service-suivi-dossiers.html">
+                <div class="card-icon"></div>
+                <h3>Suivi des dossiers</h3>
+                <p>Consultez l'etat de vos demandes et suivez leur progression.</p>
+                <a class="service-link" href="service-suivi-dossiers.html">Details du service</a>
+              </article>
+              <article class="service-card fade-up" data-card-link="service-support-utilisateur.html">
+                <div class="card-icon"></div>
+                <h3>Support utilisateur</h3>
+                <p>Contactez le support pour obtenir de l'aide rapidement.</p>
+                <a class="service-link" href="service-support-utilisateur.html">Details du service</a>
+              </article>
+            </div>
+          </div>
+        </section>
+
+        <section class="section">
+          <div class="container service-layout">
+            <div class="post-content fade-up">
+              <h2>Comment ca fonctionne ?</h2>
+              <p>
+                Un parcours simple pour demarrer vos demarches en ligne.
+              </p>
+              <h3>Les etapes</h3>
+              <ul class="feature-list">
+                <li>Creer un compte</li>
+                <li>Choisir un service</li>
+                <li>Envoyer une demande</li>
+                <li>Suivre le traitement</li>
+              </ul>
+            </div>
+            <aside class="sidebar">
+              <div class="sidebar-card fade-up">
+                <h3>Besoin d'aide pour vos demarches ?</h3>
+                <p>Notre equipe est la pour vous accompagner.</p>
+                <a class="btn btn-primary" href="contact.html">Demander de l'aide</a>
+              </div>
+              <div class="sidebar-card fade-up">
+                <h3>Pages du modele</h3>
+                <ul class="footer-list">
+                  <li><a href="index.html">Accueil</a></li>
+                  <li><a href="about.html">A propos</a></li>
+                  <li><a href="service-demande-administrative.html">Demande administrative</a></li>
+                  <li><a href="contact.html">Contact</a></li>
+                </ul>
+              </div>
+            </aside>
+          </div>
+        </section>
+
+      </main>
+
+      <footer class="footer">
+        <div class="container">
+          <div class="footer-bottom">
+            <span>&copy; 2026 SecondVoice. Tous droits reserves.</span>
+            <div class="footer-links"><a href="index.html">Confidentialite</a><a href="index.html">Conditions</a></div>
+          </div>
+        </div>
+      </footer>
+    </div>
+    <script src="assets/js/main.js"></script>
+  </body>
+</html>
+
+
+

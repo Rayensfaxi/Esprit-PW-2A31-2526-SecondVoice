@@ -1,0 +1,189 @@
+<!DOCTYPE html>
+<html lang="fr">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>SecondVoice | Gestion des rendez-vous</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+    <link rel="stylesheet" href="assets/style.css" />
+  </head>
+  <body data-page="subscription">
+    <div class="overlay" data-overlay></div>
+    <div class="shell">
+      <aside class="sidebar">
+        <div class="sidebar-panel">
+          <div class="brand-row">
+            <a class="brand" href="index.php"><img class="brand-logo" src="assets/media/secondvoice-logo.png" alt="SecondVoice logo" /></a>
+</div>
+
+          <div class="sidebar-scroll">
+            <div class="nav-section">
+              <div class="nav-title">Gestion</div>
+              <a class="nav-link" href="index.php" data-nav="home"><span class="nav-icon icon-home"></span><span>Tableau de bord</span></a>
+              <a class="nav-link" href="gestion-utilisateurs.php" data-nav="profile"><span class="nav-icon icon-profile"></span><span>Gestion des utilisateurs</span></a>
+              <a class="nav-link" href="gestion-demandes.php" data-nav="community"><span class="nav-icon icon-community"></span><span>Gestion des demandes</span></a>
+              <a class="nav-link" href="gestion-rendezvous.php" data-nav="subscription"><span class="nav-icon icon-card"></span><span>Gestion des rendez-vous</span></a>
+              <a class="nav-link" href="gestion-accompagnements.php" data-nav="chatbot"><span class="nav-icon icon-chat"></span><span>Gestion des accompagnements</span></a>
+              <a class="nav-link" href="gestion-documents.php" data-nav="images"><span class="nav-icon icon-image"></span><span>Gestion des documents</span></a>
+              <a class="nav-link" href="gestion-reclamations.php" data-nav="voice"><span class="nav-icon icon-mic"></span><span>Gestion des reclamations</span></a>
+              <a class="nav-link" href="settings.php" data-nav="settings"><span class="nav-icon icon-settings"></span><span>Parametres</span></a>
+            </div>
+          </div>
+
+        </div>
+      </aside>
+
+      <main class="page">
+        <div class="topbar">
+          <div>
+            <button class="mobile-toggle" data-nav-toggle aria-label="Open navigation">=</button>
+            <h1 class="page-title">Gestion des rendez-vous</h1>
+            <div class="page-subtitle">Planifiez et confirmez les rendez-vous avec les usagers.</div>
+          </div>
+          <div class="toolbar-actions">
+            <a class="update-button" href="../../../../front_office/view/frontend/index.html">Revenir</a>
+            <button class="icon-button icon-moon" data-theme-toggle aria-label="Switch theme"></button>
+            <div class="profile-menu-wrap" data-profile-wrap>
+              <button class="profile-trigger" data-profile-toggle aria-label="Open profile menu">
+                <img class="topbar-avatar" src="assets/media/profile-avatar.svg" alt="Mack Gok profile" />
+              </button>
+              <div class="profile-dropdown" data-profile-menu>
+                <div class="profile-dropdown-card">
+                  <div class="profile-thumb"><img src="assets/media/profile-avatar.svg" alt="Profile avatar" /></div>
+                  <div>
+                    <strong>MR. Crow Kader</strong>
+                    <span>CEO, Valo How Masud</span>
+                  </div>
+                </div>
+                <div class="profile-menu-list">
+                  <a class="menu-link" href="gestion-utilisateurs.php"><span class="menu-icon icon-profile"></span><span>Gestion des utilisateurs</span></a>
+                  <a class="menu-link" href="settings.php"><span class="menu-icon icon-settings"></span><span>Parametres</span></a>
+                  <a class="menu-link" href="gestion-rendezvous.php"><span class="menu-icon icon-card"></span><span>Gestion des rendez-vous</span></a>
+                  <a class="menu-link" href="gestion-demandes.php"><span class="menu-icon icon-activity"></span><span>Gestion des demandes</span></a>
+                  <a class="menu-link" href="gestion-accompagnements.php"><span class="menu-icon icon-help"></span><span>Gestion des accompagnements</span></a>
+                </div>
+                <button class="logout-button" type="button">Logout <span class="logout-arrow">-></span></button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="page-grid">
+          <section class="hero-banner">
+            <div class="hero-inner">
+              <div class="hero-copy">
+                <div class="badge">Gestion</div>
+                <h1>Gestion des rendez-vous</h1>
+                <p>
+                  Planifiez et confirmez les rendez-vous avec les usagers.
+                </p>
+                <a class="cta-button" href="gestion-rendezvous.php">Planifier un rendez-vous</a>
+              </div>
+              <div class="hero-visual">
+                <div class="device-stack">
+                  <img class="hero-art" src="assets/media/hero-collage.svg" alt="IntellectAI creator studio collage" />
+                </div>
+              </div>
+            </div>
+          </section>
+
+          <section class="content-section">
+            <div class="welcome-row">
+              <div class="wave-hand">👋</div>
+              <div>
+                <h2 class="section-title">Welcome, Mack Gok</h2>
+                <div class="helper">Your most used creation tools are pinned below.</div>
+              </div>
+            </div>
+
+            <div class="card-grid">
+              <article class="tool-card">
+                <div class="tool-visual chat"><img src="assets/media/preview-chat.svg" alt="AI chat workspace preview" /></div>
+                <div class="mini-badge">AI Chat</div>
+                <h3 class="feature-title">AI assistant workspace</h3>
+                <p class="card-copy">Draft captions, product descriptions, and customer responses with reusable prompt blocks.</p>
+              </article>
+              <article class="tool-card">
+                <div class="tool-visual image"><img src="assets/media/preview-image.svg" alt="Image generator preview" /></div>
+                <div class="mini-badge">Image Lab</div>
+                <h3 class="feature-title">Generate campaign visuals</h3>
+                <p class="card-copy">Build prompt sets, choose ratios, and review image batches from the same control panel.</p>
+              </article>
+              <article class="tool-card">
+                <div class="tool-visual voice"><img src="assets/media/preview-voice.svg" alt="Voice generation preview" /></div>
+                <div class="mini-badge">Voice Mix</div>
+                <h3 class="feature-title">Create voice-ready scripts</h3>
+                <p class="card-copy">Tune language, pace, and tone for social clips, explainers, and onboarding audio.</p>
+              </article>
+            </div>
+          </section>
+
+          <section class="dual-grid">
+            <article class="card">
+              <div class="card-header">
+                <div>
+                  <div class="small-label">Studio overview</div>
+                  <h3 class="panel-title">Creator metrics</h3>
+                </div>
+                <span class="status-pill active">Live</span>
+              </div>
+              <div class="stats-grid">
+                <div class="stat-card">
+                  <div class="small-label">Projects</div>
+                  <span class="metric-number">148</span>
+                  <div class="status-note">12 new this week</div>
+                </div>
+                <div class="stat-card">
+                  <div class="small-label">Generated assets</div>
+                  <span class="metric-number">3.2K</span>
+                  <div class="status-note">Across image and voice tools</div>
+                </div>
+                <div class="stat-card">
+                  <div class="small-label">Subscribers</div>
+                  <span class="metric-number">924</span>
+                  <div class="status-note">18% monthly growth</div>
+                </div>
+              </div>
+            </article>
+
+            <article class="panel">
+              <div class="panel-header">
+                <div>
+                  <div class="small-label">Queue</div>
+                  <h3 class="panel-title">Recent activity</h3>
+                </div>
+              </div>
+              <div class="feed-list">
+                <div class="feed-item">
+                  <strong>New brand pack rendered</strong>
+                  <div class="feed-meta"><span>Gestion des documents</span><span>9 min ago</span></div>
+                </div>
+                <div class="feed-item">
+                  <strong>Voice preset exported</strong>
+                  <div class="feed-meta"><span>Gestion des reclamations</span><span>24 min ago</span></div>
+                </div>
+                <div class="feed-item">
+                  <strong>Subscription upgraded to Pro</strong>
+                  <div class="feed-meta"><span>Gestion des rendez-vous</span><span>1 hour ago</span></div>
+                </div>
+              </div>
+            </article>
+          </section>
+        </div>
+      </main>
+    </div>
+
+    <script src="assets/app.js"></script>
+  </body>
+</html>
+
+
+
+
+
+
+
+
+
