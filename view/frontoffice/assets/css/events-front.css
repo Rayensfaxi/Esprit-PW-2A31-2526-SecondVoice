@@ -1,0 +1,79 @@
+.events-page{padding:18px 0}
+.controls{margin:12px 0 22px;gap:12px;align-items:center}
+.search .field{min-width:320px;max-width:520px;border-radius:12px;padding:10px 14px;border:1px solid var(--input-border);background:var(--input-bg);color:var(--text);box-shadow:none}
+.tabs .tab-toggle{border-radius:999px;padding:8px 12px;background:transparent;border:1px solid transparent;color:var(--muted);}
+.tabs .tab-toggle.active{background:linear-gradient(90deg,var(--primary),var(--primary-2));color:#fff;box-shadow:var(--shadow)}
+.grid-3{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:18px}
+/* Structure des cartes (organisation back office, couleurs front office clair) */
+.event-card{background:#fff;border:1px solid #e5e7eb;padding:18px;border-radius:12px;margin-bottom:16px;transition:transform .2s ease,box-shadow .2s ease;display:flex;flex-direction:column;min-height:300px;box-shadow:0 4px 6px rgba(0,0,0,0.05)}
+.event-card:hover{transform:translateY(-4px);box-shadow:0 12px 24px rgba(99,102,241,0.15)}
+
+/* Titre en haut avec ligne de statut */
+.event-card .row{display:flex;justify-content:space-between;align-items:flex-start;gap:8px;margin-bottom:8px}
+.event-card .row.between{justify-content:space-between}
+.event-card h3{margin:0;font-size:1.15rem;color:#1f2937;font-weight:600}
+
+/* Description */
+.event-card .desc{color:#374151;margin:12px 0;line-height:1.6;font-size:0.95rem}
+
+/* Métadonnées (dates, lieu, places) */
+.event-card .meta{color:#4b5563;font-size:0.95rem;margin-bottom:10px;line-height:1.5}
+.event-card .meta.small{color:#6b7280;font-size:0.9rem;margin-bottom:6px}
+
+/* Ressources */
+.event-card .small{color:#6b7280;font-size:0.9rem;margin-top:8px;font-weight:500}
+.resources{margin-top:8px}
+.resources ul{margin:6px 0 0 18px;color:var(--muted)}
+.badge-status{display:inline-block;padding:6px 10px;border-radius:999px;font-weight:700;font-size:13px}
+.badge-status.valid{background:var(--green-soft);color:var(--text)}
+.badge-status.pending{background:var(--warning-soft);color:var(--text)}
+.badge-status.refused{background:var(--danger-soft);color:var(--text)}
+/* Zone des actions en bas de la carte */
+.actions{margin-top:auto;padding-top:16px;display:flex;flex-wrap:wrap;gap:12px;align-items:stretch;justify-content:flex-start;border-top:1px solid #e5e7eb}
+.actions .btn{flex:1 1 auto;min-width:85px;max-width:130px;padding:10px 14px}
+
+/* Harmonisation avec le back office - style des boutons */
+.btn{background:linear-gradient(90deg,var(--primary),var(--primary-2));color:#fff;padding:10px 16px;border-radius:10px;border:none;cursor:pointer;font-size:0.9rem;font-weight:500;min-height:38px;display:inline-flex;align-items:center;justify-content:center;transition:all .15s ease;box-shadow:0 2px 4px rgba(79,70,229,0.2)}
+.btn:hover{filter:brightness(1.1);transform:translateY(-1px);box-shadow:0 4px 8px rgba(79,70,229,0.3)}
+.btn.outline{background:transparent;border:1px solid var(--primary);color:var(--primary)}
+.btn.outline:hover{background:linear-gradient(90deg,var(--primary),var(--primary-2));color:#fff}
+
+/* Harmonisation avec le back office - boutons Modifier et Supprimer */
+.btn.modify,.btn.delete{background:linear-gradient(90deg,var(--primary),var(--primary-2));color:#fff;border:none;font-size:0.9rem;font-weight:500;min-height:38px;padding:10px 16px;border-radius:10px;display:inline-flex;align-items:center;justify-content:center;cursor:pointer;transition:all .15s ease;box-shadow:0 2px 4px rgba(79,70,229,0.2)}
+.btn.modify:hover,.btn.delete:hover{filter:brightness(1.1);transform:translateY(-1px);box-shadow:0 4px 8px rgba(79,70,229,0.3)}
+.reg-item{padding:12px;border-radius:12px;border:1px solid var(--soft-border);margin-bottom:10px;background:linear-gradient(180deg,var(--panel) 0%, var(--panel-3) 100%)}
+
+/* Styles pour la validation du formulaire */
+.required {
+  color: #dc3545;
+  font-weight: bold;
+  margin-left: 2px;
+}
+
+.error-message {
+  color: #dc3545 !important;
+  font-size: 0.875rem !important;
+  margin-top: 4px !important;
+  display: none;
+  font-weight: 500 !important;
+  line-height: 1.4 !important;
+  background: transparent !important;
+  border: none !important;
+  padding: 0 !important;
+  text-align: left !important;
+}
+
+.error-message.visible {
+  display: block !important;
+}
+
+.error-message:not(:empty) {
+  display: block !important;
+}
+
+/* responsive tweaks */
+@media (max-width:900px){
+  .search .field{min-width:160px;max-width:100%}
+  .controls{flex-direction:column;align-items:flex-start}
+}
+

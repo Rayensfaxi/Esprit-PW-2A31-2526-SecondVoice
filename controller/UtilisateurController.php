@@ -120,24 +120,56 @@ class UtilisateurController
 
     public function authenticateUser(string $email, string $password): ?array
     {
+        $email = trim(strtolower($email));
+        error_log("AUTH: Tentative connexion pour email: {$email}");
+        
         $stmt = $this->conn->prepare('SELECT id, nom, prenom, email, telephone, role, statut_compte, date_creation, mot_de_passe FROM utilisateur WHERE email = :email');
-        $stmt->execute([':email' => trim(strtolower($email))]);
+        $stmt->execute([':email' => $email]);
         $user = $stmt->fetch(PDO::FETCH_ASSOC);
 
         if (!$user) {
+            error_log("AUTH: Utilisateur non trouvé pour email: {$email}");
             return null;
         }
+        
+        error_log("AUTH: Utilisateur trouvé, ID: {$user['id']}, role: {$user['role']}, statut: {$user['statut_compte']}");
 
         if (strtolower((string) ($user['statut_compte'] ?? 'actif')) !== 'actif') {
+            error_log("AUTH: Compte inactif/bloqué pour utilisateur ID: {$user['id']}");
             throw new RuntimeException('Ce compte est inactif ou bloque.');
         }
 
         $hash = (string) ($user['mot_de_passe'] ?? '');
-        if ($hash === '' || !password_verify($password, $hash)) {
+        error_log("AUTH: Hash récupéré (longueur: " . strlen($hash) . ")");
+        
+        // Vérifier si c'est un hash ou du texte brut
+        $isHash = password_get_info($hash)['algo'] !== null;
+        error_log("AUTH: Est-ce un hash valide ? " . ($isHash ? 'OUI' : 'NON (texte brut probablement)'));
+        
+        if ($hash === '') {
+            error_log("AUTH: Mot de passe vide en base");
             return null;
+        }
+        
+        // Si c'est un hash valide, utiliser password_verify
+        // Sinon, comparer directement (pour les comptes créés manuellement)
+        if ($isHash) {
+            if (!password_verify($password, $hash)) {
+                error_log("AUTH: password_verify a échoué");
+                return null;
+            }
+            error_log("AUTH: password_verify a réussi");
+        } else {
+            // Comparaison texte brut (pour compatibilité avec données manuelles)
+            if ($password !== $hash) {
+                error_log("AUTH: Comparaison texte brut a échoué");
+                return null;
+            }
+            error_log("AUTH: Comparaison texte brut a réussi");
         }
 
         unset($user['mot_de_passe']);
+        error_log("AUTH: Connexion réussie pour utilisateur ID: {$user['id']}");
         return $this->normalizeUserRow($user);
     }
 
