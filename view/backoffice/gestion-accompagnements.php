@@ -1,15 +1,32 @@
+<?php
+
+session_start();
+
+if (!isset($_SESSION['user_id'])) {
+    header('Location: ../frontoffice/login.php?status=auth_required');
+    exit;
+}
+
+$roleSession = strtolower((string) ($_SESSION['user_role'] ?? 'client'));
+if (!in_array($roleSession, ['admin', 'agent'], true)) {
+    header('Location: ../frontoffice/profile.php?status=forbidden');
+    exit;
+}
+
+$isAdmin = $roleSession === 'admin';
+?>
 <!DOCTYPE html>
 <html lang="fr">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>SecondVoice | Gestion des documents</title>
+    <title>SecondVoice | Gestion des accompagnements</title>
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
     <link rel="stylesheet" href="assets/style.css" />
   </head>
-  <body data-page="images">
+  <body data-page="chatbot">
     <div class="overlay" data-overlay></div>
     <div class="shell">
       <aside class="sidebar">
@@ -21,14 +38,18 @@
           <div class="sidebar-scroll">
             <div class="nav-section">
               <div class="nav-title">Gestion</div>
+              <?php if ($isAdmin): ?>
               <a class="nav-link" href="index.php" data-nav="home"><span class="nav-icon icon-home"></span><span>Tableau de bord</span></a>
               <a class="nav-link" href="gestion-utilisateurs.php" data-nav="profile"><span class="nav-icon icon-profile"></span><span>Gestion des utilisateurs</span></a>
               <a class="nav-link" href="gestion-brainstormings.php" data-nav="community"><span class="nav-icon icon-community"></span><span>Gestion des brainstormings</span></a>
-              <a class="nav-link" href="gestion-rendezvous.html" data-nav="subscription"><span class="nav-icon icon-card"></span><span>Gestion des rendez-vous</span></a>
-              <a class="nav-link" href="gestion-accompagnements.html" data-nav="chatbot"><span class="nav-icon icon-chat"></span><span>Gestion des accompagnements</span></a>
-              <a class="nav-link" href="gestion-documents.html" data-nav="images"><span class="nav-icon icon-image"></span><span>Gestion des documents</span></a>
-              <a class="nav-link" href="gestion-reclamations.html" data-nav="voice"><span class="nav-icon icon-mic"></span><span>Gestion des reclamations</span></a>
-              <a class="nav-link" href="settings.html" data-nav="settings"><span class="nav-icon icon-settings"></span><span>Parametres</span></a>
+              <a class="nav-link" href="gestion-rendezvous.php" data-nav="subscription"><span class="nav-icon icon-card"></span><span>Gestion des rendez-vous</span></a>
+              <?php endif; ?>
+              <a class="nav-link" href="gestion-accompagnements.php" data-nav="chatbot"><span class="nav-icon icon-chat"></span><span>Gestion des accompagnements</span></a>
+              <?php if ($isAdmin): ?>
+              <a class="nav-link" href="gestion-evenements.php" data-nav="images"><span class="nav-icon icon-image"></span><span>Gestion des evenements</span></a>
+              <a class="nav-link" href="gestion-reclamations.php" data-nav="voice"><span class="nav-icon icon-mic"></span><span>Gestion des reclamations</span></a>
+              <a class="nav-link" href="settings.php" data-nav="settings"><span class="nav-icon icon-settings"></span><span>Parametres</span></a>
+              <?php endif; ?>
             </div>
           </div>
 
@@ -39,11 +60,11 @@
         <div class="topbar">
           <div>
             <button class="mobile-toggle" data-nav-toggle aria-label="Open navigation">=</button>
-            <h1 class="page-title">Gestion des documents</h1>
-            <div class="page-subtitle">Centralisez les documents et suivez leur validation.</div>
+            <h1 class="page-title">Gestion des accompagnements</h1>
+            <div class="page-subtitle">Assurez le suivi des accompagnements et des relances.</div>
           </div>
           <div class="toolbar-actions">
-            <a class="update-button" href="../frontoffice/index.html">Revenir</a>
+            <a class="update-button" href="../frontoffice/index.php">Revenir</a>
             <button class="icon-button icon-moon" data-theme-toggle aria-label="Switch theme"></button>
             <div class="profile-menu-wrap" data-profile-wrap>
               <button class="profile-trigger" data-profile-toggle aria-label="Open profile menu">
@@ -58,11 +79,13 @@
                   </div>
                 </div>
                 <div class="profile-menu-list">
+                  <?php if ($isAdmin): ?>
                   <a class="menu-link" href="gestion-utilisateurs.php"><span class="menu-icon icon-profile"></span><span>Gestion des utilisateurs</span></a>
-                  <a class="menu-link" href="settings.html"><span class="menu-icon icon-settings"></span><span>Parametres</span></a>
-                  <a class="menu-link" href="gestion-rendezvous.html"><span class="menu-icon icon-card"></span><span>Gestion des rendez-vous</span></a>
+                  <a class="menu-link" href="settings.php"><span class="menu-icon icon-settings"></span><span>Parametres</span></a>
+                  <a class="menu-link" href="gestion-rendezvous.php"><span class="menu-icon icon-card"></span><span>Gestion des rendez-vous</span></a>
                   <a class="menu-link" href="gestion-brainstormings.php"><span class="menu-icon icon-activity"></span><span>Gestion des brainstormings</span></a>
-                  <a class="menu-link" href="gestion-accompagnements.html"><span class="menu-icon icon-help"></span><span>Gestion des accompagnements</span></a>
+                  <?php endif; ?>
+                  <a class="menu-link" href="gestion-accompagnements.php"><span class="menu-icon icon-help"></span><span>Gestion des accompagnements</span></a>
                 </div>
                 <button class="logout-button" type="button">Logout <span class="logout-arrow">-></span></button>
               </div>
@@ -75,11 +98,11 @@
             <div class="hero-inner">
               <div class="hero-copy">
                 <div class="badge">Gestion</div>
-                <h1>Gestion des documents</h1>
+                <h1>Gestion des accompagnements</h1>
                 <p>
-                  Centralisez les documents et suivez leur validation.
+                  Assurez le suivi des accompagnements et des relances.
                 </p>
-                <a class="cta-button" href="gestion-documents.html">Ajouter un document</a>
+                <a class="cta-button" href="gestion-accompagnements.php">Voir les accompagnements</a>
               </div>
               <div class="hero-visual">
                 <div class="device-stack">
@@ -91,7 +114,7 @@
 
           <section class="content-section">
             <div class="welcome-row">
-              <div class="wave-hand">👋</div>
+              <div class="wave-hand">ðŸ‘‹</div>
               <div>
                 <h2 class="section-title">Welcome, Mack Gok</h2>
                 <div class="helper">Your most used creation tools are pinned below.</div>
@@ -158,7 +181,7 @@
               <div class="feed-list">
                 <div class="feed-item">
                   <strong>New brand pack rendered</strong>
-                  <div class="feed-meta"><span>Gestion des documents</span><span>9 min ago</span></div>
+                  <div class="feed-meta"><span>Gestion des evenements</span><span>9 min ago</span></div>
                 </div>
                 <div class="feed-item">
                   <strong>Voice preset exported</strong>
@@ -178,6 +201,8 @@
     <script src="assets/app.js"></script>
   </body>
 </html>
+
+
 
 
 

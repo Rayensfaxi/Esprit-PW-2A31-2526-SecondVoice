@@ -3,6 +3,7 @@ declare(strict_types=1);
 
 session_start();
 require_once __DIR__ . '/../../controller/UtilisateurController.php';
+require_once __DIR__ . '/../../controller/ActivityLogger.php';
 
 if (!isset($_SESSION['user_id'])) {
     header('Location: login.php');
@@ -37,6 +38,52 @@ function deleteUserPhotoFiles(int $userId, string $photoDir): void
         if (is_file($file)) {
             @unlink($file);
         }
+    }
+}
+
+function formatEventDate(string $isoDate): string
+{
+    try {
+        return (new DateTime($isoDate))->format('d/m/Y');
+    } catch (Throwable $exception) {
+        return '-';
+    }
+}
+
+function formatEventTime(string $isoDate): string
+{
+    try {
+        return (new DateTime($isoDate))->format('H:i');
+    } catch (Throwable $exception) {
+        return '-';
+    }
+}
+
+function formatTimeAgo(string $isoDate): string
+{
+    try {
+        $date = new DateTime($isoDate);
+        $now = new DateTime();
+        $diff = max(0, $now->getTimestamp() - $date->getTimestamp());
+
+        if ($diff < 60) {
+            return "a l'instant";
+        }
+        if ($diff < 3600) {
+            $minutes = (int) floor($diff / 60);
+            return 'il y a ' . $minutes . ' min';
+        }
+        if ($diff < 86400) {
+            $hours = (int) floor($diff / 3600);
+            return 'il y a ' . $hours . ' h';
+        }
+        if ($diff < 172800) {
+            return "hier";
+        }
+        $days = (int) floor($diff / 86400);
+        return 'il y a ' . $days . ' jours';
+    } catch (Throwable $exception) {
+        return '-';
     }
 }
 
@@ -91,6 +138,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $removePhoto = ((string) ($_POST['remove_photo'] ?? '0')) === '1';
 
     try {
+        $oldUser = $user;
         $newPhotoTmp = null;
         $newPhotoExtension = null;
 
@@ -156,6 +204,24 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $_SESSION['user_prenom'] = (string) ($user['prenom'] ?? '');
         $_SESSION['user_email'] = (string) ($user['email'] ?? '');
 
+        $profileChanged = (
+            (string) ($oldUser['nom'] ?? '') !== (string) ($user['nom'] ?? '') ||
+            (string) ($oldUser['prenom'] ?? '') !== (string) ($user['prenom'] ?? '') ||
+            (string) ($oldUser['email'] ?? '') !== (string) ($user['email'] ?? '') ||
+            (string) ($oldUser['telephone'] ?? '') !== (string) ($user['telephone'] ?? '') ||
+            $password !== ''
+        );
+
+        if ($profileChanged) {
+            ActivityLogger::log($userId, 'Profil', 'Mise a jour du profil utilisateur.');
+        }
+
+        if ($newPhotoTmp !== null && $newPhotoExtension !== null) {
+            ActivityLogger::log($userId, 'Photo', "Ajout d'une photo de profil.");
+        } elseif ($removePhoto) {
+            ActivityLogger::log($userId, 'Photo', "Suppression de la photo de profil.");
+        }
+
         $feedback = 'Profil mis a jour avec succes.';
         $feedbackType = 'success';
     } catch (Throwable $exception) {
@@ -168,6 +234,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $user['telephone'] = $telephone;
     }
 }
+
+$recentActivities = ActivityLogger::getRecent($userId, 5);
+$lastActivity = $recentActivities[0] ?? null;
 
 $currentPhotoPath = findUserPhotoFile($userId, $photoDir);
 $currentPhotoUrl = '';
@@ -204,25 +273,25 @@ $initials = getInitials($user);
     <div class="page-shell">
       <header class="site-header">
         <div class="container nav-inner">
-          <a class="brand" href="index.html"><img class="brand-logo" src="assets/media/secondvoice-logo.png" alt="SecondVoice logo" /></a>
+          <a class="brand" href="index.php"><img class="brand-logo" src="assets/media/secondvoice-logo.png" alt="SecondVoice logo" /></a>
           <button class="menu-toggle" type="button" data-menu-toggle aria-label="Ouvrir le menu">
             <span class="icon-lines"></span>
           </button>
           <div class="nav" data-nav>
             <nav>
               <ul class="nav-links">
-                <li><a href="index.html">Accueil</a></li>
-                <li><a href="about.html">A propos</a></li>
-                <li><a href="services.html">Services</a></li>
-                <li><a href="blog.html">Blog</a></li>
-                <li><a href="contact.html">Contact</a></li>
+                <li><a href="index.php">Accueil</a></li>
+                <li><a href="about.php">A propos</a></li>
+                <li><a href="services.php">Services</a></li>
+                <li><a href="blog.php">Blog</a></li>
+                <li><a href="contact.php">Contact</a></li>
               </ul>
             </nav>
             <div class="header-actions">
               <button class="icon-btn theme-toggle" type="button" data-theme-toggle aria-label="Changer le theme">
                 <span class="theme-toggle-label" data-theme-label>Clair</span>
               </button>
-              <a class="btn btn-secondary" href="index.html">Accueil</a>
+              <a class="btn btn-secondary" href="index.php">Accueil</a>
               <form method="post" action="profile.php" style="display:inline;">
                 <input type="hidden" name="action" value="logout" />
                 <button class="btn btn-primary" type="submit">Deconnexion</button>
@@ -301,13 +370,46 @@ $initials = getInitials($user);
               </div>
 
               <div class="sidebar-card fade-up">
+                <h3>Derniere activite</h3>
+                <?php if ($lastActivity): ?>
+                  <p class="profile-help">Type : <?= h((string) ($lastActivity['type'] ?? '-')) ?></p>
+                  <p class="profile-help">Date : <?= h(formatEventDate((string) ($lastActivity['at'] ?? ''))) ?></p>
+                  <p class="profile-help">Heure : <?= h(formatEventTime((string) ($lastActivity['at'] ?? ''))) ?></p>
+                  <p class="profile-help">Detail : <?= h((string) ($lastActivity['detail'] ?? '-')) ?></p>
+                <?php else: ?>
+                  <p class="profile-help">Aucune activite enregistree pour le moment.</p>
+                <?php endif; ?>
+              </div>
+
+              <div class="sidebar-card fade-up">
+                <h3>Activite recente</h3>
+                <?php if (count($recentActivities) === 0): ?>
+                  <p class="profile-help">Aucune activite recente.</p>
+                <?php else: ?>
+                  <ul class="footer-list">
+                    <?php foreach ($recentActivities as $activity): ?>
+                      <li>
+                        <?= h((string) ($activity['detail'] ?? 'Activite')) ?>
+                        <span class="profile-help"> - <?= h(formatTimeAgo((string) ($activity['at'] ?? ''))) ?></span>
+                      </li>
+                    <?php endforeach; ?>
+                  </ul>
+                <?php endif; ?>
+              </div>
+
+              <div class="sidebar-card fade-up">
                 <h3>Liens rapides</h3>
                 <ul class="footer-list">
-                  <li><a href="index.html">Accueil</a></li>
-                  <li><a href="services.html">Services</a></li>
-                  <li><a href="contact.html">Support</a></li>
-                  <?php if (strtolower((string) ($user['role'] ?? 'client')) === 'admin' || strtolower((string) ($user['role'] ?? 'client')) === 'agent'): ?>
+                  <li><a href="index.php">Accueil</a></li>
+                  <li><a href="services.php">Services</a></li>
+                  <li><a href="contact.php">Support</a></li>
+                  <?php
+                    $role = strtolower((string) ($user['role'] ?? 'client'));
+                    if ($role === 'admin'):
+                  ?>
                   <li><a href="../backoffice/index.php">Dashboard</a></li>
+                  <?php elseif ($role === 'agent'): ?>
+                  <li><a href="../backoffice/gestion-accompagnements.php">Dashboard</a></li>
                   <?php endif; ?>
                 </ul>
               </div>

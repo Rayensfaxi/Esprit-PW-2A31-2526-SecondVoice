@@ -173,7 +173,7 @@ function updateFrontOfficeIdentity(profile, hasSession) {
       footerLink.href = INTEGRATION_ROUTES.backOfficeHome;
     } else {
       footerLink.textContent = "Support client";
-      footerLink.href = "contact.html";
+      footerLink.href = "contact.php";
     }
   }
 }
@@ -229,27 +229,41 @@ function redirectToBackOffice() {
 }
 
 function ensureDashboardButton() {
-  const headerActions = document.querySelector(".header-actions");
-  if (!headerActions) {
+  return Array.from(document.querySelectorAll("[data-dashboard-link]"));
+}
+
+async function updateDashboardVisibility() {
+  const dashboardButtons = ensureDashboardButton();
+  if (!dashboardButtons.length) {
     return;
   }
 
-  let dashboardButton = headerActions.querySelector("[data-dashboard-link]");
-  if (!dashboardButton) {
-    dashboardButton = document.createElement("a");
-    dashboardButton.className = "btn btn-secondary";
-    dashboardButton.setAttribute("data-dashboard-link", "true");
-    dashboardButton.textContent = "TABLEAU DE BORD";
+  try {
+    const response = await fetch("login.php?action=session-role", {
+      method: "GET",
+      credentials: "same-origin",
+      headers: { Accept: "application/json" }
+    });
 
-    const userShellNode = headerActions.querySelector(".user-shell");
-    if (userShellNode && userShellNode.nextSibling) {
-      headerActions.insertBefore(dashboardButton, userShellNode.nextSibling);
-    } else {
-      headerActions.appendChild(dashboardButton);
+    if (!response.ok) {
+      return;
     }
-  }
 
-  dashboardButton.setAttribute("href", INTEGRATION_ROUTES.backOfficeHome);
+    const data = await response.json();
+    if (!data || !data.canAccessDashboard || !data.dashboardUrl) {
+      dashboardButtons.forEach((button) => {
+        button.style.display = "none";
+      });
+      return;
+    }
+
+    dashboardButtons.forEach((button) => {
+      button.setAttribute("href", data.dashboardUrl);
+      button.style.display = "";
+    });
+  } catch (error) {
+    // Keep visible if session check fails.
+  }
 }
 
 function setAuthTab(tabName) {
@@ -423,6 +437,7 @@ if (authTabs.length && authPanels.length) {
 const storedProfile = normalizeProfile(getStoredProfile()) || normalizeProfile(getSession()?.user);
 const hasSession = Boolean(getSession()?.token);
 updateFrontOfficeIdentity(storedProfile, hasSession);
+updateDashboardVisibility();
 wireAuthPanel("login", getLoginPayload);
 wireAuthPanel("register", getRegisterPayload);
 

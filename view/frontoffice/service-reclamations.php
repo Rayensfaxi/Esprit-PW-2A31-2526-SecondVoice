@@ -3,7 +3,7 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Prise de rendez-vous | SecondVoice</title>
+    <title>Reclamations | SecondVoice</title>
     <link rel="icon" type="image/png" sizes="32x32" href="assets/media/favicon-32.png" />
     <link rel="icon" type="image/png" sizes="16x16" href="assets/media/favicon-16.png" />
     <link rel="apple-touch-icon" href="assets/media/apple-touch-icon.png" />
@@ -26,18 +26,18 @@
     <div class="page-shell">
       <header class="site-header">
         <div class="container nav-inner">
-          <a class="brand" href="index.html"><img class="brand-logo" src="assets/media/secondvoice-logo.png" alt="SecondVoice logo" /></a>
+          <a class="brand" href="index.php"><img class="brand-logo" src="assets/media/secondvoice-logo.png" alt="SecondVoice logo" /></a>
           <button class="menu-toggle" type="button" data-menu-toggle aria-label="Ouvrir le menu">
             <span class="icon-lines"></span>
           </button>
           <div class="nav" data-nav>
             <nav>
               <ul class="nav-links">
-                <li><a href="index.html">Accueil</a></li>
-                <li><a href="about.html">A propos</a></li>
-                <li><a class="is-active" href="services.html">Services</a></li>
-                <li><a href="blog.html">Blog</a></li>
-                <li><a href="contact.html">Contact</a></li>
+                <li><a href="index.php">Accueil</a></li>
+                <li><a href="about.php">A propos</a></li>
+                <li><a class="is-active" href="services.php">Services</a></li>
+                <li><a href="blog.php">Blog</a></li>
+                <li><a href="contact.php">Contact</a></li>
               </ul>
             </nav>
             <div class="header-actions">
@@ -70,12 +70,12 @@
                       <input class="field" type="password" placeholder="Mot de passe" />
                       <div class="auth-options">
                         <label class="check-row"><input type="checkbox" /> Se souvenir de moi</label>
-                        <a href="contact.html">Mot de passe oublie ?</a>
+                        <a href="contact.php">Mot de passe oublie ?</a>
                       </div>
                       <button class="btn btn-primary" type="button">Se connecter</button>
                     </form>
                     <div class="user-panel-footer">
-                      <a class="btn btn-secondary" href="contact.html">Support client</a>
+                      <a class="btn btn-secondary" href="contact.php">Support client</a>
                     </div>
                   </section>
                   <section class="auth-panel" data-auth-panel="register">
@@ -88,8 +88,8 @@
                       <button class="btn btn-primary" type="button">Creer un compte</button>
                     </form>
                     <ul class="auth-links">
-                      <li><a href="services.html">Voir les offres de service</a></li>
-                      <li><a href="contact.html">Demander un acces entreprise</a></li>
+                      <li><a href="services.php">Voir les offres de service</a></li>
+                      <li><a href="contact.php">Demander un acces entreprise</a></li>
                     </ul>
                   </section>
                 </div>
@@ -103,10 +103,10 @@
         <section class="page-hero">
           <div class="container">
             <div class="page-hero-card fade-up">
-              <div class="breadcrumbs"><span>Accueil</span><span>/</span><span>Prise de rendez-vous</span></div>
-              <h1>Prise de rendez-vous rapide et sans erreur.</h1>
+              <div class="breadcrumbs"><span>Accueil</span><span>/</span><span>Reclamations</span></div>
+              <h1>Reclamations traitees plus vite, avec un suivi transparent.</h1>
               <p>
-                Planifiez vos rendez-vous, recevez des rappels et gardez un historique clair.
+                Deposez une reclamation, suivez son traitement et recevez une reponse centralisee.
               </p>
             </div>
           </div>
@@ -118,22 +118,22 @@
               <div class="post-hero">
                 <div class="post-hero-content">
                   <div class="tag">Service a la une</div>
-                  <h2>Des rendez-vous confirmes avec rappels automatiques.</h2>
+                  <h2>Des reclamations tracees du depot a la resolution.</h2>
                   <p>
-                    Le service gere la disponibilite, la confirmation et les annulations.
+                    Le service structure les motifs, preuves et delais de traitement.
                   </p>
                 </div>
               </div>
               <h2>Vue d'ensemble du service</h2>
               <p>
-                Nous mettons en place un calendrier partage, des notifications et un suivi des visites.
+                Nous standardisons les workflows pour accelerer la resolution.
               </p>
               <h3>Livrables typiques</h3>
               <ul class="feature-list">
-                <li>Calendrier synchronise</li>
-                <li>Rappels automatiques</li>
-                <li>Gestion des annulations</li>
-                <li>Historique des rendez-vous</li>
+                <li>Depot structure et pieces jointes</li>
+                <li>Statuts clairs</li>
+                <li>SLA et priorisation</li>
+                <li>Historique et preuves</li>
               </ul>
               <h3>Pourquoi cette page convainc les acheteurs</h3>
                             <p>
@@ -154,7 +154,7 @@
               <div class="sidebar-card fade-up">
                 <h3>Besoin d'adapter cette page ?</h3>
                 <p>Adaptez le contenu a des offres cloud, securite, analytics ou conception produit.</p>
-                <a class="btn btn-primary" href="contact.html">Demander une version personnalisee</a>
+                <a class="btn btn-primary" href="contact.php">Demander une version personnalisee</a>
               </div>
             </aside>
           </div>
@@ -165,7 +165,7 @@
         <div class="container">
           <div class="footer-bottom">
             <span>&copy; 2026 SecondVoice. Tous droits reserves.</span>
-            <div class="footer-links"><a href="services.html">Services</a><a href="contact.html">Contact</a></div>
+            <div class="footer-links"><a href="services.php">Services</a><a href="contact.php">Contact</a></div>
           </div>
         </div>
       </footer>

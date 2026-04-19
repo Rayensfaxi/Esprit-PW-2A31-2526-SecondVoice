@@ -1,4 +1,16 @@
-<!DOCTYPE html>
+<?php
+
+session_start();
+
+$role = strtolower((string) ($_SESSION['user_role'] ?? 'client'));
+$canAccessDashboard = isset($_SESSION['user_id']) && in_array($role, ['admin', 'agent'], true);
+$dashboardUrl = $role === 'agent' ? '../backoffice/gestion-accompagnements.php' : '../backoffice/index.php';
+
+function h($value): string
+{
+    return htmlspecialchars((string) $value, ENT_QUOTES, 'UTF-8');
+}
+?><!DOCTYPE html>
 <html lang="fr">
   <head>
     <meta charset="UTF-8" />
@@ -26,18 +38,18 @@
     <div class="page-shell">
       <header class="site-header">
         <div class="container nav-inner">
-          <a class="brand" href="index.html"><img class="brand-logo" src="assets/media/secondvoice-logo.png" alt="SecondVoice logo" /></a>
+          <a class="brand" href="index.php"><img class="brand-logo" src="assets/media/secondvoice-logo.png" alt="SecondVoice logo" /></a>
           <button class="menu-toggle" type="button" data-menu-toggle aria-label="Ouvrir le menu">
             <span class="icon-lines"></span>
           </button>
           <div class="nav" data-nav>
             <nav>
               <ul class="nav-links">
-                <li><a href="index.html">Accueil</a></li>
-                <li><a class="is-active" href="about.html">A propos</a></li>
-                <li><a href="services.html">Services</a></li>
-                <li><a href="blog.html">Blog</a></li>
-                <li><a href="contact.html">Contact</a></li>
+                <li><a href="index.php">Accueil</a></li>
+                <li><a class="is-active" href="about.php">A propos</a></li>
+                <li><a href="services.php">Services</a></li>
+                <li><a href="blog.php">Blog</a></li>
+                <li><a href="contact.php">Contact</a></li>
               </ul>
             </nav>
             <div class="header-actions">
@@ -70,12 +82,12 @@
                       <input class="field" type="password" placeholder="Mot de passe" />
                       <div class="auth-options">
                         <label class="check-row"><input type="checkbox" /> Se souvenir de moi</label>
-                        <a href="contact.html">Mot de passe oublie ?</a>
+                        <a href="contact.php">Mot de passe oublie ?</a>
                       </div>
                       <button class="btn btn-primary" type="button">Se connecter</button>
                     </form>
                     <div class="user-panel-footer">
-                      <a class="btn btn-secondary" href="contact.html">Support client</a>
+                      <a class="btn btn-secondary" href="contact.php">Support client</a>
                     </div>
                   </section>
                   <section class="auth-panel" data-auth-panel="register">
@@ -88,13 +100,15 @@
                       <button class="btn btn-primary" type="button">Creer un compte</button>
                     </form>
                     <ul class="auth-links">
-                      <li><a href="services.html">Voir les offres de service</a></li>
-                      <li><a href="contact.html">Demander un acces entreprise</a></li>
+                      <li><a href="services.php">Voir les offres de service</a></li>
+                      <li><a href="contact.php">Demander un acces entreprise</a></li>
                     </ul>
                   </section>
                 </div>
               </div>
-              <a class="btn btn-primary" href="../backoffice/index.php">Tableau de bord</a>
+              <?php if ($canAccessDashboard): ?>
+              <a class="btn btn-primary" data-dashboard-link="true" href="<?= h($dashboardUrl) ?>">Tableau de bord</a>
+              <?php endif; ?>
             </div>
           </div>
         </div>
@@ -238,15 +252,15 @@
         <div class="container">
           <div class="footer-main">
             <div>
-              <a class="brand" href="index.html"><img class="brand-logo" src="assets/media/secondvoice-logo.png" alt="SecondVoice logo" /></a>
+              <a class="brand" href="index.php"><img class="brand-logo" src="assets/media/secondvoice-logo.png" alt="SecondVoice logo" /></a>
               <p>Template HTML premium pour agences IA, cabinets technologiques et marques orientees cyber.</p>
             </div>
             <div>
               <h3 class="footer-title">Pages</h3>
               <ul class="footer-list">
-                <li><a href="services.html">Services</a></li>
-                <li><a href="blog.html">Blog</a></li>
-                <li><a href="contact.html">Contact</a></li>
+                <li><a href="services.php">Services</a></li>
+                <li><a href="blog.php">Blog</a></li>
+                <li><a href="contact.php">Contact</a></li>
               </ul>
             </div>
             <div>
@@ -259,12 +273,12 @@
             </div>
             <div>
               <h3 class="footer-title">Demarrer</h3>
-              <a class="btn btn-primary" href="contact.html">Reserver un appel</a>
+              <a class="btn btn-primary" href="contact.php">Reserver un appel</a>
             </div>
           </div>
           <div class="footer-bottom">
             <span>&copy; 2026 SecondVoice. Tous droits reserves.</span>
-            <div class="footer-links"><a href="index.html">Confidentialite</a><a href="index.html">Conditions</a></div>
+            <div class="footer-links"><a href="index.php">Confidentialite</a><a href="index.php">Conditions</a></div>
           </div>
         </div>
       </footer>
@@ -272,6 +286,10 @@
     <script src="assets/js/main.js"></script>
   </body>
 </html>
+
+
+
+
 
 
 

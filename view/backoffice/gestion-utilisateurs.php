@@ -1,5 +1,4 @@
 <?php
-declare(strict_types=1);
 
 session_start();
 
@@ -10,6 +9,12 @@ if (!isset($_SESSION['user_id'])) {
 
 if (!in_array(strtolower((string) ($_SESSION['user_role'] ?? 'client')), ['admin', 'agent'], true)) {
     header('Location: ../frontoffice/profile.php?status=forbidden');
+    exit;
+}
+
+$roleSession = strtolower((string) ($_SESSION['user_role'] ?? 'client'));
+if ($roleSession === 'agent') {
+    header('Location: gestion-accompagnements.php');
     exit;
 }
 
@@ -34,8 +39,8 @@ function getStatusClass(string $status): string
 
     return match ($status) {
         'actif' => 'active',
-        'inactif' => 'review',
         'bloque' => 'risk',
+        'en_pause' => 'review',
         default => 'pending'
     };
 }
@@ -62,7 +67,8 @@ $formValues = [
     'prenom' => '',
     'email' => '',
     'telephone' => '',
-    'role' => 'agent'
+    'role' => 'agent',
+    'statut_compte' => 'actif'
 ];
 
 $search = trim((string) ($_GET['q'] ?? ''));
@@ -75,8 +81,7 @@ if (!in_array($selectedRole, $allowedRoleFilters, true)) {
 $status = (string) ($_GET['status'] ?? '');
 $statusMessages = [
     'added' => 'Utilisateur ajoute avec succes.',
-    'updated' => 'Utilisateur modifie avec succes.',
-    'deleted' => 'Utilisateur supprime avec succes.'
+    'updated' => 'Utilisateur modifie avec succes.'
 ];
 if (isset($statusMessages[$status])) {
     $feedbackType = 'success';
@@ -92,7 +97,8 @@ if (isset($_GET['edit']) && ctype_digit((string) $_GET['edit'])) {
             'prenom' => (string) ($editUser['prenom'] ?? ''),
             'email' => (string) ($editUser['email'] ?? ''),
             'telephone' => (string) ($editUser['telephone'] ?? ''),
-            'role' => (string) ($editUser['role'] ?? 'agent')
+            'role' => (string) ($editUser['role'] ?? 'agent'),
+            'statut_compte' => (string) ($editUser['statut_compte'] ?? 'actif')
         ];
     }
 }
@@ -108,12 +114,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $telephone = trim((string) ($_POST['telephone'] ?? ''));
             $role = trim((string) ($_POST['role'] ?? 'agent'));
             $password = (string) ($_POST['mot_de_passe'] ?? '');
+            $statutCompte = trim((string) ($_POST['statut_compte'] ?? 'actif'));
 
             if (!in_array(strtolower($role), ['admin', 'agent'], true)) {
                 throw new InvalidArgumentException('En backoffice, vous pouvez ajouter uniquement des admins ou des agents.');
             }
 
-            $controller->addUser($nom, $prenom, $email, $password, $telephone, $role);
+            $controller->addUser($nom, $prenom, $email, $password, $telephone, $role, $statutCompte);
             header('Location: gestion-utilisateurs.php?status=added');
             exit;
         }
@@ -126,16 +133,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $telephone = trim((string) ($_POST['telephone'] ?? ''));
             $role = trim((string) ($_POST['role'] ?? 'agent'));
             $password = trim((string) ($_POST['mot_de_passe'] ?? ''));
+            $statutCompte = trim((string) ($_POST['statut_compte'] ?? 'actif'));
 
-            $controller->updateUser($id, $nom, $prenom, $email, $telephone, $role, $password !== '' ? $password : null);
+            $controller->updateUser($id, $nom, $prenom, $email, $telephone, $role, $password !== '' ? $password : null, $statutCompte);
             header('Location: gestion-utilisateurs.php?status=updated');
-            exit;
-        }
-
-        if ($action === 'delete') {
-            $id = (int) ($_POST['id'] ?? 0);
-            $controller->deleteUser($id);
-            header('Location: gestion-utilisateurs.php?status=deleted');
             exit;
         }
 
@@ -149,6 +150,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $formValues['email'] = trim((string) ($_POST['email'] ?? $formValues['email']));
         $formValues['telephone'] = trim((string) ($_POST['telephone'] ?? $formValues['telephone']));
         $formValues['role'] = trim((string) ($_POST['role'] ?? $formValues['role']));
+        $formValues['statut_compte'] = trim((string) ($_POST['statut_compte'] ?? $formValues['statut_compte']));
 
         if (isset($_POST['id']) && ctype_digit((string) $_POST['id'])) {
             $editUser = $controller->getUserById((int) $_POST['id']);
@@ -187,11 +189,11 @@ $users = $controller->getUsers([
               <a class="nav-link" href="index.php" data-nav="home"><span class="nav-icon icon-home"></span><span>Tableau de bord</span></a>
               <a class="nav-link" href="gestion-utilisateurs.php" data-nav="profile"><span class="nav-icon icon-profile"></span><span>Gestion des utilisateurs</span></a>
               <a class="nav-link" href="gestion-brainstormings.php" data-nav="community"><span class="nav-icon icon-community"></span><span>Gestion des brainstormings</span></a>
-              <a class="nav-link" href="gestion-rendezvous.html" data-nav="subscription"><span class="nav-icon icon-card"></span><span>Gestion des rendez-vous</span></a>
-              <a class="nav-link" href="gestion-accompagnements.html" data-nav="chatbot"><span class="nav-icon icon-chat"></span><span>Gestion des accompagnements</span></a>
-              <a class="nav-link" href="gestion-documents.html" data-nav="images"><span class="nav-icon icon-image"></span><span>Gestion des documents</span></a>
-              <a class="nav-link" href="gestion-reclamations.html" data-nav="voice"><span class="nav-icon icon-mic"></span><span>Gestion des reclamations</span></a>
-              <a class="nav-link" href="settings.html" data-nav="settings"><span class="nav-icon icon-settings"></span><span>Parametres</span></a>
+              <a class="nav-link" href="gestion-rendezvous.php" data-nav="subscription"><span class="nav-icon icon-card"></span><span>Gestion des rendez-vous</span></a>
+              <a class="nav-link" href="gestion-accompagnements.php" data-nav="chatbot"><span class="nav-icon icon-chat"></span><span>Gestion des accompagnements</span></a>
+              <a class="nav-link" href="gestion-evenements.php" data-nav="images"><span class="nav-icon icon-image"></span><span>Gestion des evenements</span></a>
+              <a class="nav-link" href="gestion-reclamations.php" data-nav="voice"><span class="nav-icon icon-mic"></span><span>Gestion des reclamations</span></a>
+              <a class="nav-link" href="settings.php" data-nav="settings"><span class="nav-icon icon-settings"></span><span>Parametres</span></a>
             </div>
           </div>
         </div>
@@ -205,7 +207,7 @@ $users = $controller->getUsers([
             
           </div>
           <div class="toolbar-actions">
-            <a class="update-button" href="../frontoffice/index.html">Revenir</a>
+            <a class="update-button" href="../frontoffice/index.php">Revenir</a>
             <button class="icon-button icon-moon" data-theme-toggle aria-label="Switch theme"></button>
           </div>
         </div>
@@ -215,7 +217,7 @@ $users = $controller->getUsers([
             <div class="users-header">
               <div>
                 <h2 class="section-title">Liste des utilisateurs</h2>
-                <p class="helper">Filtrez, modifiez et supprimez les comptes en un seul endroit.</p>
+                <p class="helper">Filtrez, modifiez et gerez le statut des comptes en un seul endroit.</p>
               </div>
               <div class="users-actions">
                 <a class="ghost-button" href="gestion-utilisateurs.php">Reinitialiser</a>
@@ -291,6 +293,14 @@ $users = $controller->getUsers([
                   <label for="mot_de_passe">Mot de passe <?= $editUser ? '(laisser vide pour conserver)' : '' ?></label>
                   <input id="mot_de_passe" name="mot_de_passe" type="password" placeholder="Minimum 6 caracteres" />
                 </div>
+                <div class="filter-field">
+                  <label for="statut_compte">Statut du compte</label>
+                  <select id="statut_compte" name="statut_compte">
+                    <option value="actif" <?= strtolower((string) $formValues['statut_compte']) === 'actif' ? 'selected' : '' ?>>Actif</option>
+                    <option value="bloque" <?= strtolower((string) $formValues['statut_compte']) === 'bloque' ? 'selected' : '' ?>>Bloque</option>
+                    <option value="en_pause" <?= strtolower((string) $formValues['statut_compte']) === 'en_pause' ? 'selected' : '' ?>>En pause</option>
+                  </select>
+                </div>
               </div>
 
               <p id="crud-feedback" class="form-feedback"></p>
@@ -337,16 +347,15 @@ $users = $controller->getUsers([
                       <td><?= h($user['email']) ?></td>
                       <td><?= h($user['telephone']) ?></td>
                       <td><span class="status-pill active"><?= ucfirst(h((string) $user['role'])) ?></span></td>
-                      <td><span class="status-pill <?= h(getStatusClass((string) ($user['statut_compte'] ?? 'actif'))) ?>"><?= ucfirst(h((string) ($user['statut_compte'] ?? 'actif'))) ?></span></td>
+                      <td>
+                        <span class="status-pill <?= h(getStatusClass((string) ($user['statut_compte'] ?? 'actif'))) ?>">
+                          <?= h(ucfirst(str_replace('_', ' ', (string) ($user['statut_compte'] ?? 'actif')))) ?>
+                        </span>
+                      </td>
                       <td><?= h(formatCreationDate((string) ($user['date_creation'] ?? ''))) ?></td>
                       <td>
                         <div class="table-actions">
                           <a class="ghost-button" href="gestion-utilisateurs.php?edit=<?= (int) $user['id'] ?>#user-form">Modifier</a>
-                          <form class="inline-delete-form" method="post" action="gestion-utilisateurs.php" data-delete-form>
-                            <input type="hidden" name="action" value="delete" />
-                            <input type="hidden" name="id" value="<?= (int) $user['id'] ?>" />
-                            <button class="ghost-button danger" type="submit">Supprimer</button>
-                          </form>
                         </div>
                       </td>
                     </tr>
@@ -388,9 +397,10 @@ $users = $controller->getUsers([
             const email = (form.email.value || "").trim();
             const telephone = (form.telephone.value || "").trim().replace(/\s+/g, "");
             const role = (form.role.value || "").trim().toLowerCase();
+            const status = (form.statut_compte.value || "").trim().toLowerCase();
             const password = form.mot_de_passe.value || "";
 
-            const namePattern = /^[A-Za-zï¿½-ï¿½ï¿½-ï¿½ï¿½-ï¿½\s'-]{2,60}$/;
+            const namePattern = /^[A-Za-zÃ¯Â¿Â½-Ã¯Â¿Â½Ã¯Â¿Â½-Ã¯Â¿Â½Ã¯Â¿Â½-Ã¯Â¿Â½\s'-]{2,60}$/;
             const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
             const phonePattern = /^\+?[0-9]{8,15}$/;
 
@@ -427,21 +437,20 @@ $users = $controller->getUsers([
             if ((action === "add" || password.length > 0) && password.length < 6) {
               event.preventDefault();
               showError("Le mot de passe doit contenir au moins 6 caracteres.");
+              return;
+            }
+
+            if (!["actif", "bloque", "en_pause"].includes(status)) {
+              event.preventDefault();
+              showError("Le statut du compte doit etre Actif, Bloque ou En pause.");
             }
           });
         }
-
-        const deleteForms = document.querySelectorAll("[data-delete-form]");
-        deleteForms.forEach(function (deleteForm) {
-          deleteForm.addEventListener("submit", function (event) {
-            if (!window.confirm("Voulez-vous vraiment supprimer cet utilisateur ?")) {
-              event.preventDefault();
-            }
-          });
-        });
       })();
     </script>
     <script src="assets/app.js"></script>
   </body>
 </html>
+
+
 

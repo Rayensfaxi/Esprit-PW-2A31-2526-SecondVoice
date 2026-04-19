@@ -2,7 +2,32 @@
 declare(strict_types=1);
 
 session_start();
+
+if (isset($_GET['action']) && $_GET['action'] === 'session-role') {
+    header('Content-Type: application/json; charset=UTF-8');
+
+    $role = strtolower((string) ($_SESSION['user_role'] ?? 'client'));
+    $isAuthenticated = isset($_SESSION['user_id']);
+    $canAccessDashboard = $isAuthenticated && in_array($role, ['admin', 'agent'], true);
+
+    $dashboardUrl = '';
+    if ($canAccessDashboard) {
+        $dashboardUrl = $role === 'agent'
+            ? '../backoffice/gestion-accompagnements.php'
+            : '../backoffice/index.php';
+    }
+
+    echo json_encode([
+        'authenticated' => $isAuthenticated,
+        'role' => $role,
+        'canAccessDashboard' => $canAccessDashboard,
+        'dashboardUrl' => $dashboardUrl
+    ], JSON_UNESCAPED_UNICODE);
+    exit;
+}
+
 require_once __DIR__ . '/../../controller/UtilisateurController.php';
+require_once __DIR__ . '/../../controller/ActivityLogger.php';
 
 if (isset($_SESSION['user_id'])) {
     header('Location: profile.php');
@@ -17,6 +42,7 @@ function h($value): string
 $feedback = '';
 $feedbackType = '';
 $emailValue = '';
+$loginMode = 'client';
 
 if (isset($_GET['status']) && $_GET['status'] === 'logged_out') {
     $feedback = 'Vous etes deconnecte.';
@@ -32,8 +58,14 @@ if (isset($_GET['status']) && $_GET['status'] === 'forbidden') {
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $emailValue = trim((string) ($_POST['email'] ?? ''));
     $password = (string) ($_POST['password'] ?? '');
+    $loginMode = (string) ($_POST['login_mode'] ?? 'client');
+    $authKey = trim((string) ($_POST['auth_key'] ?? ''));
 
     try {
+        if ($loginMode !== 'client' && $loginMode !== 'agent') {
+            throw new InvalidArgumentException('Mode de connexion invalide.');
+        }
+
         if (!filter_var($emailValue, FILTER_VALIDATE_EMAIL)) {
             throw new InvalidArgumentException('Adresse e-mail invalide.');
         }
@@ -49,11 +81,34 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             throw new RuntimeException('E-mail ou mot de passe incorrect.');
         }
 
+        if ($loginMode === 'agent') {
+            $agentKey = getenv('SECONDVOICE_AGENT_KEY') ?: 'SV-AGENT-2026';
+            $role = strtolower((string) ($user['role'] ?? ''));
+
+            if ($authKey === '') {
+                throw new InvalidArgumentException("La cle d'authentification est obligatoire pour un agent.");
+            }
+
+            if (!hash_equals($agentKey, $authKey)) {
+                throw new RuntimeException("Cle d'authentification invalide.");
+            }
+
+            if ($role !== 'agent' && $role !== 'admin') {
+                throw new RuntimeException("Ce compte n'a pas les droits agent.");
+            }
+        }
+
         $_SESSION['user_id'] = (int) $user['id'];
         $_SESSION['user_role'] = (string) ($user['role'] ?? 'client');
         $_SESSION['user_nom'] = (string) ($user['nom'] ?? '');
         $_SESSION['user_prenom'] = (string) ($user['prenom'] ?? '');
         $_SESSION['user_email'] = (string) ($user['email'] ?? '');
+
+        ActivityLogger::log(
+            (int) $user['id'],
+            'Connexion',
+            $loginMode === 'agent' ? 'Connexion agent au compte.' : "Acces a l'espace utilisateur."
+        );
 
         header('Location: profile.php?status=logged_in');
         exit;
@@ -90,7 +145,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
   </head>
   <body class="auth-screen">
     <main class="auth-stage">
-      <a class="auth-brand" href="index.html">
+      <div class="auth-theme-row">
+        <button class="icon-btn auth-theme-toggle" type="button" data-theme-toggle aria-label="Changer le theme">
+          <span class="theme-glyph" data-theme-glyph aria-hidden="true">☾</span>
+        </button>
+      </div>
+
+      <a class="auth-brand" href="index.php">
         <img src="assets/media/secondvoice-logo.png" alt="SecondVoice logo" />
       </a>
 
@@ -103,7 +164,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
               <p class="user-modal-copy">Connectez-vous pour acceder a votre profil utilisateur.</p>
             </div>
           </div>
-          <a class="icon-btn user-close" href="index.html" aria-label="Retour a l'accueil">X</a>
+          <a class="icon-btn user-close" href="index.php" aria-label="Retour a l'accueil">X</a>
         </div>
 
         <div class="auth-tabs">
@@ -112,15 +173,32 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         </div>
 
         <section class="auth-panel is-active">
-          <h3 class="auth-title">Connexion utilisateur</h3>
-          <p class="auth-helper">Saisissez vos identifiants.</p>
+          <h3 id="login-title" class="auth-title"><?= $loginMode === 'agent' ? 'Connexion agent' : 'Connexion utilisateur' ?></h3>
+          <p id="login-helper" class="auth-helper">
+            <?= $loginMode === 'agent' ? "Saisissez vos identifiants agent et la cle d'authentification." : 'Saisissez vos identifiants.' ?>
+          </p>
 
           <form class="auth-form" id="login-form" action="login.php" method="post" novalidate>
+            <input type="hidden" name="login_mode" id="login-mode" value="<?= h($loginMode) ?>" />
             <input class="field" type="text" name="email" value="<?= h($emailValue) ?>" placeholder="Adresse e-mail" />
+            <p class="field-error" data-error-for="email"></p>
             <input class="field" type="password" name="password" placeholder="Mot de passe" />
+            <p class="field-error" data-error-for="password"></p>
+            <input
+              class="field"
+              type="text"
+              name="auth_key"
+              id="auth-key-field"
+              placeholder="Cle d'authentification"
+              style="<?= $loginMode === 'agent' ? '' : 'display:none;' ?>"
+            />
+            <p class="field-error" id="auth-key-error" data-error-for="auth_key" style="<?= $loginMode === 'agent' ? '' : 'display:none;' ?>"></p>
 
             <p id="login-feedback" class="auth-feedback <?= $feedbackType === 'error' ? 'error' : '' ?>"><?= h($feedback) ?></p>
-            <button class="btn btn-primary" type="submit">Se connecter</button>
+            <div style="display:flex; gap:12px; flex-wrap:wrap;">
+              <button class="btn btn-primary" id="login-client-btn" type="button">Se connecter en tant que client</button>
+              <button class="btn btn-secondary" id="login-agent-btn" type="button">Se connecter en tant qu'agent</button>
+            </div>
           </form>
 
           <div class="user-panel-footer">
@@ -132,32 +210,114 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     <script>
       (function () {
+        const root = document.documentElement;
+        const themeToggle = document.querySelector("[data-theme-toggle]");
+        const themeGlyph = document.querySelector("[data-theme-glyph]");
+
+        function applyTheme(theme) {
+          root.dataset.theme = theme;
+          if (themeToggle) {
+            themeToggle.setAttribute("aria-label", theme === "light" ? "Activer le mode sombre" : "Activer le mode clair");
+          }
+          if (themeGlyph) {
+            themeGlyph.textContent = theme === "light" ? "☀" : "☾";
+          }
+        }
+
+        applyTheme(root.dataset.theme || "dark");
+        if (themeToggle) {
+          themeToggle.addEventListener("click", function () {
+            const nextTheme = root.dataset.theme === "light" ? "dark" : "light";
+            localStorage.setItem("theme", nextTheme);
+            applyTheme(nextTheme);
+          });
+        }
+
         const form = document.getElementById("login-form");
         const feedback = document.getElementById("login-feedback");
+        const clientBtn = document.getElementById("login-client-btn");
+        const agentBtn = document.getElementById("login-agent-btn");
+        const loginModeInput = document.getElementById("login-mode");
+        const authKeyField = document.getElementById("auth-key-field");
+        const authKeyError = document.getElementById("auth-key-error");
+        const title = document.getElementById("login-title");
+        const helper = document.getElementById("login-helper");
+        const fieldErrors = {
+          email: form.querySelector('[data-error-for="email"]'),
+          password: form.querySelector('[data-error-for="password"]'),
+          auth_key: form.querySelector('[data-error-for="auth_key"]')
+        };
         if (!form) return;
 
-        form.addEventListener("submit", function (event) {
+        function clearFieldErrors() {
+          Object.values(fieldErrors).forEach(function (node) {
+            if (node) node.textContent = "";
+          });
+        }
+
+        function setFieldError(fieldName, message) {
+          const node = fieldErrors[fieldName];
+          if (node) node.textContent = message;
+        }
+
+        function setAgentMode(active) {
+          if (loginModeInput) loginModeInput.value = active ? "agent" : "client";
+          if (authKeyField) authKeyField.style.display = active ? "" : "none";
+          if (authKeyError) authKeyError.style.display = active ? "" : "none";
+          if (title) title.textContent = active ? "Connexion agent" : "Connexion utilisateur";
+          if (helper) {
+            helper.textContent = active
+              ? "Saisissez vos identifiants agent et la cle d'authentification."
+              : "Saisissez vos identifiants.";
+          }
+        }
+
+        function validateForm(agentMode) {
+          clearFieldErrors();
           const email = (form.email.value || "").trim();
           const password = form.password.value || "";
+          const authKey = authKeyField ? (authKeyField.value || "").trim() : "";
           const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
           if (!emailPattern.test(email)) {
-            event.preventDefault();
-            feedback.textContent = "Adresse e-mail invalide.";
-            feedback.classList.add("error");
-            return;
+            setFieldError("email", "Adresse e-mail invalide.");
+            return false;
           }
 
           if (password.length < 6) {
-            event.preventDefault();
-            feedback.textContent = "Le mot de passe doit contenir au moins 6 caracteres.";
-            feedback.classList.add("error");
-            return;
+            setFieldError("password", "Le mot de passe doit contenir au moins 6 caracteres.");
+            return false;
+          }
+
+          if (agentMode && !authKey) {
+            setFieldError("auth_key", "La cle d'authentification est obligatoire.");
+            return false;
           }
 
           feedback.textContent = "";
           feedback.classList.remove("error");
-        });
+          return true;
+        }
+
+        setAgentMode(loginModeInput && loginModeInput.value === "agent");
+
+        if (clientBtn) {
+          clientBtn.addEventListener("click", function () {
+            setAgentMode(false);
+            if (validateForm(false)) {
+              form.submit();
+            }
+          });
+        }
+
+        if (agentBtn) {
+          agentBtn.addEventListener("click", function () {
+            setAgentMode(true);
+            if (validateForm(true)) {
+              form.submit();
+            }
+          });
+        }
       })();
     </script>
   </body>

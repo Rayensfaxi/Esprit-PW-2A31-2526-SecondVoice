@@ -3,7 +3,7 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Contact | SecondVoice</title>
+    <title>Accompagnement | SecondVoice</title>
     <link rel="icon" type="image/png" sizes="32x32" href="assets/media/favicon-32.png" />
     <link rel="icon" type="image/png" sizes="16x16" href="assets/media/favicon-16.png" />
     <link rel="apple-touch-icon" href="assets/media/apple-touch-icon.png" />
@@ -26,18 +26,18 @@
     <div class="page-shell">
       <header class="site-header">
         <div class="container nav-inner">
-          <a class="brand" href="index.html"><img class="brand-logo" src="assets/media/secondvoice-logo.png" alt="SecondVoice logo" /></a>
+          <a class="brand" href="index.php"><img class="brand-logo" src="assets/media/secondvoice-logo.png" alt="SecondVoice logo" /></a>
           <button class="menu-toggle" type="button" data-menu-toggle aria-label="Ouvrir le menu">
             <span class="icon-lines"></span>
           </button>
           <div class="nav" data-nav>
             <nav>
               <ul class="nav-links">
-                <li><a href="index.html">Accueil</a></li>
-                <li><a href="about.html">A propos</a></li>
-                <li><a href="services.html">Services</a></li>
-                <li><a href="blog.html">Blog</a></li>
-                <li><a class="is-active" href="contact.html">Contact</a></li>
+                <li><a href="index.php">Accueil</a></li>
+                <li><a href="about.php">A propos</a></li>
+                <li><a class="is-active" href="services.php">Services</a></li>
+                <li><a href="blog.php">Blog</a></li>
+                <li><a href="contact.php">Contact</a></li>
               </ul>
             </nav>
             <div class="header-actions">
@@ -70,12 +70,12 @@
                       <input class="field" type="password" placeholder="Mot de passe" />
                       <div class="auth-options">
                         <label class="check-row"><input type="checkbox" /> Se souvenir de moi</label>
-                        <a href="contact.html">Mot de passe oublie ?</a>
+                        <a href="contact.php">Mot de passe oublie ?</a>
                       </div>
                       <button class="btn btn-primary" type="button">Se connecter</button>
                     </form>
                     <div class="user-panel-footer">
-                      <a class="btn btn-secondary" href="contact.html">Support client</a>
+                      <a class="btn btn-secondary" href="contact.php">Support client</a>
                     </div>
                   </section>
                   <section class="auth-panel" data-auth-panel="register">
@@ -88,13 +88,12 @@
                       <button class="btn btn-primary" type="button">Creer un compte</button>
                     </form>
                     <ul class="auth-links">
-                      <li><a href="services.html">Voir les offres de service</a></li>
-                      <li><a href="contact.html">Demander un acces entreprise</a></li>
+                      <li><a href="services.php">Voir les offres de service</a></li>
+                      <li><a href="contact.php">Demander un acces entreprise</a></li>
                     </ul>
                   </section>
                 </div>
               </div>
-              <a class="btn btn-primary" href="../backoffice/index.php">Tableau de bord</a>
             </div>
           </div>
         </div>
@@ -104,53 +103,60 @@
         <section class="page-hero">
           <div class="container">
             <div class="page-hero-card fade-up">
-              <div class="breadcrumbs"><span>Accueil</span><span>/</span><span>Contact</span></div>
-              <h1>Contact SecondVoice</h1>
-              <p>Envoyez-nous votre message pour assistance, information ou accompagnement.</p>
-            </div>
-          </div>
-        </section>
-
-        <section class="section">
-          <div class="container contact-grid">
-            <article class="contact-card fade-up">
-              <h3>Parlons de votre besoin.</h3>
+              <div class="breadcrumbs"><span>Accueil</span><span>/</span><span>Accompagnement</span></div>
+              <h1>Accompagnement pas a pas pour chaque demarche.</h1>
               <p>
-                Remplissez le formulaire ci-dessous. Notre equipe support vous repond rapidement.
+                Guidage humain et digital pour aider l'utilisateur a finaliser ses procedures.
               </p>
-              <form>
-                <div class="input-row">
-                  <input class="field" type="text" placeholder="Nom" />
-                  <input class="field" type="email" placeholder="Email" />
-                </div>
-                <textarea class="field" placeholder="Message"></textarea>
-                <button class="btn btn-primary" type="submit">Envoyer</button>
-              </form>
-            </article>
-            <div class="map-card fade-up">
-              <div class="map-grid">
-                <span class="map-pin one"></span>
-                <span class="map-pin two"></span>
-                <span class="map-pin three"></span>
-              </div>
             </div>
           </div>
         </section>
 
         <section class="section">
-          <div class="container grid-3">
-            <article class="detail-card fade-up">
-              <h3>Siege</h3>
-              <p>Les Berges du Lac 2, Tunis, Tunisia</p>
-            </article>
-            <article class="detail-card fade-up">
-              <h3>E-mail support</h3>
-              <p>support@secondvoice.app</p>
-            </article>
-            <article class="detail-card fade-up">
-              <h3>Telephone</h3>
-              <p>+216 70 000 000</p>
-            </article>
+          <div class="container service-layout">
+            <div class="post-content fade-up">
+              <div class="post-hero">
+                <div class="post-hero-content">
+                  <div class="tag">Service a la une</div>
+                  <h2>Un parcours clair, avec aide a chaque etape.</h2>
+                  <p>
+                    Nous combinons contenus explicatifs, check-lists et support proactif.
+                  </p>
+                </div>
+              </div>
+              <h2>Vue d'ensemble du service</h2>
+              <p>
+                L'accompagnement reduit les abandons et rassure l'utilisateur.
+              </p>
+              <h3>Livrables typiques</h3>
+              <ul class="feature-list">
+                <li>Guides et check-lists</li>
+                <li>Suivi par un conseiller</li>
+                <li>Messages de soutien personnalises</li>
+                <li>Escalade vers support</li>
+              </ul>
+              <h3>Pourquoi cette page convainc les acheteurs</h3>
+                            <p>
+                Une page detail solide reduit l'ambiguite. Elle montre comment le travail est realise,
+                ce qui est inclus et ou l'impact metier apparait.
+              </p>
+            </div>
+            <aside class="sidebar">
+              <div class="sidebar-card fade-up">
+                <h3>Apercu du projet</h3>
+                <ul class="footer-list">
+                  <li>Delai : 4 a 8 semaines</li>
+                  <li>Format : decouverte + implementation</li>
+                  <li>Ideal pour : operations de service</li>
+                  <li>Support : optimisation continue</li>
+                </ul>
+              </div>
+              <div class="sidebar-card fade-up">
+                <h3>Besoin d'adapter cette page ?</h3>
+                <p>Adaptez le contenu a des offres cloud, securite, analytics ou conception produit.</p>
+                <a class="btn btn-primary" href="contact.php">Demander une version personnalisee</a>
+              </div>
+            </aside>
           </div>
         </section>
       </main>
@@ -159,7 +165,7 @@
         <div class="container">
           <div class="footer-bottom">
             <span>&copy; 2026 SecondVoice. Tous droits reserves.</span>
-            <div class="footer-links"><a href="index.html">Accueil</a><a href="services.html">Services</a></div>
+            <div class="footer-links"><a href="services.php">Services</a><a href="contact.php">Contact</a></div>
           </div>
         </div>
       </footer>
@@ -167,5 +173,8 @@
     <script src="assets/js/main.js"></script>
   </body>
 </html>
+
+
+
 
 

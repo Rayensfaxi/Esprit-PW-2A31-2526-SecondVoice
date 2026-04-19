@@ -5,7 +5,7 @@ const integrationKeys = {
   apiBaseUrl: "intellectai-api-base-url"
 };
 const integrationRoutes = {
-  frontOfficeLogin: "../frontoffice/index.html"
+  frontOfficeLogin: "../frontoffice/index.php"
 };
 const root = document.documentElement;
 

@@ -8,7 +8,7 @@ class BrainstormingController
 {
     private PDO $conn;
 
-    private const ALLOWED_STATUTS = ['en attente', 'approuvé', 'désapprouvé'];
+    private const ALLOWED_STATUTS = ['en attente', 'approuve', 'desapprouve'];
 
     public function __construct(?PDO $connection = null)
     {

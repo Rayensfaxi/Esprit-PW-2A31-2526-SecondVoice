@@ -9,6 +9,7 @@ class UtilisateurController
     private PDO $conn;
 
     private const ALLOWED_ROLES = ['admin', 'agent', 'client'];
+    private const ALLOWED_ACCOUNT_STATUS = ['actif', 'bloque', 'en_pause'];
 
     public function __construct(?PDO $connection = null)
     {
@@ -33,7 +34,7 @@ class UtilisateurController
         throw new RuntimeException('Connexion base de donnees indisponible.');
     }
 
-    public function addUser(string $nom, string $prenom, string $email, string $password, string $telephone, string $role): int
+    public function addUser(string $nom, string $prenom, string $email, string $password, string $telephone, string $role, string $statutCompte = 'actif'): int
     {
         $data = $this->validatePayload([
             'nom' => $nom,
@@ -41,7 +42,8 @@ class UtilisateurController
             'email' => $email,
             'password' => $password,
             'telephone' => $telephone,
-            'role' => $role
+            'role' => $role,
+            'statut_compte' => $statutCompte
         ], false);
 
         if ($this->emailExists($data['email'])) {
@@ -61,7 +63,7 @@ class UtilisateurController
             ':password' => password_hash($data['password'], PASSWORD_DEFAULT),
             ':telephone' => $utilisateur->getTelephone(),
             ':role' => $utilisateur->getRole(),
-            ':statut_compte' => 'actif',
+            ':statut_compte' => $data['statut_compte'],
             ':date_creation' => date('Y-m-d')
         ]);
 
@@ -141,7 +143,16 @@ class UtilisateurController
         return $this->normalizeUserRow($user);
     }
 
-    public function updateUser(int $id, string $nom, string $prenom, string $email, string $telephone, string $role, ?string $password = null): bool
+    public function updateUser(
+        int $id,
+        string $nom,
+        string $prenom,
+        string $email,
+        string $telephone,
+        string $role,
+        ?string $password = null,
+        ?string $statutCompte = null
+    ): bool
     {
         if ($id <= 0) {
             throw new InvalidArgumentException('Identifiant utilisateur invalide.');
@@ -153,7 +164,8 @@ class UtilisateurController
             'email' => $email,
             'password' => $password ?? '',
             'telephone' => $telephone,
-            'role' => $role
+            'role' => $role,
+            'statut_compte' => $statutCompte ?? 'actif'
         ], true);
 
         if ($this->emailExists($data['email'], $id)) {
@@ -167,7 +179,8 @@ class UtilisateurController
                     prenom = :prenom,
                     email = :email,
                     telephone = :telephone,
-                    role = :role';
+                    role = :role,
+                    statut_compte = :statut_compte';
 
         $params = [
             ':nom' => $utilisateur->getNom(),
@@ -175,6 +188,7 @@ class UtilisateurController
             ':email' => $utilisateur->getEmail(),
             ':telephone' => $utilisateur->getTelephone(),
             ':role' => $utilisateur->getRole(),
+            ':statut_compte' => $data['statut_compte'],
             ':id' => $id
         ];
 
@@ -191,12 +205,7 @@ class UtilisateurController
 
     public function deleteUser(int $id): bool
     {
-        if ($id <= 0) {
-            throw new InvalidArgumentException('Identifiant utilisateur invalide.');
-        }
-
-        $stmt = $this->conn->prepare('DELETE FROM utilisateur WHERE id = :id');
-        return $stmt->execute([':id' => $id]);
+        throw new RuntimeException('Suppression des utilisateurs desactivee. Utilisez le statut du compte.');
     }
 
     private function emailExists(string $email, ?int $excludeId = null): bool
@@ -268,6 +277,7 @@ class UtilisateurController
         $password = (string) ($payload['password'] ?? '');
         $telephone = preg_replace('/\s+/', '', (string) ($payload['telephone'] ?? ''));
         $role = $this->normalizeRole((string) ($payload['role'] ?? ''));
+        $statutCompte = strtolower(trim((string) ($payload['statut_compte'] ?? 'actif')));
 
         $errors = [];
 
@@ -291,6 +301,10 @@ class UtilisateurController
             $errors[] = 'Le role doit etre admin, agent ou client.';
         }
 
+        if (!in_array($statutCompte, self::ALLOWED_ACCOUNT_STATUS, true)) {
+            $errors[] = 'Le statut du compte doit etre actif, bloque ou en_pause.';
+        }
+
         if (!$isUpdate || $password !== '') {
             if (strlen($password) < 6) {
                 $errors[] = 'Le mot de passe doit contenir au moins 6 caracteres.';
@@ -307,7 +321,8 @@ class UtilisateurController
             'email' => $email,
             'password' => $password,
             'telephone' => $telephone,
-            'role' => $role
+            'role' => $role,
+            'statut_compte' => $statutCompte
         ];
     }
 }

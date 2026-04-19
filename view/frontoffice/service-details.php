@@ -26,18 +26,18 @@
     <div class="page-shell">
       <header class="site-header">
         <div class="container nav-inner">
-          <a class="brand" href="index.html"><img class="brand-logo" src="assets/media/secondvoice-logo.png" alt="SecondVoice logo" /></a>
+          <a class="brand" href="index.php"><img class="brand-logo" src="assets/media/secondvoice-logo.png" alt="SecondVoice logo" /></a>
           <button class="menu-toggle" type="button" data-menu-toggle aria-label="Ouvrir le menu">
             <span class="icon-lines"></span>
           </button>
           <div class="nav" data-nav>
             <nav>
               <ul class="nav-links">
-                <li><a href="index.html">Accueil</a></li>
-                <li><a href="about.html">A propos</a></li>
-                <li><a class="is-active" href="services.html">Services</a></li>
-                <li><a href="blog.html">Blog</a></li>
-                <li><a href="contact.html">Contact</a></li>
+                <li><a href="index.php">Accueil</a></li>
+                <li><a href="about.php">A propos</a></li>
+                <li><a class="is-active" href="services.php">Services</a></li>
+                <li><a href="blog.php">Blog</a></li>
+                <li><a href="contact.php">Contact</a></li>
               </ul>
             </nav>
             <div class="header-actions">
@@ -70,12 +70,12 @@
                       <input class="field" type="password" placeholder="Mot de passe" />
                       <div class="auth-options">
                         <label class="check-row"><input type="checkbox" /> Se souvenir de moi</label>
-                        <a href="contact.html">Mot de passe oublie ?</a>
+                        <a href="contact.php">Mot de passe oublie ?</a>
                       </div>
                       <button class="btn btn-primary" type="button">Se connecter</button>
                     </form>
                     <div class="user-panel-footer">
-                      <a class="btn btn-secondary" href="contact.html">Support client</a>
+                      <a class="btn btn-secondary" href="contact.php">Support client</a>
                     </div>
                   </section>
                   <section class="auth-panel" data-auth-panel="register">
@@ -88,8 +88,8 @@
                       <button class="btn btn-primary" type="button">Creer un compte</button>
                     </form>
                     <ul class="auth-links">
-                      <li><a href="services.html">Voir les offres de service</a></li>
-                      <li><a href="contact.html">Demander un acces entreprise</a></li>
+                      <li><a href="services.php">Voir les offres de service</a></li>
+                      <li><a href="contact.php">Demander un acces entreprise</a></li>
                     </ul>
                   </section>
                 </div>
@@ -157,7 +157,7 @@
               <div class="sidebar-card fade-up">
                 <h3>Besoin d'adapter cette page ?</h3>
                 <p>Adaptez le contenu a des offres cloud, securite, analytics ou conception produit.</p>
-                <a class="btn btn-primary" href="contact.html">Demander une version personnalisee</a>
+                <a class="btn btn-primary" href="contact.php">Demander une version personnalisee</a>
               </div>
             </aside>
           </div>
@@ -168,7 +168,7 @@
         <div class="container">
           <div class="footer-bottom">
             <span>&copy; 2026 SecondVoice. Tous droits reserves.</span>
-            <div class="footer-links"><a href="services.html">Services</a><a href="contact.html">Contact</a></div>
+            <div class="footer-links"><a href="services.php">Services</a><a href="contact.php">Contact</a></div>
           </div>
         </div>
       </footer>

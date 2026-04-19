@@ -3,7 +3,7 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Services | SecondVoice</title>
+    <title>Support utilisateur | SecondVoice</title>
     <link rel="icon" type="image/png" sizes="32x32" href="assets/media/favicon-32.png" />
     <link rel="icon" type="image/png" sizes="16x16" href="assets/media/favicon-16.png" />
     <link rel="apple-touch-icon" href="assets/media/apple-touch-icon.png" />
@@ -26,18 +26,18 @@
     <div class="page-shell">
       <header class="site-header">
         <div class="container nav-inner">
-          <a class="brand" href="index.html"><img class="brand-logo" src="assets/media/secondvoice-logo.png" alt="SecondVoice logo" /></a>
+          <a class="brand" href="index.php"><img class="brand-logo" src="assets/media/secondvoice-logo.png" alt="SecondVoice logo" /></a>
           <button class="menu-toggle" type="button" data-menu-toggle aria-label="Ouvrir le menu">
             <span class="icon-lines"></span>
           </button>
           <div class="nav" data-nav>
             <nav>
               <ul class="nav-links">
-                <li><a href="index.html">Accueil</a></li>
-                <li><a href="about.html">A propos</a></li>
-                <li><a class="is-active" href="services.html">Services</a></li>
-                <li><a href="blog.html">Blog</a></li>
-                <li><a href="contact.html">Contact</a></li>
+                <li><a href="index.php">Accueil</a></li>
+                <li><a href="about.php">A propos</a></li>
+                <li><a class="is-active" href="services.php">Services</a></li>
+                <li><a href="blog.php">Blog</a></li>
+                <li><a href="contact.php">Contact</a></li>
               </ul>
             </nav>
             <div class="header-actions">
@@ -70,12 +70,12 @@
                       <input class="field" type="password" placeholder="Mot de passe" />
                       <div class="auth-options">
                         <label class="check-row"><input type="checkbox" /> Se souvenir de moi</label>
-                        <a href="contact.html">Mot de passe oublie ?</a>
+                        <a href="contact.php">Mot de passe oublie ?</a>
                       </div>
                       <button class="btn btn-primary" type="button">Se connecter</button>
                     </form>
                     <div class="user-panel-footer">
-                      <a class="btn btn-secondary" href="contact.html">Support client</a>
+                      <a class="btn btn-secondary" href="contact.php">Support client</a>
                     </div>
                   </section>
                   <section class="auth-panel" data-auth-panel="register">
@@ -88,13 +88,12 @@
                       <button class="btn btn-primary" type="button">Creer un compte</button>
                     </form>
                     <ul class="auth-links">
-                      <li><a href="services.html">Voir les offres de service</a></li>
-                      <li><a href="contact.html">Demander un acces entreprise</a></li>
+                      <li><a href="services.php">Voir les offres de service</a></li>
+                      <li><a href="contact.php">Demander un acces entreprise</a></li>
                     </ul>
                   </section>
                 </div>
               </div>
-              <a class="btn btn-primary" href="service-demande-administrative.html">Voir les details</a>
             </div>
           </div>
         </div>
@@ -104,55 +103,11 @@
         <section class="page-hero">
           <div class="container">
             <div class="page-hero-card fade-up">
-              <div class="breadcrumbs"><span>Accueil</span><span>/</span><span>Services</span></div>
-              <h1>Nos services pour simplifier vos demarches</h1>
+              <div class="breadcrumbs"><span>Accueil</span><span>/</span><span>Support utilisateur</span></div>
+              <h1>Support utilisateur centralise et reactif.</h1>
               <p>
-                Decouvrez les services que nous mettons a votre disposition pour faciliter vos demarches administratives
-                et vous accompagner efficacement.
+                Un canal unique pour obtenir de l'aide rapidement.
               </p>
-            </div>
-          </div>
-        </section>
-
-        <section class="section">
-          <div class="container">
-            <div class="grid-3">
-              <article class="service-card fade-up" data-card-link="service-demande-administrative.html">
-                <div class="card-icon"></div>
-                <h3>Demande administrative</h3>
-                <p>Creez et envoyez vos demandes administratives en toute simplicite depuis votre espace.</p>
-                <a class="service-link" href="service-demande-administrative.html">Details du service</a>
-              </article>
-              <article class="service-card fade-up" data-card-link="service-prise-rendezvous.html">
-                <div class="card-icon"></div>
-                <h3>Prise de rendez-vous</h3>
-                <p>Planifiez facilement vos rendez-vous avec les services concernes et recevez des rappels.</p>
-                <a class="service-link" href="service-prise-rendezvous.html">Details du service</a>
-              </article>
-              <article class="service-card fade-up" data-card-link="service-accompagnement.html">
-                <div class="card-icon"></div>
-                <h3>Accompagnement</h3>
-                <p>Beneficiez d'un accompagnement personnalise pour completer vos demarches.</p>
-                <a class="service-link" href="service-accompagnement.html">Details du service</a>
-              </article>
-              <article class="service-card fade-up" data-card-link="service-reclamations.html">
-                <div class="card-icon"></div>
-                <h3>Reclamations</h3>
-                <p>Deposez vos reclamations et suivez leur traitement en temps reel.</p>
-                <a class="service-link" href="service-reclamations.html">Details du service</a>
-              </article>
-              <article class="service-card fade-up" data-card-link="service-suivi-dossiers.html">
-                <div class="card-icon"></div>
-                <h3>Suivi des dossiers</h3>
-                <p>Consultez l'etat de vos demandes et suivez leur progression.</p>
-                <a class="service-link" href="service-suivi-dossiers.html">Details du service</a>
-              </article>
-              <article class="service-card fade-up" data-card-link="service-support-utilisateur.html">
-                <div class="card-icon"></div>
-                <h3>Support utilisateur</h3>
-                <p>Contactez le support pour obtenir de l'aide rapidement.</p>
-                <a class="service-link" href="service-support-utilisateur.html">Details du service</a>
-              </article>
             </div>
           </div>
         </section>
@@ -160,44 +115,57 @@
         <section class="section">
           <div class="container service-layout">
             <div class="post-content fade-up">
-              <h2>Comment ca fonctionne ?</h2>
+              <div class="post-hero">
+                <div class="post-hero-content">
+                  <div class="tag">Service a la une</div>
+                  <h2>Un support clair, humain et tracable.</h2>
+                  <p>
+                    Nous unifions email, formulaires et suivi.
+                  </p>
+                </div>
+              </div>
+              <h2>Vue d'ensemble du service</h2>
               <p>
-                Un parcours simple pour demarrer vos demarches en ligne.
+                Le support reduit les temps de reponse et augmente la satisfaction.
               </p>
-              <h3>Les etapes</h3>
+              <h3>Livrables typiques</h3>
               <ul class="feature-list">
-                <li>Creer un compte</li>
-                <li>Choisir un service</li>
-                <li>Envoyer une demande</li>
-                <li>Suivre le traitement</li>
+                <li>Canal unique</li>
+                <li>FAQ et ressources</li>
+                <li>Tickets priorises</li>
+                <li>Mesure de satisfaction</li>
               </ul>
+              <h3>Pourquoi cette page convainc les acheteurs</h3>
+                            <p>
+                Une page detail solide reduit l'ambiguite. Elle montre comment le travail est realise,
+                ce qui est inclus et ou l'impact metier apparait.
+              </p>
             </div>
             <aside class="sidebar">
               <div class="sidebar-card fade-up">
-                <h3>Besoin d'aide pour vos demarches ?</h3>
-                <p>Notre equipe est la pour vous accompagner.</p>
-                <a class="btn btn-primary" href="contact.html">Demander de l'aide</a>
+                <h3>Apercu du projet</h3>
+                <ul class="footer-list">
+                  <li>Delai : 4 a 8 semaines</li>
+                  <li>Format : decouverte + implementation</li>
+                  <li>Ideal pour : operations de service</li>
+                  <li>Support : optimisation continue</li>
+                </ul>
               </div>
               <div class="sidebar-card fade-up">
-                <h3>Pages du modele</h3>
-                <ul class="footer-list">
-                  <li><a href="index.html">Accueil</a></li>
-                  <li><a href="about.html">A propos</a></li>
-                  <li><a href="service-demande-administrative.html">Demande administrative</a></li>
-                  <li><a href="contact.html">Contact</a></li>
-                </ul>
+                <h3>Besoin d'adapter cette page ?</h3>
+                <p>Adaptez le contenu a des offres cloud, securite, analytics ou conception produit.</p>
+                <a class="btn btn-primary" href="contact.php">Demander une version personnalisee</a>
               </div>
             </aside>
           </div>
         </section>
-
       </main>
 
       <footer class="footer">
         <div class="container">
           <div class="footer-bottom">
             <span>&copy; 2026 SecondVoice. Tous droits reserves.</span>
-            <div class="footer-links"><a href="index.html">Confidentialite</a><a href="index.html">Conditions</a></div>
+            <div class="footer-links"><a href="services.php">Services</a><a href="contact.php">Contact</a></div>
           </div>
         </div>
       </footer>
@@ -205,6 +173,8 @@
     <script src="assets/js/main.js"></script>
   </body>
 </html>
+
+
 
 
 

@@ -1,9 +1,21 @@
-<!DOCTYPE html>
+<?php
+
+session_start();
+
+$role = strtolower((string) ($_SESSION['user_role'] ?? 'client'));
+$canAccessDashboard = isset($_SESSION['user_id']) && in_array($role, ['admin', 'agent'], true);
+$dashboardUrl = $role === 'agent' ? '../backoffice/gestion-accompagnements.php' : '../backoffice/index.php';
+
+function h($value): string
+{
+    return htmlspecialchars((string) $value, ENT_QUOTES, 'UTF-8');
+}
+?><!DOCTYPE html>
 <html lang="fr">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Reclamations | SecondVoice</title>
+    <title>Blog | SecondVoice</title>
     <link rel="icon" type="image/png" sizes="32x32" href="assets/media/favicon-32.png" />
     <link rel="icon" type="image/png" sizes="16x16" href="assets/media/favicon-16.png" />
     <link rel="apple-touch-icon" href="assets/media/apple-touch-icon.png" />
@@ -26,18 +38,18 @@
     <div class="page-shell">
       <header class="site-header">
         <div class="container nav-inner">
-          <a class="brand" href="index.html"><img class="brand-logo" src="assets/media/secondvoice-logo.png" alt="SecondVoice logo" /></a>
+          <a class="brand" href="index.php"><img class="brand-logo" src="assets/media/secondvoice-logo.png" alt="SecondVoice logo" /></a>
           <button class="menu-toggle" type="button" data-menu-toggle aria-label="Ouvrir le menu">
             <span class="icon-lines"></span>
           </button>
           <div class="nav" data-nav>
             <nav>
               <ul class="nav-links">
-                <li><a href="index.html">Accueil</a></li>
-                <li><a href="about.html">A propos</a></li>
-                <li><a class="is-active" href="services.html">Services</a></li>
-                <li><a href="blog.html">Blog</a></li>
-                <li><a href="contact.html">Contact</a></li>
+                <li><a href="index.php">Accueil</a></li>
+                <li><a href="about.php">A propos</a></li>
+                <li><a href="services.php">Services</a></li>
+                <li><a class="is-active" href="blog.php">Blog</a></li>
+                <li><a href="contact.php">Contact</a></li>
               </ul>
             </nav>
             <div class="header-actions">
@@ -70,12 +82,12 @@
                       <input class="field" type="password" placeholder="Mot de passe" />
                       <div class="auth-options">
                         <label class="check-row"><input type="checkbox" /> Se souvenir de moi</label>
-                        <a href="contact.html">Mot de passe oublie ?</a>
+                        <a href="contact.php">Mot de passe oublie ?</a>
                       </div>
                       <button class="btn btn-primary" type="button">Se connecter</button>
                     </form>
                     <div class="user-panel-footer">
-                      <a class="btn btn-secondary" href="contact.html">Support client</a>
+                      <a class="btn btn-secondary" href="contact.php">Support client</a>
                     </div>
                   </section>
                   <section class="auth-panel" data-auth-panel="register">
@@ -88,12 +100,15 @@
                       <button class="btn btn-primary" type="button">Creer un compte</button>
                     </form>
                     <ul class="auth-links">
-                      <li><a href="services.html">Voir les offres de service</a></li>
-                      <li><a href="contact.html">Demander un acces entreprise</a></li>
+                      <li><a href="services.php">Voir les offres de service</a></li>
+                      <li><a href="contact.php">Demander un acces entreprise</a></li>
                     </ul>
                   </section>
                 </div>
               </div>
+              <?php if ($canAccessDashboard): ?>
+              <a class="btn btn-primary" data-dashboard-link="true" href="<?= h($dashboardUrl) ?>">Tableau de bord</a>
+              <?php endif; ?>
             </div>
           </div>
         </div>
@@ -103,58 +118,59 @@
         <section class="page-hero">
           <div class="container">
             <div class="page-hero-card fade-up">
-              <div class="breadcrumbs"><span>Accueil</span><span>/</span><span>Reclamations</span></div>
-              <h1>Reclamations traitees plus vite, avec un suivi transparent.</h1>
+              <div class="breadcrumbs"><span>Accueil</span><span>/</span><span>Blog</span></div>
+              <h1>Blog SecondVoice</h1>
               <p>
-                Deposez une reclamation, suivez son traitement et recevez une reponse centralisee.
+                Conseils, actualites et guides pour mieux gerer vos demarches et votre suivi.
               </p>
             </div>
           </div>
         </section>
 
         <section class="section">
-          <div class="container service-layout">
-            <div class="post-content fade-up">
-              <div class="post-hero">
-                <div class="post-hero-content">
-                  <div class="tag">Service a la une</div>
-                  <h2>Des reclamations tracees du depot a la resolution.</h2>
-                  <p>
-                    Le service structure les motifs, preuves et delais de traitement.
-                  </p>
-                </div>
-              </div>
-              <h2>Vue d'ensemble du service</h2>
-              <p>
-                Nous standardisons les workflows pour accelerer la resolution.
-              </p>
-              <h3>Livrables typiques</h3>
-              <ul class="feature-list">
-                <li>Depot structure et pieces jointes</li>
-                <li>Statuts clairs</li>
-                <li>SLA et priorisation</li>
-                <li>Historique et preuves</li>
-              </ul>
-              <h3>Pourquoi cette page convainc les acheteurs</h3>
-                            <p>
-                Une page detail solide reduit l'ambiguite. Elle montre comment le travail est realise,
-                ce qui est inclus et ou l'impact metier apparait.
-              </p>
+          <div class="container blog-layout">
+            <div class="post-grid">
+              <article class="blog-card fade-up">
+                <div class="blog-art"></div>
+                <div class="post-meta"><span class="tag">Conseils</span><span>23 Mar 2026</span></div>
+                <h3><a href="blog-details.php">5 conseils pour accelerer vos demandes administratives</a></h3>
+                <p>Des bonnes pratiques simples pour eviter les erreurs frequentes et gagner du temps.</p>
+              </article>
+              <article class="blog-card fade-up">
+                <div class="blog-art"></div>
+                <div class="post-meta"><span class="tag">Actualites</span><span>19 Mar 2026</span></div>
+                <h3><a href="blog-details.php">Nouveautes SecondVoice: suivi plus clair des statuts</a></h3>
+                <p>Un point rapide sur les dernieres ameliorations cote utilisateur et support.</p>
+              </article>
+              <article class="blog-card fade-up">
+                <div class="blog-art"></div>
+                <div class="post-meta"><span class="tag">Guides</span><span>14 Mar 2026</span></div>
+                <h3><a href="blog-details.php">Guide pratique: prise de rendez-vous en 3 etapes</a></h3>
+                <p>Un tutoriel rapide pour reserver, confirmer et suivre un rendez-vous efficacement.</p>
+              </article>
             </div>
             <aside class="sidebar">
               <div class="sidebar-card fade-up">
-                <h3>Apercu du projet</h3>
+                <h3>Recherche</h3>
+                <form class="search-form">
+                  <input type="search" placeholder="Recherche articles" />
+                </form>
+              </div>
+              <div class="sidebar-card fade-up">
+                <h3>Categories</h3>
                 <ul class="footer-list">
-                  <li>Delai : 4 a 8 semaines</li>
-                  <li>Format : decouverte + implementation</li>
-                  <li>Ideal pour : operations de service</li>
-                  <li>Support : optimisation continue</li>
+                  <li><a href="#">Conseils</a></li>
+                  <li><a href="#">Actualites</a></li>
+                  <li><a href="#">Guides</a></li>
+                  <li><a href="#">Astuces pratiques</a></li>
                 </ul>
               </div>
               <div class="sidebar-card fade-up">
-                <h3>Besoin d'adapter cette page ?</h3>
-                <p>Adaptez le contenu a des offres cloud, securite, analytics ou conception produit.</p>
-                <a class="btn btn-primary" href="contact.html">Demander une version personnalisee</a>
+                <h3>Newsletter</h3>
+                <form class="newsletter-form">
+                  <input type="email" placeholder="Votre e-mail" />
+                  <a class="btn btn-primary" href="contact.php">S'abonner</a>
+                </form>
               </div>
             </aside>
           </div>
@@ -165,7 +181,7 @@
         <div class="container">
           <div class="footer-bottom">
             <span>&copy; 2026 SecondVoice. Tous droits reserves.</span>
-            <div class="footer-links"><a href="services.html">Services</a><a href="contact.html">Contact</a></div>
+            <div class="footer-links"><a href="blog-details.php">Article a la une</a><a href="contact.php">Contact</a></div>
           </div>
         </div>
       </footer>
@@ -173,6 +189,7 @@
     <script src="assets/js/main.js"></script>
   </body>
 </html>
+
 
 
 

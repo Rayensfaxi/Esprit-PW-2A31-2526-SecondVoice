@@ -1,5 +1,4 @@
 <?php
-declare(strict_types=1);
 
 session_start();
 require_once __DIR__ . '/../../controller/UtilisateurController.php';
@@ -87,7 +86,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
   </head>
   <body class="auth-screen">
     <main class="auth-stage">
-      <a class="auth-brand" href="index.html">
+      <div class="auth-theme-row">
+        <button class="icon-btn auth-theme-toggle" type="button" data-theme-toggle aria-label="Changer le theme">
+          <span class="theme-glyph" data-theme-glyph aria-hidden="true">â˜¾</span>
+        </button>
+      </div>
+      <a class="auth-brand" href="index.php">
         <img src="assets/media/secondvoice-logo.png" alt="SecondVoice logo" />
       </a>
 
@@ -100,7 +104,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
               <p class="user-modal-copy">Inscrivez-vous pour acceder a votre espace utilisateur.</p>
             </div>
           </div>
-          <a class="icon-btn user-close" href="index.html" aria-label="Retour a l'accueil">X</a>
+          <a class="icon-btn user-close" href="index.php" aria-label="Retour a l'accueil">X</a>
         </div>
 
         <div class="auth-tabs">
@@ -114,10 +118,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
           <form class="auth-form" id="register-form" action="register.php" method="post" novalidate>
             <input class="field" type="text" name="nom" value="<?= h($values['nom']) ?>" placeholder="Nom" />
+            <p class="field-error" data-error-for="nom"></p>
             <input class="field" type="text" name="prenom" value="<?= h($values['prenom']) ?>" placeholder="Prenom" />
+            <p class="field-error" data-error-for="prenom"></p>
             <input class="field" type="text" name="email" value="<?= h($values['email']) ?>" placeholder="E-mail" />
+            <p class="field-error" data-error-for="email"></p>
             <input class="field" type="text" name="telephone" value="<?= h($values['telephone']) ?>" placeholder="Telephone (+216...)" />
+            <p class="field-error" data-error-for="telephone"></p>
             <input class="field" type="password" name="password" placeholder="Mot de passe" />
+            <p class="field-error" data-error-for="password"></p>
 
             <p id="register-feedback" class="auth-feedback <?= $feedbackType === 'error' ? 'error' : '' ?>"><?= h($feedback) ?></p>
             <button class="btn btn-primary" type="submit">Creer un compte</button>
@@ -128,53 +137,90 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     <script>
       (function () {
+        const root = document.documentElement;
+        const themeToggle = document.querySelector("[data-theme-toggle]");
+        const themeGlyph = document.querySelector("[data-theme-glyph]");
+
+        function applyTheme(theme) {
+          root.dataset.theme = theme;
+          if (themeToggle) {
+            themeToggle.setAttribute("aria-label", theme === "light" ? "Activer le mode sombre" : "Activer le mode clair");
+          }
+          if (themeGlyph) {
+            themeGlyph.textContent = theme === "light" ? "â˜€" : "â˜¾";
+          }
+        }
+
+        applyTheme(root.dataset.theme || "dark");
+        if (themeToggle) {
+          themeToggle.addEventListener("click", function () {
+            const nextTheme = root.dataset.theme === "light" ? "dark" : "light";
+            localStorage.setItem("theme", nextTheme);
+            applyTheme(nextTheme);
+          });
+        }
+
         const form = document.getElementById("register-form");
         const feedback = document.getElementById("register-feedback");
+        const fieldErrors = {
+          nom: form ? form.querySelector('[data-error-for="nom"]') : null,
+          prenom: form ? form.querySelector('[data-error-for="prenom"]') : null,
+          email: form ? form.querySelector('[data-error-for="email"]') : null,
+          telephone: form ? form.querySelector('[data-error-for="telephone"]') : null,
+          password: form ? form.querySelector('[data-error-for="password"]') : null
+        };
         if (!form) return;
 
+        function clearFieldErrors() {
+          Object.values(fieldErrors).forEach(function (node) {
+            if (node) node.textContent = "";
+          });
+        }
+
+        function setFieldError(fieldName, message) {
+          const node = fieldErrors[fieldName];
+          if (node) node.textContent = message;
+        }
+
         form.addEventListener("submit", function (event) {
+          clearFieldErrors();
           const nom = (form.nom.value || "").trim();
           const prenom = (form.prenom.value || "").trim();
           const email = (form.email.value || "").trim();
           const telephone = (form.telephone.value || "").trim().replace(/\s+/g, "");
           const password = form.password.value || "";
 
-          const namePattern = /^[A-Za-zÀ-ÖØ-öø-ÿ\s'-]{2,60}$/;
+          const namePattern = /^[A-Za-zÃ€-Ã–Ã˜-Ã¶Ã¸-Ã¿\s'-]{2,60}$/;
           const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
           const phonePattern = /^\+?[0-9]{8,15}$/;
 
           if (!namePattern.test(nom)) {
             event.preventDefault();
-            feedback.textContent = "Le nom doit contenir 2 a 60 caracteres alphabetiques.";
-            feedback.classList.add("error");
+            setFieldError("nom", "Nom invalide (2 a 60 caracteres).");
             return;
           }
 
           if (!namePattern.test(prenom)) {
             event.preventDefault();
-            feedback.textContent = "Le prenom doit contenir 2 a 60 caracteres alphabetiques.";
-            feedback.classList.add("error");
+            setFieldError("prenom", "Prenom invalide (2 a 60 caracteres).");
             return;
           }
 
           if (!emailPattern.test(email)) {
             event.preventDefault();
-            feedback.textContent = "Adresse e-mail invalide.";
-            feedback.classList.add("error");
+            setFieldError("email", "Adresse e-mail invalide.");
             return;
           }
 
           if (!phonePattern.test(telephone)) {
             event.preventDefault();
-            feedback.textContent = "Le telephone doit contenir entre 8 et 15 chiffres.";
-            feedback.classList.add("error");
+            setFieldError("telephone", "Telephone invalide (8 a 15 chiffres).");
             return;
           }
 
           if (password.length < 6) {
             event.preventDefault();
-            feedback.textContent = "Le mot de passe doit contenir au moins 6 caracteres.";
-            feedback.classList.add("error");
+            setFieldError("password", "Mot de passe: minimum 6 caracteres.");
             return;
           }
 
@@ -185,3 +231,4 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     </script>
   </body>
 </html>
+

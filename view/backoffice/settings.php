@@ -23,11 +23,11 @@
               <a class="nav-link" href="index.php" data-nav="home"><span class="nav-icon icon-home"></span><span>Tableau de bord</span></a>
               <a class="nav-link" href="gestion-utilisateurs.php" data-nav="profile"><span class="nav-icon icon-profile"></span><span>Gestion des utilisateurs</span></a>
               <a class="nav-link" href="gestion-brainstormings.php" data-nav="community"><span class="nav-icon icon-community"></span><span>Gestion des brainstormings</span></a>
-              <a class="nav-link" href="gestion-rendezvous.html" data-nav="subscription"><span class="nav-icon icon-card"></span><span>Gestion des rendez-vous</span></a>
-              <a class="nav-link" href="gestion-accompagnements.html" data-nav="chatbot"><span class="nav-icon icon-chat"></span><span>Gestion des accompagnements</span></a>
-              <a class="nav-link" href="gestion-documents.html" data-nav="images"><span class="nav-icon icon-image"></span><span>Gestion des documents</span></a>
-              <a class="nav-link" href="gestion-reclamations.html" data-nav="voice"><span class="nav-icon icon-mic"></span><span>Gestion des reclamations</span></a>
-              <a class="nav-link" href="settings.html" data-nav="settings"><span class="nav-icon icon-settings"></span><span>Parametres</span></a>
+              <a class="nav-link" href="gestion-rendezvous.php" data-nav="subscription"><span class="nav-icon icon-card"></span><span>Gestion des rendez-vous</span></a>
+              <a class="nav-link" href="gestion-accompagnements.php" data-nav="chatbot"><span class="nav-icon icon-chat"></span><span>Gestion des accompagnements</span></a>
+              <a class="nav-link" href="gestion-evenements.php" data-nav="images"><span class="nav-icon icon-image"></span><span>Gestion des evenements</span></a>
+              <a class="nav-link" href="gestion-reclamations.php" data-nav="voice"><span class="nav-icon icon-mic"></span><span>Gestion des reclamations</span></a>
+              <a class="nav-link" href="settings.php" data-nav="settings"><span class="nav-icon icon-settings"></span><span>Parametres</span></a>
             </div>
           </div>
         </div>
@@ -41,7 +41,7 @@
             <div class="page-subtitle">Control workspace defaults, notifications, and profile behavior.</div>
           </div>
           <div class="toolbar-actions">
-            <a class="update-button" href="../frontoffice/index.html">Revenir</a>
+            <a class="update-button" href="../frontoffice/index.php">Revenir</a>
             <button class="icon-button icon-moon" data-theme-toggle aria-label="Switch theme"></button>
             <div class="profile-menu-wrap" data-profile-wrap>
               <button class="profile-trigger" data-profile-toggle aria-label="Open profile menu">
@@ -57,10 +57,10 @@
                 </div>
                 <div class="profile-menu-list">
                   <a class="menu-link" href="gestion-utilisateurs.php"><span class="menu-icon icon-profile"></span><span>Gestion des utilisateurs</span></a>
-                  <a class="menu-link" href="settings.html"><span class="menu-icon icon-settings"></span><span>Parametres</span></a>
-                  <a class="menu-link" href="gestion-rendezvous.html"><span class="menu-icon icon-card"></span><span>Gestion des rendez-vous</span></a>
+                  <a class="menu-link" href="settings.php"><span class="menu-icon icon-settings"></span><span>Parametres</span></a>
+                  <a class="menu-link" href="gestion-rendezvous.php"><span class="menu-icon icon-card"></span><span>Gestion des rendez-vous</span></a>
                   <a class="menu-link" href="gestion-brainstormings.php"><span class="menu-icon icon-activity"></span><span>Gestion des brainstormings</span></a>
-                  <a class="menu-link" href="gestion-accompagnements.html"><span class="menu-icon icon-help"></span><span>Gestion des accompagnements</span></a>
+                  <a class="menu-link" href="gestion-accompagnements.php"><span class="menu-icon icon-help"></span><span>Gestion des accompagnements</span></a>
                 </div>
                 <button class="logout-button" type="button">Logout <span class="logout-arrow">-></span></button>
               </div>
@@ -133,6 +133,8 @@
     <script src="assets/app.js"></script>
   </body>
 </html>
+
+
 
 
 

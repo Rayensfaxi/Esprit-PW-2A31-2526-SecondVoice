@@ -1,4 +1,16 @@
-<!DOCTYPE html>
+<?php
+
+session_start();
+
+$role = strtolower((string) ($_SESSION['user_role'] ?? 'client'));
+$canAccessDashboard = isset($_SESSION['user_id']) && in_array($role, ['admin', 'agent'], true);
+$dashboardUrl = $role === 'agent' ? '../backoffice/gestion-accompagnements.php' : '../backoffice/index.php';
+
+function h($value): string
+{
+    return htmlspecialchars((string) $value, ENT_QUOTES, 'UTF-8');
+}
+?><!DOCTYPE html>
 <html lang="fr">
   <head>
     <meta charset="UTF-8" />
@@ -35,18 +47,18 @@
     <div class="page-shell">
       <header class="site-header">
         <div class="container nav-inner">
-          <a class="brand" href="index.html"><img class="brand-logo" src="assets/media/secondvoice-logo.png" alt="SecondVoice logo" /></a>
+          <a class="brand" href="index.php"><img class="brand-logo" src="assets/media/secondvoice-logo.png" alt="SecondVoice logo" /></a>
           <button class="menu-toggle" type="button" data-menu-toggle aria-label="Ouvrir le menu">
             <span class="icon-lines"></span>
           </button>
           <div class="nav" data-nav>
             <nav>
               <ul class="nav-links">
-                <li><a class="is-active" href="index.html">Accueil</a></li>
-                <li><a href="about.html">A propos</a></li>
-                <li><a href="services.html">Services</a></li>
-                <li><a href="blog.html">Blog</a></li>
-                <li><a href="contact.html">Contact</a></li>
+                <li><a class="is-active" href="index.php">Accueil</a></li>
+                <li><a href="about.php">A propos</a></li>
+                <li><a href="services.php">Services</a></li>
+                <li><a href="blog.php">Blog</a></li>
+                <li><a href="contact.php">Contact</a></li>
               </ul>
             </nav>
             <div class="header-actions">
@@ -79,12 +91,12 @@
                       <input class="field" type="password" placeholder="Mot de passe" />
                       <div class="auth-options">
                         <label class="check-row"><input type="checkbox" /> Se souvenir de moi</label>
-                        <a href="contact.html">Mot de passe oublie ?</a>
+                        <a href="contact.php">Mot de passe oublie ?</a>
                       </div>
                       <button class="btn btn-primary" type="button">Se connecter</button>
                     </form>
                     <div class="user-panel-footer">
-                      <a class="btn btn-secondary" href="contact.html">Support client</a>
+                      <a class="btn btn-secondary" href="contact.php">Support client</a>
                     </div>
                   </section>
                   <section class="auth-panel" data-auth-panel="register">
@@ -97,13 +109,15 @@
                       <button class="btn btn-primary" type="button">Creer un compte</button>
                     </form>
                     <ul class="auth-links">
-                      <li><a href="services.html">Voir les offres de service</a></li>
-                      <li><a href="contact.html">Demander un acces entreprise</a></li>
+                      <li><a href="services.php">Voir les offres de service</a></li>
+                      <li><a href="contact.php">Demander un acces entreprise</a></li>
                     </ul>
                   </section>
                 </div>
               </div>
-              <a class="btn btn-primary" href="../backoffice/index.php">Tableau de bord</a>
+              <?php if ($canAccessDashboard): ?>
+              <a class="btn btn-primary" data-dashboard-link="true" href="<?= h($dashboardUrl) ?>">Tableau de bord</a>
+              <?php endif; ?>
             </div>
           </div>
         </div>
@@ -123,8 +137,8 @@
                 deposer des documents et obtenir de l'accompagnement facilement.
               </p>
               <div class="hero-actions">
-                <a class="btn btn-primary" href="services.html">Voir les services</a>
-                <a class="btn btn-secondary" href="contact.html">Contacter l'equipe</a>
+                <a class="btn btn-primary" href="services.php">Voir les services</a>
+                <a class="btn btn-secondary" href="contact.php">Contacter l'equipe</a>
               </div>
               <div class="hero-metrics">
                 <article class="metric-card">
@@ -198,13 +212,13 @@
                 <div class="section-kicker">Nos services</div>
                 <h2>Nos services</h2>
               </div>
-              <a class="btn btn-secondary" href="services.html">Explorer tous les services</a>
+              <a class="btn btn-secondary" href="services.php">Explorer tous les services</a>
             </div>
             <div class="grid-4">
               <article class="stat-card fade-up">
                 <strong>01</strong>
-                <h3>Demandes administratives</h3>
-                <p class="meta">Creer, envoyer et suivre vos demandes simplement.</p>
+                <h3>Brainstorming</h3>
+                <p class="meta">Soumettre des idees, collaborer et suivre les propositions.</p>
               </article>
               <article class="stat-card fade-up">
                 <strong>02</strong>
@@ -269,7 +283,7 @@
               <p class="section-copy">
                 Faciliter l'acces aux services administratifs et reduire la complexite des demarches pour tous les utilisateurs.
               </p>
-              <a class="btn btn-primary" href="about.html">En savoir plus</a>
+              <a class="btn btn-primary" href="about.php">En savoir plus</a>
             </div>
             <div class="timeline">
               <article class="timeline-item fade-up">
@@ -375,8 +389,8 @@
           <div class="footer-bottom">
             <span>&copy; 2026 SecondVoice. Tous droits reserves.</span>
             <div class="footer-links">
-              <a href="index.html">Confidentialite</a>
-              <a href="index.html">Conditions</a>
+              <a href="index.php">Confidentialite</a>
+              <a href="index.php">Conditions</a>
             </div>
           </div>
         </div>
@@ -386,6 +400,10 @@
     <script src="assets/js/main.js"></script>
   </body>
 </html>
+
+
+
+
 
 
 
