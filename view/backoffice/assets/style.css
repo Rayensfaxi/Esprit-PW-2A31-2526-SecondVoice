@@ -106,6 +106,7 @@ img {
 }
 
 .sidebar {
+  z-index: 25;
   position: sticky;
   top: 0;
   height: 100vh;
@@ -1394,7 +1395,8 @@ html[data-theme="light"] .icon-button.icon-moon::before {
 }
 
 .overlay {
-  display: none;
+  display: none !important;
+  pointer-events: none !important;
 }
 
 body,
@@ -1475,7 +1477,8 @@ textarea {
   }
 
   body.nav-open .overlay {
-    display: block;
+    display: block !important;
+    pointer-events: auto !important;
   }
 
   .mobile-toggle {
@@ -1598,3 +1601,5 @@ textarea {
     grid-template-columns: 1fr;
   }
 }
+
+.page{position:relative;z-index:1;}
