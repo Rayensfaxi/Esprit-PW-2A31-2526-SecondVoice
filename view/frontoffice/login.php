@@ -264,6 +264,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
           if (loginModeInput) loginModeInput.value = active ? "agent" : "client";
           if (authKeyField) authKeyField.style.display = active ? "" : "none";
           if (authKeyError) authKeyError.style.display = active ? "" : "none";
+          if (!active) {
+            setFieldError("auth_key", "");
+          }
           if (title) title.textContent = active ? "Connexion agent" : "Connexion utilisateur";
           if (helper) {
             helper.textContent = active
@@ -279,18 +282,24 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
           const authKey = authKeyField ? (authKeyField.value || "").trim() : "";
           const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
+          let hasError = false;
+
           if (!emailPattern.test(email)) {
             setFieldError("email", "Adresse e-mail invalide.");
-            return false;
+            hasError = true;
           }
 
           if (password.length < 6) {
             setFieldError("password", "Le mot de passe doit contenir au moins 6 caracteres.");
-            return false;
+            hasError = true;
           }
 
           if (agentMode && !authKey) {
             setFieldError("auth_key", "La cle d'authentification est obligatoire.");
+            hasError = true;
+          }
+
+          if (hasError) {
             return false;
           }
 
@@ -316,6 +325,29 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             if (validateForm(true)) {
               form.submit();
             }
+          });
+        }
+
+        if (form.email) {
+          form.email.addEventListener("input", function () {
+            const email = (form.email.value || "").trim();
+            const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+            setFieldError("email", email && emailPattern.test(email) ? "" : "Adresse e-mail invalide.");
+          });
+        }
+
+        if (form.password) {
+          form.password.addEventListener("input", function () {
+            const password = form.password.value || "";
+            setFieldError("password", password.length >= 6 ? "" : "Le mot de passe doit contenir au moins 6 caracteres.");
+          });
+        }
+
+        if (authKeyField) {
+          authKeyField.addEventListener("input", function () {
+            const isAgent = loginModeInput && loginModeInput.value === "agent";
+            const authKey = (authKeyField.value || "").trim();
+            setFieldError("auth_key", isAgent && !authKey ? "La cle d'authentification est obligatoire." : "");
           });
         }
       })();

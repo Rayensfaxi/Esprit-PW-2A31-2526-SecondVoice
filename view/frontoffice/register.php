@@ -1,4 +1,4 @@
-<?php
+﻿<?php
 
 session_start();
 require_once __DIR__ . '/../../controller/UtilisateurController.php';
@@ -21,6 +21,13 @@ $values = [
     'email' => '',
     'telephone' => ''
 ];
+$fieldErrors = [
+    'nom' => '',
+    'prenom' => '',
+    'email' => '',
+    'telephone' => '',
+    'password' => ''
+];
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $values['nom'] = trim((string) ($_POST['nom'] ?? ''));
@@ -28,34 +35,82 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $values['email'] = trim((string) ($_POST['email'] ?? ''));
     $values['telephone'] = trim((string) ($_POST['telephone'] ?? ''));
     $password = (string) ($_POST['password'] ?? '');
+    $normalizedPhone = preg_replace('/\s+/', '', $values['telephone']) ?? '';
 
-    try {
-        $controller = new UtilisateurController();
-        $newId = $controller->addUser(
-            $values['nom'],
-            $values['prenom'],
-            $values['email'],
-            $password,
-            $values['telephone'],
-            'client'
-        );
+    if ($values['nom'] === '') {
+        $fieldErrors['nom'] = 'Le nom est obligatoire.';
+    } elseif (!preg_match("/^[\\p{L}\\s'\\-]{2,60}$/u", $values['nom'])) {
+        $fieldErrors['nom'] = 'Nom invalide (2 a 60 caracteres lettres).';
+    }
 
-        $user = $controller->getUserById($newId);
-        if (!$user) {
-            throw new RuntimeException('Impossible de recuperer le compte cree.');
+    if ($values['prenom'] === '') {
+        $fieldErrors['prenom'] = 'Le prenom est obligatoire.';
+    } elseif (!preg_match("/^[\\p{L}\\s'\\-]{2,60}$/u", $values['prenom'])) {
+        $fieldErrors['prenom'] = 'Prenom invalide (2 a 60 caracteres lettres).';
+    }
+
+    if ($values['email'] === '') {
+        $fieldErrors['email'] = "L'e-mail est obligatoire.";
+    } elseif (!filter_var($values['email'], FILTER_VALIDATE_EMAIL)) {
+        $fieldErrors['email'] = 'Adresse e-mail invalide.';
+    } elseif (strlen($values['email']) > 100) {
+        $fieldErrors['email'] = 'Adresse e-mail trop longue (max 100 caracteres).';
+    }
+
+    if ($normalizedPhone === '') {
+        $fieldErrors['telephone'] = 'Le telephone est obligatoire.';
+    } elseif (!preg_match('/^\+?[0-9]{8,15}$/', $normalizedPhone)) {
+        $fieldErrors['telephone'] = 'Telephone invalide (8 a 15 chiffres).';
+    }
+
+    if ($password === '') {
+        $fieldErrors['password'] = 'Le mot de passe est obligatoire.';
+    } elseif (strlen($password) < 6) {
+        $fieldErrors['password'] = 'Mot de passe: minimum 6 caracteres.';
+    } elseif (strlen($password) > 255) {
+        $fieldErrors['password'] = 'Mot de passe trop long.';
+    }
+
+    $hasFieldErrors = false;
+    foreach ($fieldErrors as $message) {
+        if ($message !== '') {
+            $hasFieldErrors = true;
+            break;
         }
+    }
 
-        $_SESSION['user_id'] = (int) $user['id'];
-        $_SESSION['user_role'] = (string) ($user['role'] ?? 'client');
-        $_SESSION['user_nom'] = (string) ($user['nom'] ?? '');
-        $_SESSION['user_prenom'] = (string) ($user['prenom'] ?? '');
-        $_SESSION['user_email'] = (string) ($user['email'] ?? '');
-
-        header('Location: profile.php?status=registered');
-        exit;
-    } catch (Throwable $exception) {
-        $feedback = $exception->getMessage();
+    if ($hasFieldErrors) {
+        $feedback = 'Veuillez corriger les erreurs de saisie.';
         $feedbackType = 'error';
+    } else {
+        try {
+            $controller = new UtilisateurController();
+            $newId = $controller->addUser(
+                $values['nom'],
+                $values['prenom'],
+                $values['email'],
+                $password,
+                $normalizedPhone,
+                'client'
+            );
+
+            $user = $controller->getUserById($newId);
+            if (!$user) {
+                throw new RuntimeException('Impossible de recuperer le compte cree.');
+            }
+
+            $_SESSION['user_id'] = (int) $user['id'];
+            $_SESSION['user_role'] = (string) ($user['role'] ?? 'client');
+            $_SESSION['user_nom'] = (string) ($user['nom'] ?? '');
+            $_SESSION['user_prenom'] = (string) ($user['prenom'] ?? '');
+            $_SESSION['user_email'] = (string) ($user['email'] ?? '');
+
+            header('Location: profile.php?status=registered');
+            exit;
+        } catch (Throwable $exception) {
+            $feedback = $exception->getMessage();
+            $feedbackType = 'error';
+        }
     }
 }
 ?>
@@ -118,15 +173,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
           <form class="auth-form" id="register-form" action="register.php" method="post" novalidate>
             <input class="field" type="text" name="nom" value="<?= h($values['nom']) ?>" placeholder="Nom" />
-            <p class="field-error" data-error-for="nom"></p>
+            <p class="field-error" data-error-for="nom"><?= h($fieldErrors['nom']) ?></p>
             <input class="field" type="text" name="prenom" value="<?= h($values['prenom']) ?>" placeholder="Prenom" />
-            <p class="field-error" data-error-for="prenom"></p>
+            <p class="field-error" data-error-for="prenom"><?= h($fieldErrors['prenom']) ?></p>
             <input class="field" type="text" name="email" value="<?= h($values['email']) ?>" placeholder="E-mail" />
-            <p class="field-error" data-error-for="email"></p>
+            <p class="field-error" data-error-for="email"><?= h($fieldErrors['email']) ?></p>
             <input class="field" type="text" name="telephone" value="<?= h($values['telephone']) ?>" placeholder="Telephone (+216...)" />
-            <p class="field-error" data-error-for="telephone"></p>
+            <p class="field-error" data-error-for="telephone"><?= h($fieldErrors['telephone']) ?></p>
             <input class="field" type="password" name="password" placeholder="Mot de passe" />
-            <p class="field-error" data-error-for="password"></p>
+            <p class="field-error" data-error-for="password"><?= h($fieldErrors['password']) ?></p>
 
             <p id="register-feedback" class="auth-feedback <?= $feedbackType === 'error' ? 'error' : '' ?>"><?= h($feedback) ?></p>
             <button class="btn btn-primary" type="submit">Creer un compte</button>
@@ -182,50 +237,98 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
           if (node) node.textContent = message;
         }
 
-        form.addEventListener("submit", function (event) {
-          clearFieldErrors();
+        function validateNom() {
           const nom = (form.nom.value || "").trim();
-          const prenom = (form.prenom.value || "").trim();
-          const email = (form.email.value || "").trim();
-          const telephone = (form.telephone.value || "").trim().replace(/\s+/g, "");
-          const password = form.password.value || "";
-
           const namePattern = /^[A-Za-zÀ-ÖØ-öø-ÿ\s'-]{2,60}$/;
+          if (!nom) return "Le nom est obligatoire.";
+          if (!namePattern.test(nom)) return "Nom invalide (2 a 60 caracteres lettres).";
+          return "";
+        }
+
+        function validatePrenom() {
+          const prenom = (form.prenom.value || "").trim();
+          const namePattern = /^[A-Za-zÀ-ÖØ-öø-ÿ\s'-]{2,60}$/;
+          if (!prenom) return "Le prenom est obligatoire.";
+          if (!namePattern.test(prenom)) return "Prenom invalide (2 a 60 caracteres lettres).";
+          return "";
+        }
+
+        function validateEmail() {
+          const email = (form.email.value || "").trim();
           const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+          if (!email) return "L'e-mail est obligatoire.";
+          if (!emailPattern.test(email)) return "Adresse e-mail invalide.";
+          if (email.length > 100) return "Adresse e-mail trop longue (max 100 caracteres).";
+          return "";
+        }
+
+        function validateTelephone() {
+          const telephone = (form.telephone.value || "").trim().replace(/\s+/g, "");
           const phonePattern = /^\+?[0-9]{8,15}$/;
+          if (!telephone) return "Le telephone est obligatoire.";
+          if (!phonePattern.test(telephone)) return "Telephone invalide (8 a 15 chiffres).";
+          return "";
+        }
 
-          if (!namePattern.test(nom)) {
-            event.preventDefault();
-            setFieldError("nom", "Nom invalide (2 a 60 caracteres).");
-            return;
+        function validatePassword() {
+          const password = form.password.value || "";
+          if (!password) return "Le mot de passe est obligatoire.";
+          if (password.length < 6) return "Mot de passe: minimum 6 caracteres.";
+          if (password.length > 255) return "Mot de passe trop long.";
+          return "";
+        }
+
+        function runValidation(showFeedback) {
+          clearFieldErrors();
+          let hasError = false;
+          const checks = {
+            nom: validateNom(),
+            prenom: validatePrenom(),
+            email: validateEmail(),
+            telephone: validateTelephone(),
+            password: validatePassword()
+          };
+
+          Object.keys(checks).forEach(function (key) {
+            if (checks[key]) {
+              hasError = true;
+              setFieldError(key, checks[key]);
+            }
+          });
+
+          if (showFeedback) {
+            if (hasError) {
+              feedback.textContent = "Veuillez corriger les erreurs de saisie.";
+              feedback.classList.add("error");
+            } else {
+              feedback.textContent = "";
+              feedback.classList.remove("error");
+            }
           }
 
-          if (!namePattern.test(prenom)) {
-            event.preventDefault();
-            setFieldError("prenom", "Prenom invalide (2 a 60 caracteres).");
-            return;
-          }
+          return !hasError;
+        }
 
-          if (!emailPattern.test(email)) {
+        form.addEventListener("submit", function (event) {
+          if (!runValidation(true)) {
             event.preventDefault();
-            setFieldError("email", "Adresse e-mail invalide.");
-            return;
           }
+        });
 
-          if (!phonePattern.test(telephone)) {
-            event.preventDefault();
-            setFieldError("telephone", "Telephone invalide (8 a 15 chiffres).");
-            return;
-          }
-
-          if (password.length < 6) {
-            event.preventDefault();
-            setFieldError("password", "Mot de passe: minimum 6 caracteres.");
-            return;
-          }
-
-          feedback.textContent = "";
-          feedback.classList.remove("error");
+        form.nom.addEventListener("input", function () {
+          setFieldError("nom", validateNom());
+        });
+        form.prenom.addEventListener("input", function () {
+          setFieldError("prenom", validatePrenom());
+        });
+        form.email.addEventListener("input", function () {
+          setFieldError("email", validateEmail());
+        });
+        form.telephone.addEventListener("input", function () {
+          setFieldError("telephone", validateTelephone());
+        });
+        form.password.addEventListener("input", function () {
+          setFieldError("password", validatePassword());
         });
       })();
     </script>

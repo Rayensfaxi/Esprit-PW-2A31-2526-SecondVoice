@@ -1,4 +1,4 @@
-<?php
+﻿<?php
 
 session_start();
 
@@ -58,6 +58,62 @@ function formatCreationDate(string $date): string
     }
 }
 
+function validateUserInput(array $data, bool $isAdd): array
+{
+    $errors = [
+        'nom' => '',
+        'prenom' => '',
+        'email' => '',
+        'telephone' => '',
+        'role' => '',
+        'mot_de_passe' => '',
+        'statut_compte' => ''
+    ];
+
+    $nom = trim((string) ($data['nom'] ?? ''));
+    $prenom = trim((string) ($data['prenom'] ?? ''));
+    $email = trim((string) ($data['email'] ?? ''));
+    $telephone = preg_replace('/\s+/', '', trim((string) ($data['telephone'] ?? ''))) ?? '';
+    $role = strtolower(trim((string) ($data['role'] ?? '')));
+    $status = strtolower(trim((string) ($data['statut_compte'] ?? '')));
+    $password = (string) ($data['mot_de_passe'] ?? '');
+
+    if (!preg_match("/^[\\p{L}\\s'\\-]{2,60}$/u", $nom)) {
+        $errors['nom'] = 'Le nom doit contenir 2 a 60 caracteres alphabetiques.';
+    }
+
+    if (!preg_match("/^[\\p{L}\\s'\\-]{2,60}$/u", $prenom)) {
+        $errors['prenom'] = 'Le prenom doit contenir 2 a 60 caracteres alphabetiques.';
+    }
+
+    if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
+        $errors['email'] = 'Adresse e-mail invalide.';
+    } elseif (strlen($email) > 100) {
+        $errors['email'] = 'Adresse e-mail trop longue (max 100 caracteres).';
+    }
+
+    if (!preg_match('/^\+?[0-9]{8,15}$/', $telephone)) {
+        $errors['telephone'] = 'Le telephone doit contenir entre 8 et 15 chiffres.';
+    }
+
+    $allowedRoles = $isAdd ? ['admin', 'agent'] : ['admin', 'agent', 'client'];
+    if (!in_array($role, $allowedRoles, true)) {
+        $errors['role'] = $isAdd
+            ? 'En creation, le role doit etre admin ou agent.'
+            : 'Le role doit etre admin, agent ou client.';
+    }
+
+    if (($isAdd || $password !== '') && strlen($password) < 6) {
+        $errors['mot_de_passe'] = 'Le mot de passe doit contenir au moins 6 caracteres.';
+    }
+
+    if (!in_array($status, ['actif', 'bloque', 'en_pause'], true)) {
+        $errors['statut_compte'] = 'Le statut du compte doit etre Actif, Bloque ou En pause.';
+    }
+
+    return $errors;
+}
+
 $controller = new UtilisateurController();
 $feedbackType = '';
 $feedbackMessage = '';
@@ -69,6 +125,15 @@ $formValues = [
     'telephone' => '',
     'role' => 'agent',
     'statut_compte' => 'actif'
+];
+$fieldErrors = [
+    'nom' => '',
+    'prenom' => '',
+    'email' => '',
+    'telephone' => '',
+    'role' => '',
+    'mot_de_passe' => '',
+    'statut_compte' => ''
 ];
 
 $search = trim((string) ($_GET['q'] ?? ''));
@@ -105,56 +170,85 @@ if (isset($_GET['edit']) && ctype_digit((string) $_GET['edit'])) {
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $action = strtolower(trim((string) ($_POST['action'] ?? '')));
+    $formValues['nom'] = trim((string) ($_POST['nom'] ?? $formValues['nom']));
+    $formValues['prenom'] = trim((string) ($_POST['prenom'] ?? $formValues['prenom']));
+    $formValues['email'] = trim((string) ($_POST['email'] ?? $formValues['email']));
+    $formValues['telephone'] = trim((string) ($_POST['telephone'] ?? $formValues['telephone']));
+    $formValues['role'] = trim((string) ($_POST['role'] ?? $formValues['role']));
+    $formValues['statut_compte'] = trim((string) ($_POST['statut_compte'] ?? $formValues['statut_compte']));
 
-    try {
-        if ($action === 'add') {
-            $nom = trim((string) ($_POST['nom'] ?? ''));
-            $prenom = trim((string) ($_POST['prenom'] ?? ''));
-            $email = trim((string) ($_POST['email'] ?? ''));
-            $telephone = trim((string) ($_POST['telephone'] ?? ''));
-            $role = trim((string) ($_POST['role'] ?? 'agent'));
-            $password = (string) ($_POST['mot_de_passe'] ?? '');
-            $statutCompte = trim((string) ($_POST['statut_compte'] ?? 'actif'));
-
-            if (!in_array(strtolower($role), ['admin', 'agent'], true)) {
-                throw new InvalidArgumentException('En backoffice, vous pouvez ajouter uniquement des admins ou des agents.');
-            }
-
-            $controller->addUser($nom, $prenom, $email, $password, $telephone, $role, $statutCompte);
-            header('Location: gestion-utilisateurs.php?status=added');
-            exit;
-        }
-
-        if ($action === 'update') {
-            $id = (int) ($_POST['id'] ?? 0);
-            $nom = trim((string) ($_POST['nom'] ?? ''));
-            $prenom = trim((string) ($_POST['prenom'] ?? ''));
-            $email = trim((string) ($_POST['email'] ?? ''));
-            $telephone = trim((string) ($_POST['telephone'] ?? ''));
-            $role = trim((string) ($_POST['role'] ?? 'agent'));
-            $password = trim((string) ($_POST['mot_de_passe'] ?? ''));
-            $statutCompte = trim((string) ($_POST['statut_compte'] ?? 'actif'));
-
-            $controller->updateUser($id, $nom, $prenom, $email, $telephone, $role, $password !== '' ? $password : null, $statutCompte);
-            header('Location: gestion-utilisateurs.php?status=updated');
-            exit;
-        }
-
-        throw new InvalidArgumentException('Action invalide.');
-    } catch (Throwable $exception) {
+    if ($action !== 'add' && $action !== 'update') {
         $feedbackType = 'error';
-        $feedbackMessage = $exception->getMessage();
-
-        $formValues['nom'] = trim((string) ($_POST['nom'] ?? $formValues['nom']));
-        $formValues['prenom'] = trim((string) ($_POST['prenom'] ?? $formValues['prenom']));
-        $formValues['email'] = trim((string) ($_POST['email'] ?? $formValues['email']));
-        $formValues['telephone'] = trim((string) ($_POST['telephone'] ?? $formValues['telephone']));
-        $formValues['role'] = trim((string) ($_POST['role'] ?? $formValues['role']));
-        $formValues['statut_compte'] = trim((string) ($_POST['statut_compte'] ?? $formValues['statut_compte']));
-
-        if (isset($_POST['id']) && ctype_digit((string) $_POST['id'])) {
-            $editUser = $controller->getUserById((int) $_POST['id']);
+        $feedbackMessage = 'Action invalide.';
+    } else {
+        $validationErrors = validateUserInput($_POST, $action === 'add');
+        $hasFieldErrors = false;
+        foreach ($validationErrors as $key => $message) {
+            $fieldErrors[$key] = $message;
+            if ($message !== '') {
+                $hasFieldErrors = true;
+            }
         }
+
+        if ($hasFieldErrors) {
+            $feedbackType = 'error';
+            $feedbackMessage = 'Veuillez corriger les erreurs sous les champs.';
+        } else {
+            try {
+                if ($action === 'add') {
+                    $controller->addUser(
+                        $formValues['nom'],
+                        $formValues['prenom'],
+                        $formValues['email'],
+                        (string) ($_POST['mot_de_passe'] ?? ''),
+                        $formValues['telephone'],
+                        $formValues['role'],
+                        $formValues['statut_compte']
+                    );
+                    header('Location: gestion-utilisateurs.php?status=added');
+                    exit;
+                }
+
+                $id = (int) ($_POST['id'] ?? 0);
+                $password = trim((string) ($_POST['mot_de_passe'] ?? ''));
+                $controller->updateUser(
+                    $id,
+                    $formValues['nom'],
+                    $formValues['prenom'],
+                    $formValues['email'],
+                    $formValues['telephone'],
+                    $formValues['role'],
+                    $password !== '' ? $password : null,
+                    $formValues['statut_compte']
+                );
+                header('Location: gestion-utilisateurs.php?status=updated');
+                exit;
+            } catch (Throwable $exception) {
+                $feedbackType = 'error';
+                $feedbackMessage = $exception->getMessage();
+                $message = strtolower($feedbackMessage);
+
+                if (str_contains($message, 'e-mail') || str_contains($message, 'email')) {
+                    $fieldErrors['email'] = $feedbackMessage;
+                } elseif (str_contains($message, 'telephone')) {
+                    $fieldErrors['telephone'] = $feedbackMessage;
+                } elseif (str_contains($message, 'prenom')) {
+                    $fieldErrors['prenom'] = $feedbackMessage;
+                } elseif (str_contains($message, 'nom')) {
+                    $fieldErrors['nom'] = $feedbackMessage;
+                } elseif (str_contains($message, 'role')) {
+                    $fieldErrors['role'] = $feedbackMessage;
+                } elseif (str_contains($message, 'statut')) {
+                    $fieldErrors['statut_compte'] = $feedbackMessage;
+                } elseif (str_contains($message, 'mot de passe')) {
+                    $fieldErrors['mot_de_passe'] = $feedbackMessage;
+                }
+            }
+        }
+    }
+
+    if (isset($_POST['id']) && ctype_digit((string) $_POST['id'])) {
+        $editUser = $controller->getUserById((int) $_POST['id']);
     }
 }
 
@@ -173,6 +267,14 @@ $users = $controller->getUsers([
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
     <link rel="stylesheet" href="assets/style.css" />
+    <style>
+      .field-error-inline {
+        margin: 6px 0 0;
+        min-height: 18px;
+        font-size: 0.84rem;
+        color: #dc4b67;
+      }
+    </style>
   </head>
   <body data-page="profile">
     <div class="overlay" data-overlay></div>
@@ -266,18 +368,22 @@ $users = $controller->getUsers([
                 <div class="filter-field">
                   <label for="nom">Nom</label>
                   <input id="nom" name="nom" type="text" value="<?= h($formValues['nom']) ?>" placeholder="Nom" />
+                  <p class="field-error-inline" data-error-for="nom"><?= h($fieldErrors['nom']) ?></p>
                 </div>
                 <div class="filter-field">
                   <label for="prenom">Prenom</label>
                   <input id="prenom" name="prenom" type="text" value="<?= h($formValues['prenom']) ?>" placeholder="Prenom" />
+                  <p class="field-error-inline" data-error-for="prenom"><?= h($fieldErrors['prenom']) ?></p>
                 </div>
                 <div class="filter-field">
                   <label for="email">E-mail</label>
                   <input id="email" name="email" type="text" value="<?= h($formValues['email']) ?>" placeholder="utilisateur@mail.com" />
+                  <p class="field-error-inline" data-error-for="email"><?= h($fieldErrors['email']) ?></p>
                 </div>
                 <div class="filter-field">
                   <label for="telephone">Telephone</label>
                   <input id="telephone" name="telephone" type="text" value="<?= h($formValues['telephone']) ?>" placeholder="+21612345678" />
+                  <p class="field-error-inline" data-error-for="telephone"><?= h($fieldErrors['telephone']) ?></p>
                 </div>
                 <div class="filter-field">
                   <label for="role">Role</label>
@@ -288,10 +394,12 @@ $users = $controller->getUsers([
                       <option value="client" <?= strtolower((string) $formValues['role']) === 'client' ? 'selected' : '' ?>>Client</option>
                     <?php endif; ?>
                   </select>
+                  <p class="field-error-inline" data-error-for="role"><?= h($fieldErrors['role']) ?></p>
                 </div>
                 <div class="filter-field">
                   <label for="mot_de_passe">Mot de passe <?= $editUser ? '(laisser vide pour conserver)' : '' ?></label>
                   <input id="mot_de_passe" name="mot_de_passe" type="password" placeholder="Minimum 6 caracteres" />
+                  <p class="field-error-inline" data-error-for="mot_de_passe"><?= h($fieldErrors['mot_de_passe']) ?></p>
                 </div>
                 <div class="filter-field">
                   <label for="statut_compte">Statut du compte</label>
@@ -300,6 +408,7 @@ $users = $controller->getUsers([
                     <option value="bloque" <?= strtolower((string) $formValues['statut_compte']) === 'bloque' ? 'selected' : '' ?>>Bloque</option>
                     <option value="en_pause" <?= strtolower((string) $formValues['statut_compte']) === 'en_pause' ? 'selected' : '' ?>>En pause</option>
                   </select>
+                  <p class="field-error-inline" data-error-for="statut_compte"><?= h($fieldErrors['statut_compte']) ?></p>
                 </div>
               </div>
 
@@ -372,13 +481,19 @@ $users = $controller->getUsers([
       (function () {
         const form = document.getElementById("crud-user-form");
         const feedback = document.getElementById("crud-feedback");
+        const fieldErrors = form
+          ? {
+              nom: form.querySelector('[data-error-for="nom"]'),
+              prenom: form.querySelector('[data-error-for="prenom"]'),
+              email: form.querySelector('[data-error-for="email"]'),
+              telephone: form.querySelector('[data-error-for="telephone"]'),
+              role: form.querySelector('[data-error-for="role"]'),
+              mot_de_passe: form.querySelector('[data-error-for="mot_de_passe"]'),
+              statut_compte: form.querySelector('[data-error-for="statut_compte"]')
+            }
+          : {};
 
-        function showError(message) {
-          if (!feedback) return;
-          feedback.textContent = message;
-          feedback.classList.add("error");
-          feedback.classList.remove("success");
-        }
+        if (!form) return;
 
         function clearFeedback() {
           if (!feedback) return;
@@ -387,70 +502,133 @@ $users = $controller->getUsers([
           feedback.classList.remove("success");
         }
 
-        if (form) {
-          form.addEventListener("submit", function (event) {
-            clearFeedback();
-
-            const action = (form.querySelector('input[name="action"]')?.value || "").toLowerCase();
-            const nom = (form.nom.value || "").trim();
-            const prenom = (form.prenom.value || "").trim();
-            const email = (form.email.value || "").trim();
-            const telephone = (form.telephone.value || "").trim().replace(/\s+/g, "");
-            const role = (form.role.value || "").trim().toLowerCase();
-            const status = (form.statut_compte.value || "").trim().toLowerCase();
-            const password = form.mot_de_passe.value || "";
-
-            const namePattern = /^[A-Za-zÃ¯Â¿Â½-Ã¯Â¿Â½Ã¯Â¿Â½-Ã¯Â¿Â½Ã¯Â¿Â½-Ã¯Â¿Â½\s'-]{2,60}$/;
-            const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-            const phonePattern = /^\+?[0-9]{8,15}$/;
-
-            if (!namePattern.test(nom)) {
-              event.preventDefault();
-              showError("Le nom doit contenir 2 a 60 caracteres alphabetiques.");
-              return;
-            }
-
-            if (!namePattern.test(prenom)) {
-              event.preventDefault();
-              showError("Le prenom doit contenir 2 a 60 caracteres alphabetiques.");
-              return;
-            }
-
-            if (!emailPattern.test(email)) {
-              event.preventDefault();
-              showError("Adresse e-mail invalide.");
-              return;
-            }
-
-            if (!phonePattern.test(telephone)) {
-              event.preventDefault();
-              showError("Le telephone doit contenir entre 8 et 15 chiffres.");
-              return;
-            }
-
-            if ((action === "add" && !["admin", "agent"].includes(role)) || (action !== "add" && !["admin", "agent", "client"].includes(role))) {
-              event.preventDefault();
-              showError(action === "add" ? "En creation, le role doit etre admin ou agent." : "Le role doit etre admin, agent ou client.");
-              return;
-            }
-
-            if ((action === "add" || password.length > 0) && password.length < 6) {
-              event.preventDefault();
-              showError("Le mot de passe doit contenir au moins 6 caracteres.");
-              return;
-            }
-
-            if (!["actif", "bloque", "en_pause"].includes(status)) {
-              event.preventDefault();
-              showError("Le statut du compte doit etre Actif, Bloque ou En pause.");
-            }
+        function clearFieldErrors() {
+          Object.values(fieldErrors).forEach(function (node) {
+            if (node) node.textContent = "";
           });
         }
+
+        function setFieldError(fieldName, message) {
+          const node = fieldErrors[fieldName];
+          if (node) node.textContent = message;
+        }
+
+        function validateFields() {
+          clearFieldErrors();
+          const action = (form.querySelector('input[name="action"]')?.value || "").toLowerCase();
+          const nom = (form.nom.value || "").trim();
+          const prenom = (form.prenom.value || "").trim();
+          const email = (form.email.value || "").trim();
+          const telephone = (form.telephone.value || "").trim().replace(/\s+/g, "");
+          const role = (form.role.value || "").trim().toLowerCase();
+          const status = (form.statut_compte.value || "").trim().toLowerCase();
+          const password = form.mot_de_passe.value || "";
+
+          const namePattern = /^[A-Za-zÀ-ÖØ-öø-ÿ\s'-]{2,60}$/;
+          const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+          const phonePattern = /^\+?[0-9]{8,15}$/;
+          let hasError = false;
+
+          if (!namePattern.test(nom)) {
+            setFieldError("nom", "Le nom doit contenir 2 a 60 caracteres alphabetiques.");
+            hasError = true;
+          }
+
+          if (!namePattern.test(prenom)) {
+            setFieldError("prenom", "Le prenom doit contenir 2 a 60 caracteres alphabetiques.");
+            hasError = true;
+          }
+
+          if (!emailPattern.test(email)) {
+            setFieldError("email", "Adresse e-mail invalide.");
+            hasError = true;
+          } else if (email.length > 100) {
+            setFieldError("email", "Adresse e-mail trop longue (max 100 caracteres).");
+            hasError = true;
+          }
+
+          if (!phonePattern.test(telephone)) {
+            setFieldError("telephone", "Le telephone doit contenir entre 8 et 15 chiffres.");
+            hasError = true;
+          }
+
+          const validRoles = action === "add" ? ["admin", "agent"] : ["admin", "agent", "client"];
+          if (!validRoles.includes(role)) {
+            setFieldError(
+              "role",
+              action === "add"
+                ? "En creation, le role doit etre admin ou agent."
+                : "Le role doit etre admin, agent ou client."
+            );
+            hasError = true;
+          }
+
+          if ((action === "add" || password.length > 0) && password.length < 6) {
+            setFieldError("mot_de_passe", "Le mot de passe doit contenir au moins 6 caracteres.");
+            hasError = true;
+          }
+
+          if (!["actif", "bloque", "en_pause"].includes(status)) {
+            setFieldError("statut_compte", "Le statut du compte doit etre Actif, Bloque ou En pause.");
+            hasError = true;
+          }
+
+          return !hasError;
+        }
+
+        form.addEventListener("submit", function (event) {
+          clearFeedback();
+          if (!validateFields()) {
+            event.preventDefault();
+            if (feedback) {
+              feedback.textContent = "Veuillez corriger les erreurs sous les champs.";
+              feedback.classList.add("error");
+              feedback.classList.remove("success");
+            }
+          }
+        });
+
+        form.nom.addEventListener("input", function () {
+          const namePattern = /^[A-Za-zÀ-ÖØ-öø-ÿ\s'-]{2,60}$/;
+          setFieldError("nom", namePattern.test((form.nom.value || "").trim()) ? "" : "Le nom doit contenir 2 a 60 caracteres alphabetiques.");
+        });
+        form.prenom.addEventListener("input", function () {
+          const namePattern = /^[A-Za-zÀ-ÖØ-öø-ÿ\s'-]{2,60}$/;
+          setFieldError("prenom", namePattern.test((form.prenom.value || "").trim()) ? "" : "Le prenom doit contenir 2 a 60 caracteres alphabetiques.");
+        });
+        form.email.addEventListener("input", function () {
+          const email = (form.email.value || "").trim();
+          const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+          if (!emailPattern.test(email)) {
+            setFieldError("email", "Adresse e-mail invalide.");
+          } else if (email.length > 100) {
+            setFieldError("email", "Adresse e-mail trop longue (max 100 caracteres).");
+          } else {
+            setFieldError("email", "");
+          }
+        });
+        form.telephone.addEventListener("input", function () {
+          const phonePattern = /^\+?[0-9]{8,15}$/;
+          const phone = (form.telephone.value || "").trim().replace(/\s+/g, "");
+          setFieldError("telephone", phonePattern.test(phone) ? "" : "Le telephone doit contenir entre 8 et 15 chiffres.");
+        });
+        form.role.addEventListener("change", function () {
+          setFieldError("role", "");
+        });
+        form.statut_compte.addEventListener("change", function () {
+          setFieldError("statut_compte", "");
+        });
+        form.mot_de_passe.addEventListener("input", function () {
+          const action = (form.querySelector('input[name="action"]')?.value || "").toLowerCase();
+          const password = form.mot_de_passe.value || "";
+          if ((action === "add" || password.length > 0) && password.length < 6) {
+            setFieldError("mot_de_passe", "Le mot de passe doit contenir au moins 6 caracteres.");
+          } else {
+            setFieldError("mot_de_passe", "");
+          }
+        });
       })();
     </script>
     <script src="assets/app.js"></script>
   </body>
 </html>
-
-
-
