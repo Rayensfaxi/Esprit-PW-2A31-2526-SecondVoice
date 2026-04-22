@@ -54,6 +54,33 @@ if (isset($_GET['status']) && $_GET['status'] === 'forbidden') {
     $feedback = 'Acces refuse: seul un admin ou un agent peut acceder au dashboard.';
     $feedbackType = 'error';
 }
+if (isset($_GET['status']) && $_GET['status'] === 'verify_email_sent') {
+    $feedback = 'Compte cree. Verifiez votre e-mail puis cliquez sur le lien de confirmation.';
+}
+if (isset($_GET['status']) && $_GET['status'] === 'verify_email_sent_log') {
+    $feedback = "Compte cree. L'e-mail n'a pas pu etre envoye automatiquement. Verifiez la config e-mail et storage/mail/outbox.log.";
+}
+if (isset($_GET['status']) && $_GET['status'] === 'email_verified') {
+    $feedback = 'E-mail verifie avec succes. Vous pouvez maintenant vous connecter.';
+}
+if (isset($_GET['status']) && $_GET['status'] === 'email_verify_failed') {
+    $feedback = 'Lien de verification invalide ou expire.';
+    $feedbackType = 'error';
+}
+if (isset($_GET['status']) && $_GET['status'] === 'reset_link_sent') {
+    $feedback = 'Si cet e-mail existe, un lien de reinitialisation a ete envoye.';
+}
+if (isset($_GET['status']) && $_GET['status'] === 'reset_link_sent_log') {
+    $feedback = "Lien genere mais e-mail non envoye. Verifiez la config e-mail ou consultez storage/mail/outbox.log.";
+    $feedbackType = 'error';
+}
+if (isset($_GET['status']) && $_GET['status'] === 'password_reset_done') {
+    $feedback = 'Mot de passe mis a jour. Connectez-vous avec le nouveau mot de passe.';
+}
+if (isset($_GET['status']) && $_GET['status'] === 'reset_invalid') {
+    $feedback = 'Lien de reinitialisation invalide ou expire.';
+    $feedbackType = 'error';
+}
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $emailValue = trim((string) ($_POST['email'] ?? ''));
@@ -203,6 +230,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
           <div class="user-panel-footer">
             <a class="btn btn-secondary" href="register.php">Creer un compte</a>
+          </div>
+          <div class="auth-links" style="margin-top: 10px; text-align: center;">
+            <a href="forgot-password.php">Mot de passe oublie ?</a>
           </div>
         </section>
       </section>

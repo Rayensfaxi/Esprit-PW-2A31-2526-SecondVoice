@@ -1,0 +1,292 @@
+----
+date: 2026-04-21 21:07:00
+to: sfrayen54@gmail.com
+subject: Reinitialisation de mot de passe - SecondVoice
+mail_sent: no
+body:
+Bonjour Rayen Sfaxi,
+
+Vous avez demande la reinitialisation de votre mot de passe.
+Cliquez sur ce lien pour definir un nouveau mot de passe:
+http://localhost/Second voice/view/frontoffice/reset-password.php?token=17cff809561de77246f9606dbb264e444e64c91d3743e2219271e753aa3e45b0
+
+Ce lien expire dans 2 heures.
+Si vous n'avez pas fait cette demande, ignorez ce message.
+
+----
+
+----
+date: 2026-04-21 21:08:47
+to: dow@gmail.com
+subject: Verification de votre e-mail SecondVoice
+mail_sent: no
+body:
+Bonjour dow douda,
+
+Merci pour votre inscription sur SecondVoice.
+Cliquez sur ce lien pour verifier votre e-mail:
+http://localhost/Second voice/view/frontoffice/verify-email.php?token=dbccbc149f43b14d9484b16a49df3bdfe10bb0d79e6468cce17da0ab61309913
+
+Ce lien expire dans 24 heures.
+Si vous n'etes pas a l'origine de cette demande, ignorez ce message.
+
+----
+
+----
+date: 2026-04-21 21:37:03
+to: sfrayen54@gmail.com
+subject: Reinitialisation de mot de passe - SecondVoice
+mail_sent: no
+mail_error: Configuration SMTP incomplete (username/password).
+body:
+Bonjour Rayen Sfaxi,
+
+Vous avez demande la reinitialisation de votre mot de passe.
+Cliquez sur ce lien pour definir un nouveau mot de passe:
+http://localhost/Second voice/view/frontoffice/reset-password.php?token=52e4db77d8294d21a8798e72ddc82f384f024bd8651e6ef4d8874c57076df6eb
+
+Ce lien expire dans 2 heures.
+Si vous n'avez pas fait cette demande, ignorez ce message.
+
+----
+
+----
+date: 2026-04-21 21:39:32
+to: sfrayen54@gmail.com
+subject: Reinitialisation de mot de passe - SecondVoice
+mail_sent: no
+mail_error: Configuration SMTP incomplete (username/password).
+body:
+Bonjour Rayen Sfaxi,
+
+Vous avez demande la reinitialisation de votre mot de passe.
+Cliquez sur ce lien pour definir un nouveau mot de passe:
+http://localhost/Second voice/view/frontoffice/reset-password.php?token=63547eaaea5043574296c60d11c6faae7c27594e5bd6ae08bca9cc4f37d151ed
+
+Ce lien expire dans 2 heures.
+Si vous n'avez pas fait cette demande, ignorez ce message.
+
+----
+
+----
+date: 2026-04-21 21:39:42
+to: sfrayen54@gmail.com
+subject: Reinitialisation de mot de passe - SecondVoice
+mail_sent: no
+mail_error: Configuration SMTP incomplete (username/password).
+body:
+Bonjour Rayen Sfaxi,
+
+Vous avez demande la reinitialisation de votre mot de passe.
+Cliquez sur ce lien pour definir un nouveau mot de passe:
+http://localhost/Second voice/view/frontoffice/reset-password.php?token=21acf8c3bb2a7c047bcafa06beb27d5c8ffffe07420c607ac96380e3e4c25783
+
+Ce lien expire dans 2 heures.
+Si vous n'avez pas fait cette demande, ignorez ce message.
+
+----
+
+----
+date: 2026-04-21 21:59:17
+to: sfrayen54@gmail.com
+subject: Reinitialisation de mot de passe - SecondVoice
+provider: brevo
+mail_sent: no
+mail_error: Brevo API key manquante.
+body:
+Bonjour Rayen Sfaxi,
+
+Vous avez demande la reinitialisation de votre mot de passe.
+Cliquez sur ce lien pour definir un nouveau mot de passe:
+http://localhost/Second voice/view/frontoffice/reset-password.php?token=aa9a0817fab704289aca7eae5cce806efe09c438795e440e0513a96518fe42c6
+
+Ce lien expire dans 2 heures.
+Si vous n'avez pas fait cette demande, ignorez ce message.
+
+----
+
+----
+date: 2026-04-21 22:01:20
+to: sfrayen54@gmail.com
+subject: Reinitialisation de mot de passe - SecondVoice
+provider: brevo
+mail_sent: no
+mail_error: Brevo API key manquante.
+body:
+Bonjour Rayen Sfaxi,
+
+Vous avez demande la reinitialisation de votre mot de passe.
+Cliquez sur ce lien pour definir un nouveau mot de passe:
+http://localhost/Second voice/view/frontoffice/reset-password.php?token=d162963c8ef2a72624b52c756ba9bec03e72062cfadef84e3638e511d22ef40d
+
+Ce lien expire dans 2 heures.
+Si vous n'avez pas fait cette demande, ignorez ce message.
+
+----
+
+----
+date: 2026-04-22 00:15:37
+to: sfrayen54@gmail.com
+subject: Reinitialisation de mot de passe - SecondVoice
+provider: brevo
+mail_sent: no
+mail_error: Brevo HTTP 401: {"message":"Key not found","code":"unauthorized"}
+
+body:
+Bonjour Rayen Sfaxi,
+
+Vous avez demande la reinitialisation de votre mot de passe.
+Cliquez sur ce lien pour definir un nouveau mot de passe:
+http://localhost/Second voice/view/frontoffice/reset-password.php?token=a11fa35f749b6a64f78e71c61eb64ad3608759487503d55b7f9dfe3346d5a3c3
+
+Ce lien expire dans 2 heures.
+Si vous n'avez pas fait cette demande, ignorez ce message.
+
+----
+
+----
+date: 2026-04-22 00:17:02
+to: sfrayen54@gmail.com
+subject: Reinitialisation de mot de passe - SecondVoice
+provider: brevo
+mail_sent: no
+mail_error: Brevo HTTP 401: {"message":"Key not found","code":"unauthorized"}
+
+body:
+Bonjour Rayen Sfaxi,
+
+Vous avez demande la reinitialisation de votre mot de passe.
+Cliquez sur ce lien pour definir un nouveau mot de passe:
+http://localhost/Second voice/view/frontoffice/reset-password.php?token=aaeada985f9c142836d4dcdab349553114cf178a6cae9c0701f49c85f821177d
+
+Ce lien expire dans 2 heures.
+Si vous n'avez pas fait cette demande, ignorez ce message.
+
+----
+
+----
+date: 2026-04-22 00:25:09
+to: sfrayen54@gmail.com
+subject: Reinitialisation de mot de passe - SecondVoice
+provider: brevo
+mail_sent: yes
+body:
+Bonjour Rayen Sfaxi,
+
+Vous avez demande la reinitialisation de votre mot de passe.
+Cliquez sur ce lien pour definir un nouveau mot de passe:
+http://localhost/Second voice/view/frontoffice/reset-password.php?token=bfd85f76fc8e460e584f445f42b3da99c54efa7800cbee9b0bd866ef3c17c5b0
+
+Ce lien expire dans 2 heures.
+Si vous n'avez pas fait cette demande, ignorez ce message.
+
+----
+
+----
+date: 2026-04-22 00:25:56
+to: sfrayen54@gmail.com
+subject: Reinitialisation de mot de passe - SecondVoice
+provider: brevo
+mail_sent: yes
+body:
+Bonjour Rayen Sfaxi,
+
+Vous avez demande la reinitialisation de votre mot de passe.
+Cliquez sur ce lien pour definir un nouveau mot de passe:
+http://localhost/Second voice/view/frontoffice/reset-password.php?token=2bf04042019ceaaf34617acf028be03b3ff201a30dd15e2bb66cded27351f567
+
+Ce lien expire dans 2 heures.
+Si vous n'avez pas fait cette demande, ignorez ce message.
+
+----
+
+----
+date: 2026-04-22 00:36:10
+to: sfrayen54@gmail.com
+subject: Reinitialisation de mot de passe - SecondVoice
+provider: brevo
+mail_sent: yes
+body:
+Bonjour Rayen Sfaxi,
+
+Vous avez demande la reinitialisation de votre mot de passe.
+Cliquez sur ce lien pour definir un nouveau mot de passe:
+http://localhost/Second%20voice/view/frontoffice/reset-password.php?token=3df1941bfb5921f4cc5ff41e5eb3abf90a28c057f63c46ce5cdf47a0787c8888
+
+Ce lien expire dans 2 heures.
+Si vous n'avez pas fait cette demande, ignorez ce message.
+
+----
+
+----
+date: 2026-04-22 00:44:56
+to: dar@esp.hmmmmmmmmm
+subject: Verification de votre e-mail SecondVoice
+provider: brevo
+mail_sent: yes
+body:
+Bonjour ed DarGraphix,
+
+Merci pour votre inscription sur SecondVoice.
+Cliquez sur ce lien pour verifier votre e-mail:
+http://localhost/Second%20voice/view/frontoffice/verify-email.php?token=f6401ab831668232362026b0cdfd9cd594a7a3fabc1db39e9f048f99d29287c9
+
+Ce lien expire dans 24 heures.
+Si vous n'etes pas a l'origine de cette demande, ignorez ce message.
+
+----
+
+----
+date: 2026-04-22 00:50:03
+to: hamoudi555555555@gmail.com
+subject: Verification de votre e-mail SecondVoice
+provider: brevo
+mail_sent: yes
+body:
+Bonjour ahm ahmed,
+
+Merci pour votre inscription sur SecondVoice.
+Cliquez sur ce lien pour verifier votre e-mail:
+http://localhost/Second%20voice/view/frontoffice/verify-email.php?token=e5f72703739ad89d69ccd276f5183707ffd64a28d369a742a39ae03d9da29e2e
+
+Ce lien expire dans 24 heures.
+Si vous n'etes pas a l'origine de cette demande, ignorez ce message.
+
+----
+
+----
+date: 2026-04-22 01:10:34
+to: sfrayen2204@gmail.com
+subject: Verification de votre e-mail SecondVoice
+provider: brevo
+mail_sent: yes
+body:
+Bonjour abdo abdo,
+
+Merci pour votre inscription sur SecondVoice.
+Cliquez sur ce lien pour verifier votre e-mail:
+http://localhost/Second%20voice/view/frontoffice/verify-email.php?token=6a3fa14d3a1b3208d886a1a03ae7c772394911195c66f1ea11639d6291d55f83
+
+Ce lien expire dans 24 heures.
+Si vous n'etes pas a l'origine de cette demande, ignorez ce message.
+
+----
+
+----
+date: 2026-04-22 10:25:09
+to: sfrayen54@gmail.com
+subject: Reinitialisation de mot de passe - SecondVoice
+provider: brevo
+mail_sent: yes
+body:
+Bonjour Rayen Sfaxi,
+
+Vous avez demande la reinitialisation de votre mot de passe.
+Cliquez sur ce lien pour definir un nouveau mot de passe:
+http://localhost/Second%20voice/view/frontoffice/reset-password.php?token=4f5fb5a0a2790b66cdc8e97d9c3e2e10a76073338b34cd30c2a120a1501139f1
+
+Ce lien expire dans 2 heures.
+Si vous n'avez pas fait cette demande, ignorez ce message.
+
+----
+

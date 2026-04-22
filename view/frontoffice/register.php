@@ -13,6 +13,16 @@ function h($value): string
     return htmlspecialchars((string) $value, ENT_QUOTES, 'UTF-8');
 }
 
+function frontofficeBaseUrl(): string
+{
+    $https = isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off';
+    $scheme = $https ? 'https' : 'http';
+    $host = (string) ($_SERVER['HTTP_HOST'] ?? 'localhost');
+    $script = str_replace('\\', '/', (string) ($_SERVER['SCRIPT_NAME'] ?? '/'));
+    $dir = rtrim(dirname($script), '/');
+    return $scheme . '://' . $host . $dir;
+}
+
 $feedback = '';
 $feedbackType = '';
 $values = [
@@ -99,16 +109,23 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 throw new RuntimeException('Impossible de recuperer le compte cree.');
             }
 
-            $_SESSION['user_id'] = (int) $user['id'];
-            $_SESSION['user_role'] = (string) ($user['role'] ?? 'client');
-            $_SESSION['user_nom'] = (string) ($user['nom'] ?? '');
-            $_SESSION['user_prenom'] = (string) ($user['prenom'] ?? '');
-            $_SESSION['user_email'] = (string) ($user['email'] ?? '');
+            $mailSent = $controller->sendEmailVerification(
+                (int) $newId,
+                $values['email'],
+                trim($values['prenom'] . ' ' . $values['nom']),
+                frontofficeBaseUrl() . '/verify-email.php'
+            );
 
-            header('Location: profile.php?status=registered');
+            header('Location: login.php?status=' . ($mailSent ? 'verify_email_sent' : 'verify_email_sent_log'));
             exit;
         } catch (Throwable $exception) {
-            $feedback = $exception->getMessage();
+            $message = $exception->getMessage();
+            if (stripos($message, 'e-mail') !== false || stripos($message, 'adresse') !== false || stripos($message, 'domaine') !== false) {
+                $fieldErrors['email'] = $message;
+                $feedback = 'Veuillez corriger les erreurs de saisie.';
+            } else {
+                $feedback = $message;
+            }
             $feedbackType = 'error';
         }
     }
