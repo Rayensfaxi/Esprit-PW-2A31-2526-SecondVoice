@@ -1,5 +1,8 @@
 <?php
-
+      include '../../../controller/reclamationcontroller.php';
+      require_once __DIR__ . '/../../../model/reclamation.php';
+      $ReclamationController = new ReclamationController();
+      $Reclamations = $ReclamationController->listReclamations();
 ?>
 
 <!DOCTYPE html>
@@ -167,13 +170,13 @@
                   </div>
                 </div>
                 <div class="profile-menu-list">
-                  <a
+                  <!--<a
                     class="menu-link"
                     href="../utilisateurs/gestion-utilisateurs.php"
                   >
                     <span class="menu-icon icon-profile"></span>
                     <span>Gestion des utilisateurs</span>
-                  </a>
+                  </a>-->
                   <a class="menu-link" href="../settings.php">
                     <span class="menu-icon icon-settings"></span>
                     <span>Paramètres</span>
@@ -252,7 +255,7 @@
               </div>
             </div>
           </section>
-
+          
           <section class="table-card">
             <table class="table users-table">
               <thead>
@@ -266,9 +269,10 @@
                 </tr>
               </thead>
               <tbody>
+              <?php if (count($Reclamations) > 0): ?> <?php foreach ($Reclamations as $Reclamation): ?>
                 <tr>
-                  <td><strong>#REC-001</strong></td>
-                  <td>Problème de facturation du mois de mars...</td>
+                  <td><strong><?= htmlspecialchars($Reclamation->getId_reclamation()) ?></strong></td>
+                  <td><?= htmlspecialchars($Reclamation->getDescription()) ?></td>
                   <td>
                     <div class="user-cell">
                       <span class="user-avatar">AS</span>
@@ -278,98 +282,28 @@
                       </div>
                     </div>
                   </td>
-                  <td><span class="status-pill en-cours">En cours</span></td>
-                  <td>14/04/2026 10:30</td>
+                  <td><span class="status-pill en-cours"><?= htmlspecialchars($Reclamation->getStatut()) ?></span></td>
+                  <td><?= htmlspecialchars($Reclamation->getDate_creation()) ?></td>
                   <td>
                     <div class="table-actions">
-                      <a href="form-reclamation.php?id=1" class="ghost-button"
+                    <!--  <a href="form-reclamation.php?id=1" class="ghost-button"
                         >Modifier</a
-                      >
+                      >-->
                       <a
-                        href="form-reponse.php?reclamation=1"
+                        href="form-reponse.php?reclamation=<?=$Reclamation->getId_reclamation() ?>"
                         class="ghost-button"
                         >Répondre</a
                       >
                     </div>
                   </td>
                 </tr>
+                <?php endforeach; ?> <?php else: ?>
                 <tr>
-                  <td><strong>#REC-002</strong></td>
-                  <td>Service client non disponible...</td>
-                  <td>
-                    <div class="user-cell">
-                      <span class="user-avatar">NK</span>
-                      <div>
-                        <strong>Nour Kammoun</strong>
-                        <span>User #89</span>
-                      </div>
-                    </div>
-                  </td>
-                  <td><span class="status-pill resolue">Résolue</span></td>
-                  <td>13/04/2026 09:15</td>
-                  <td>
-                    <div class="table-actions">
-                      <a href="form-reclamation.php?id=2" class="ghost-button"
-                        >Modifier</a
-                      >
-                      <button class="ghost-button" type="button">Voir</button>
-                    </div>
+                  <td colspan="6" class="text-center">
+                    Aucune livre trouvée.
                   </td>
                 </tr>
-                <tr>
-                  <td><strong>#REC-003</strong></td>
-                  <td>Retard de livraison commande...</td>
-                  <td>
-                    <div class="user-cell">
-                      <span class="user-avatar">LM</span>
-                      <div>
-                        <strong>Leila Mansour</strong>
-                        <span>User #56</span>
-                      </div>
-                    </div>
-                  </td>
-                  <td>
-                    <span class="status-pill en-attente">En attente</span>
-                  </td>
-                  <td>12/04/2026 14:20</td>
-                  <td>
-                    <div class="table-actions">
-                      <a href="form-reclamation.php?id=3" class="ghost-button"
-                        >Modifier</a
-                      >
-                      <a
-                        href="form-reponse.php?reclamation=3"
-                        class="ghost-button"
-                        >Répondre</a
-                      >
-                    </div>
-                  </td>
-                </tr>
-                <tr>
-                  <td><strong>#REC-004</strong></td>
-                  <td>Produit défectueux reçu...</td>
-                  <td>
-                    <div class="user-cell">
-                      <span class="user-avatar">HB</span>
-                      <div>
-                        <strong>Hichem Ben Ali</strong>
-                        <span>User #78</span>
-                      </div>
-                    </div>
-                  </td>
-                  <td><span class="status-pill rejetee">Rejetée</span></td>
-                  <td>10/04/2026 11:00</td>
-                  <td>
-                    <div class="table-actions">
-                      <a
-                        href="form-justification.php?reclamation=4"
-                        class="ghost-button"
-                        >Justifier</a
-                      >
-                      <button class="ghost-button" type="button">Voir</button>
-                    </div>
-                  </td>
-                </tr>
+                <?php endif; ?>
               </tbody>
             </table>
           </section>

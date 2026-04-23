@@ -1,7 +1,33 @@
 ﻿<?php
 
-?>
+session_start();
+include '../../controller/utilisateurcontroller.php';
 
+$error = "";
+
+if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    $email = trim($_POST['email']);
+    $password = $_POST['password'];
+    
+    $userController = new UtilisateurController();
+    $user = $userController->getUserByEmail($email);
+    
+    if ($user && $password === $user->getMot_de_passe()) {
+        // Connexion réussie
+        $_SESSION['user_id'] = $user->getId();
+        $_SESSION['user_email'] = $user->getEmail();
+        $_SESSION['user_role'] = $user->getRole();
+        $_SESSION['user_nom'] = $user->getNom();
+        $_SESSION['user_prenom'] = $user->getPrenom();
+        
+        header("Location: index.php");
+        exit;
+    } else {
+        $error = "Email ou mot de passe incorrect.";
+    }
+}
+
+?>
 
 <!DOCTYPE html>
 <html lang="fr">
@@ -9,45 +35,25 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Connexion | SecondVoice</title>
-    <link
-      rel="icon"
-      type="image/png"
-      sizes="32x32"
-      href="../assets/media/favicon-32.png"
-    />
-    <link
-      rel="icon"
-      type="image/png"
-      sizes="16x16"
-      href="../assets/media/favicon-16.png"
-    />
+    <link rel="icon" type="image/png" sizes="32x32" href="../assets/media/favicon-32.png" />
+    <link rel="icon" type="image/png" sizes="16x16" href="../assets/media/favicon-16.png" />
     <link rel="apple-touch-icon" href="../assets/media/apple-touch-icon.png" />
     <link rel="shortcut icon" href="../assets/media/favicon.png" />
     <script>
       const savedTheme = localStorage.getItem("theme");
-      const initialTheme =
-        savedTheme ||
-        (window.matchMedia("(prefers-color-scheme: light)").matches
-          ? "light"
-          : "dark");
+      const initialTheme = savedTheme || (window.matchMedia("(prefers-color-scheme: light)").matches ? "light" : "dark");
       document.documentElement.dataset.theme = initialTheme;
     </script>
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link
-      href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=Space+Grotesk:wght@500;700&display=swap"
-      rel="stylesheet"
-    />
+    <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=Space+Grotesk:wght@500;700&display=swap" rel="stylesheet" />
     <link rel="stylesheet" href="../assets/css/style.css" />
     <link rel="stylesheet" href="../assets/css/auth.css" />
   </head>
   <body class="auth-screen">
     <main class="auth-stage">
       <a class="auth-brand" href="index.php">
-        <img
-          src="../assets/media/secondvoice-logo.png"
-          alt="SecondVoice logo"
-        />
+        <img src="../assets/media/secondvoice-logo.png" alt="SecondVoice logo" />
       </a>
 
       <section class="user-panel">
@@ -55,18 +61,11 @@
           <div class="user-panel-intro">
             <div class="user-avatar">GU</div>
             <div>
-              <p class="user-panel-title">Bienvenue, Utilisateur invite</p>
-              <p class="user-modal-copy">
-                Connectez-vous pour completer votre profil.
-              </p>
+              <p class="user-panel-title">Bienvenue, Utilisateur invité</p>
+              <p class="user-modal-copy">Connectez-vous pour accéder à votre espace.</p>
             </div>
           </div>
-          <a
-            class="icon-btn user-close"
-            href="index.php"
-            aria-label="Retour a l'accueil"
-            >X</a
-          >
+          <a class="icon-btn user-close" href="index.php" aria-label="Retour à l'accueil">X</a>
         </div>
 
         <div class="auth-tabs">
@@ -76,108 +75,33 @@
 
         <section class="auth-panel is-active">
           <h3 class="auth-title">Connexion Client</h3>
-          <p class="auth-helper">
-            Utilisez votre e-mail et mot de passe pour continuer.
-          </p>
+          <p class="auth-helper">Utilisez votre e-mail et mot de passe pour continuer.</p>
 
-          <form
-            class="auth-form"
-            id="login-form"
-            action="profile.php"
-            method="get"
-          >
-            <input
-              class="field"
-              type="email"
-              name="email"
-              placeholder="Adresse e-mail"
-              required
-            />
-            <input
-              class="field"
-              type="password"
-              name="password"
-              placeholder="Mot de passe"
-              minlength="4"
-              required
-            />
+          <!-- ✅ METHOD="POST" et action="" -->
+          <form class="auth-form" action="" method="POST">
+            
+            <?php if (!empty($error)): ?>
+              <p style="color: #dc3545; background: #f8d7da; padding: 10px; border-radius: 6px; margin-bottom: 15px;">
+                <?= htmlspecialchars($error) ?>
+              </p>
+            <?php endif; ?>
+
+            <input class="field" type="email" name="email" placeholder="Adresse e-mail" required />
+            <input class="field" type="password" name="password" placeholder="Mot de passe" minlength="4" required />
 
             <div class="auth-options">
-              <label class="check-row"
-                ><input type="checkbox" name="remember" /> Se souvenir de
-                moi</label
-              >
-              <a href="contact.php">Mot de passe oublie ?</a>
+              <label class="check-row"><input type="checkbox" name="remember" /> Se souvenir de moi</label>
+              <a href="contact.php">Mot de passe oublié ?</a>
             </div>
 
-            <p id="login-feedback" class="auth-feedback"></p>
             <button class="btn btn-primary" type="submit">Se connecter</button>
           </form>
 
           <div class="user-panel-footer">
-            <a class="btn btn-secondary" href="profile.php">Aller au profil</a>
+            <a class="btn btn-secondary" href="register.php">Créer un compte</a>
           </div>
         </section>
       </section>
     </main>
-
-    <script>
-      (function () {
-        const form = document.getElementById("login-form");
-        const feedback = document.getElementById("login-feedback");
-        const SESSION_KEY = "intellectai-session";
-        const PROFILE_KEY = "intellectai-profile";
-
-        function save(key, value) {
-          try {
-            localStorage.setItem(key, JSON.stringify(value));
-          } catch (error) {
-            // Continue even if storage is unavailable.
-          }
-        }
-
-        function resolveFrontProfileUrl() {
-          return "profile.php";
-        }
-
-        form.addEventListener("submit", function (event) {
-          event.preventDefault();
-
-          const email = form.email.value.trim();
-          const password = form.password.value;
-
-          if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
-            feedback.textContent = "Veuillez saisir une adresse e-mail valide.";
-            feedback.classList.add("error");
-            return;
-          }
-
-          if (!password || password.length < 4) {
-            feedback.textContent =
-              "Veuillez saisir un mot de passe (4 caracteres minimum).";
-            feedback.classList.add("error");
-            return;
-          }
-
-          const localPart = email.split("@")[0] || "Invite";
-          const profile = {
-            fullName: localPart,
-            firstName: localPart,
-            lastName: "",
-            email: email,
-            role: "client",
-          };
-
-          save(PROFILE_KEY, profile);
-          save(SESSION_KEY, {
-            token: "demo-token-" + Date.now(),
-            user: profile,
-            issuedAt: new Date().toISOString(),
-          });
-
-          window.location.href = resolveFrontProfileUrl();
-        });
-      })();
-    </script>
   </body>
 </html>

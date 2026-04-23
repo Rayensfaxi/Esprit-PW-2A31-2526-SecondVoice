@@ -1660,3 +1660,26 @@ textarea.field {
     font-size: 1.55rem;
   }
 }
+.tabs-menu a {
+  position: relative;
+  color: var(--text-secondary);
+  font-weight: 600;
+}
+
+.tabs-menu a::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  bottom: -6px;
+  width: 100%;
+  height: 2px;
+  background: linear-gradient(90deg, var(--primary), var(--primary-2));
+  transform: scaleX(0);
+  transform-origin: right;
+  transition: transform 0.3s ease;
+}
+
+.tabs-menu a:hover::after {
+  transform: scaleX(1);
+  transform-origin: left;
+}

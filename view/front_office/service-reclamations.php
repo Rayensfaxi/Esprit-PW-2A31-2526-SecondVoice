@@ -1,5 +1,43 @@
 ﻿<?php
+  include '../../controller/reclamationcontroller.php';
+  require_once __DIR__ . '/../../model/reclamation.php';
+  $error = "";
+    $reclamationController = new ReclamationController();
 
+    if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+        if (isset($_POST["id_user"]) && isset($_POST["description"])) {
+            if (!empty($_POST["id_user"]) && !empty($_POST["description"])) {
+                
+                $id_user = intval($_POST['id_user']);
+                $description = trim($_POST['description']);
+                
+                if ($id_user < 1) {
+                    $error = "ID utilisateur invalide.";
+                } elseif (strlen($description) < 10) {
+                    $error = "La description doit contenir au moins 10 caractères.";
+                } else {
+                    $reclamation = new Reclamation();
+                    $reclamation->setDescription($description);
+                    $reclamation->setDate_creation(date('Y-m-d H:i:s'));
+                    $reclamation->setStatut('en_attente');
+                    $reclamation->setId_user($id_user);
+                    
+                    $id = $reclamationController->addReclamation($reclamation);
+                    
+                    if ($id) {
+                        header('Location: client-reclamations.php');
+                        exit;
+                    } else {
+                        $error = "Erreur lors de la création.";
+                    }
+                }
+            } else {
+                $error = "Tous les champs sont obligatoires.";
+            }
+        } else {
+            $error = "Informations manquantes.";
+        }
+    }
 ?>
 
 <!DOCTYPE html>
@@ -38,7 +76,30 @@
       rel="stylesheet"
     />
     <link rel="stylesheet" href="../assets/css/style.css" />
+    <link rel="stylesheet" href="../assets/css/chat.css" />
     <style>
+      .tabs-menu {
+        display: flex;
+        justify-content: flex-;
+        gap: 100px;
+        margin-bottom: 24px;
+        margin-left: 15%;
+        padding:4px;
+        background: var(--bg-card);
+        border-radius: 12px;
+        border: 1px solid var(--border);
+      }
+      .tab-button {
+        padding: 12px 24px;
+        border-radius: 8px;
+        border: none;
+        background: transparent;
+        color: var(--text-secondary);
+        font-weight: 600;
+        cursor: pointer;
+        transition: all 0.2s;
+        text-decoration: none;
+      }
       .form-section {
         max-width: 800px;
         margin: 0 auto;
@@ -87,6 +148,7 @@
         border-top: 1px solid var(--border);
       }
     </style>
+    <link rel="stylesheet" href="../assets/css/chat.css" />
   </head>
   <body>
     <div class="page-shell">
@@ -141,24 +203,37 @@
       </header>
 
       <main>
-        <section class="page-hero">
+      <div class="chat-watermark">
+    <img src="../assets/media/secondvoice-logo.png" alt="SecondVoice" />
+</div>
+      <div class="tabs-menu">
+          <a href="service-reclamations.php" class="tab-button active"
+            >nouvelle réclamation</a
+          >
+          <a href="client-reclamations.php" class="tab-button "
+            >reclamation en cours</a
+          >
+          <!--<a href="client-reponse.php" class="tab-button">Réponses</a>-->
+          
+        </div>
+        <!--<section class="page-hero">
           <div class="container">
             <div class="page-hero-card fade-up">
-              <!--<div class="breadcrumbs">
+              <div class="breadcrumbs">
                 <span>Accueil</span><span>/</span
                 ><span><a href="gestion-reclamation.php">Réclamations</a></span
                 ><span>/</span><span>Nouvelle</span>
-              </div>-->
+              </div>
               <h1>Nouvelle réclamation</h1>
               <p>Décrivez votre problème et nous vous répondrons rapidement.</p>
             </div>
           </div>
-        </section>
+        </section>-->
 
         <section class="form-section">
           <div class="container">
             <div class="form-card fade-up">
-              <form id="form-reclamation">
+              <form id="form-reclamation" method="POST" action="">
                 <div class="form-group">
                   <label class="form-label">Votre ID Utilisateur *</label>
                   <input
@@ -166,7 +241,6 @@
                     class="form-input"
                     id="id_user"
                     name="id_user"
-                    required
                     placeholder="Entrez votre ID utilisateur"
                   />
                 </div>
@@ -179,7 +253,6 @@
                     class="form-input form-textarea"
                     id="description"
                     name="description"
-                    required
                     placeholder="Décrivez en détail votre problème..."
                   ></textarea>
                 </div>
@@ -215,9 +288,9 @@
       document
         .getElementById("form-reclamation")
         .addEventListener("submit", function (e) {
-          e.preventDefault();
-          alert("Réclamation soumise avec succès !");
-          window.location.href = "gestion-reclamation.php";
+          //e.preventDefault();
+         // alert("Réclamation soumise avec succès !");
+          //window.location.href = "gestion-reclamation.php";
         });
     </script>
   </body>

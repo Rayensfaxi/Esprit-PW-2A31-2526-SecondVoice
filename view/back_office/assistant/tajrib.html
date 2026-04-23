@@ -1,9 +1,8 @@
 <?php
-  include '../../../controller/justificationcontroller.php';
-  require_once __DIR__ . '/../../../model/justification.php';
+  include '../../controller/justificationcontroller.php';
+  require_once __DIR__ . '/../../model/justification.php';
   $JustificationController = new JustificationController();
-  $Justifications = $JustificationController->listJustifications(); 
-  ?>
+  $Justifications = $JustificationController->listJustifications(); ?>
 
 <!DOCTYPE html>
 <html lang="fr">
@@ -199,9 +198,7 @@
         </div>
 
         <div class="tabs-menu">
-          <a href="gestion-reclamations.php" class="tab-button"
-            >Réclamations</a
-          >
+          <a href="gestion-reclamations.php" class="tab-button">Réclamations</a>
           <a href="gestion-reponse.php" class="tab-button">Réponses</a>
           <a href="gestion-justification.php" class="tab-button active"
             >Justifications</a
@@ -267,40 +264,44 @@
                 </tr>
               </thead>
               <tbody>
-              <?php if (count($Justifications) >
+                <?php if (count($Justifications) >
                 0): ?>
                 <?php foreach ($Justifications as $Justification): ?>
                 <tr>
                   <td>
                     <strong
-                      ><?= htmlspecialchars($Justification->getId_justification())
+                      ><?= htmlspecialchars($Justification->getId_reclamation())
                       ?></strong
                     >
                   </td>
                   <td>
-                    <?= htmlspecialchars($Justification->getId_reclamation()) ?>
+                    <?= htmlspecialchars($Justification->getDescription()) ?>
                   </td>
                   <td>
                     <div class="user-cell">
                       <span class="user-avatar">AS</span>
                       <div>
-                        <strong><?= htmlspecialchars($Justification->getContenu()) ?></strong>
+                        <strong>Amira Selmi</strong>
+                        <span>User #124</span>
                       </div>
                     </div>
                   </td>
                   <td>
                     <span class="status-pill en-cours"
-                      ><?= htmlspecialchars($Justification->getDate_justification())
+                      ><?= htmlspecialchars($Justification->getStatut())
                       ?></span
                     >
                   </td>
                   <td>
+                    <?= htmlspecialchars($Justification->getDate_creation()) ?>
+                  </td>
+                  <td>
                     <div class="table-actions">
-                        <a href="form-reclamation.php?id=1" class="ghost-button"
+                      <!--  <a href="form-reclamation.php?id=1" class="ghost-button"
                         >Modifier</a
-                      >
+                      >-->
                       <a
-                        href="form-reponse.php?reclamation=<?=$Justification->getId_justification() ?>"
+                        href="form-reponse.php?reclamation=<?=$Justification->getId_reclamation() ?>"
                         class="ghost-button"
                         >Répondre</a
                       >
@@ -310,7 +311,7 @@
                 <?php endforeach; ?>
                 <?php else: ?>
                 <tr>
-                  <td colspan="5" class="text-center">Aucune justification est donne.</td>
+                  <td colspan="6" class="text-center">Aucune livre trouvée.</td>
                 </tr>
                 <?php endif; ?>
               </tbody>

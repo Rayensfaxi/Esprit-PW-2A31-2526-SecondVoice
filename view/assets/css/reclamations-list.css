@@ -1,0 +1,294 @@
+/* ============================================
+   RECLAMATIONS LIST - SecondVoice Design
+   ============================================ */
+
+   .reclamations-page {
+    min-height: 100vh;
+    position: relative;
+    padding-bottom: 60px;
+}
+
+/* Watermark */
+.chat-watermark {
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 550px;
+    opacity: 0.035;
+    pointer-events: none;
+    z-index: 0;
+    filter: grayscale(100%);
+}
+
+.chat-watermark img {
+    width: 100%;
+    height: auto;
+}
+
+/* ============================================
+   TABS MENU
+   ============================================ */
+
+.tabs-menu {
+    display: flex;
+    justify-content: center;
+    gap: 12px;
+    margin: 32px auto 40px;
+    padding: 8px;
+    background: var(--surface);
+    border-radius: 16px;
+    border: 1px solid var(--line);
+    width: fit-content;
+    position: relative;
+    z-index: 1;
+}
+
+.tab-button {
+    padding: 12px 24px;
+    border-radius: 12px;
+    border: none;
+    background: transparent;
+    color: var(--muted);
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    text-decoration: none;
+    font-size: 0.95rem;
+}
+
+.tab-button:hover {
+    color: var(--text);
+    background: var(--pill-bg);
+}
+
+.tab-button.active {
+    color: white;
+    background: linear-gradient(135deg, var(--primary) 0%, var(--primary-2) 100%);
+    box-shadow: 0 4px 16px rgba(127, 61, 255, 0.3);
+    pointer-events: none;
+}
+
+/* ============================================
+   LISTE DES RECLAMATIONS
+   ============================================ */
+
+.reclamations-list {
+    position: relative;
+    z-index: 1;
+    max-width: 15000px;
+    margin: 0 auto 0 30px;
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+}
+
+/* ============================================
+   RECLAMATION ITEM - VERTICAL (bulle + actions)
+   ============================================ */
+
+.reclamation-item {
+    display: flex;
+    flex-direction: row;     /* ← BULLE AU-DESSUS, ACTIONS EN-DESSOUS */
+    gap: 12px;
+    padding: 20px;
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: 24px;
+    box-shadow: var(--shadow);
+    backdrop-filter: blur(20px);
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.reclamation-item:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 32px rgba(127, 61, 255, 0.15);
+}
+
+/* ============================================
+   LIEN CLICABLE (toute la bulle)
+   ============================================ */
+
+.reclamation-bubble-link {
+    display: block;             /* ← prend toute la largeur */
+    width: 80%;
+    text-decoration: none;
+    color: inherit;
+    cursor: pointer;
+}
+
+.reclamation-bubble-link:hover .reclamation-bubble {
+    border-color: var(--primary);
+    box-shadow: 0 0 0 3px rgba(127, 61, 255, 0.1);
+}
+
+/* ============================================
+   BUBBLE DESCRIPTION
+   ============================================ */
+
+.reclamation-bubble {
+    width: 100%;                /* ← remplit le lien */
+    background: var(--input-bg);
+    border: 1px solid var(--input-border);
+    border-radius: 20px;
+    padding: 16px 20px;
+    transition: all 0.2s ease;
+}
+
+.reclamation-content {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.reclamation-text {
+    margin: 0;
+    color: var(--text);
+    font-size: 15px;
+    line-height: 1.5;
+    font-weight: 500;
+}
+
+.reclamation-date {
+    font-size: 12px;
+    color: var(--muted);
+    opacity: 0.8;
+}
+
+/* ============================================
+   ACTIONS (supprimer, etc.)
+   ============================================ */
+
+.reclamation-actions {
+    display: flex;
+    justify-content: flex-end;  /* ← bouton à droite */
+    padding: 10px 4px;
+}
+
+/* ============================================
+   BOUTONS
+   ============================================ */
+
+.btn-delete {
+    background: #dc2626;
+    color: white;
+    border: none;
+    padding: 8px 16px;
+    border-radius: 8px;
+    font-weight: 600;
+    font-size: 13px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.btn-delete:hover {
+    background: #b91c1c;
+    transform: scale(1.02);
+}
+
+/* ============================================
+   BOUTON REPONSE (commenté pour l'instant)
+   ============================================ */
+
+.response-btn {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 14px 20px;
+    border-radius: 16px;
+    font-weight: 600;
+    font-size: 14px;
+    text-decoration: none;
+    transition: all 0.2s ease;
+    white-space: nowrap;
+    border: none;
+    cursor: pointer;
+}
+
+.response-btn--empty {
+    background: var(--soft-surface);
+    color: var(--muted);
+    border: 1px solid var(--line);
+    cursor: not-allowed;
+    opacity: 0.7;
+}
+
+.response-btn--active {
+    background: linear-gradient(135deg, var(--primary) 0%, var(--primary-2) 100%);
+    color: white;
+    box-shadow: 0 4px 16px rgba(127, 61, 255, 0.3);
+}
+
+/* ============================================
+   EMPTY STATE
+   ============================================ */
+
+.empty-state {
+    text-align: center;
+    padding: 60px 40px;
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: 24px;
+    box-shadow: var(--shadow);
+}
+
+.empty-icon {
+    font-size: 64px;
+    margin-bottom: 20px;
+    opacity: 0.8;
+}
+
+.empty-state h3 {
+    margin: 0 0 12px;
+    color: var(--text);
+    font-size: 1.5rem;
+}
+
+.empty-state p {
+    margin: 0 0 24px;
+    color: var(--muted);
+}
+
+/* ============================================
+   RESPONSIVE
+   ============================================ */
+
+@media (max-width: 760px) {
+    .tabs-menu {
+        gap: 8px;
+        padding: 6px;
+    }
+
+    .tab-button {
+        padding: 10px 16px;
+        font-size: 0.85rem;
+    }
+
+    .chat-watermark {
+        width: 300px;
+    }
+}
+
+@media (max-width: 480px) {
+    .reclamations-list {
+        padding: 0 10px;
+    }
+
+    .reclamation-item {
+        padding: 16px;
+        gap: 10px;
+    }
+
+    .reclamation-bubble {
+        padding: 14px 16px;
+    }
+
+    .reclamation-text {
+        font-size: 14px;
+    }
+    
+    .btn-delete {
+        padding: 6px 12px;
+        font-size: 12px;
+    }
+}
