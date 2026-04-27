@@ -72,7 +72,9 @@ $status = (string) ($_GET['status'] ?? '');
 $statusMessages = [
     'added' => 'Brainstorming ajoute avec succes.',
     'updated' => 'Brainstorming modifie avec succes.',
-    'deleted' => 'Brainstorming supprime avec succes.'
+    'deleted' => 'Brainstorming supprime avec succes.',
+    'approved' => 'Brainstorming approuve avec succes.',
+    'disapproved' => 'Brainstorming desapprouve avec succes.'
 ];
 if (isset($statusMessages[$status])) {
     $feedbackType = 'success';
@@ -120,6 +122,20 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $id = (int) ($_POST['id'] ?? 0);
             $controller->deleteBrainstorming($id);
             header('Location: gestion-brainstormings.php?status=deleted');
+            exit;
+        }
+
+        if ($action === 'approve') {
+            $id = (int) ($_POST['id'] ?? 0);
+            $controller->updateBrainstormingStatus($id, 'approuve');
+            header('Location: gestion-brainstormings.php?status=approved');
+            exit;
+        }
+
+        if ($action === 'disapprove') {
+            $id = (int) ($_POST['id'] ?? 0);
+            $controller->updateBrainstormingStatus($id, 'desapprouve');
+            header('Location: gestion-brainstormings.php?status=disapproved');
             exit;
         }
 
@@ -198,7 +214,7 @@ $brainstormings = $controller->getBrainstormings([
             <div class="users-header">
               <div>
                 <h2 class="section-title">Liste des brainstormings</h2>
-                <p class="helper">Filtrez, modifiez et supprimez les brainstormings.</p>
+                <p class="helper">Filtrez, approuvez et desapprouvez les brainstormings.</p>
               </div>
               <div class="users-actions">
                 <a class="ghost-button" href="gestion-brainstormings.php">Reinitialiser</a>
@@ -293,6 +309,7 @@ $brainstormings = $controller->getBrainstormings([
                   </tr>
                 <?php else: ?>
                   <?php foreach ($brainstormings as $brainstorming): ?>
+                    <?php $currentStatus = strtolower(trim((string) $brainstorming['statut'])); ?>
                     <tr>
                       <td>
                         <div class="user-cell">
@@ -308,11 +325,15 @@ $brainstormings = $controller->getBrainstormings([
                       <td><?= h(formatCreationDate((string) $brainstorming['dateCreation'])) ?></td>
                       <td>
                         <div class="table-actions">
-                          <a class="ghost-button" href="gestion-brainstormings.php?edit=<?= (int) $brainstorming['id'] ?>#brainstorming-form">Modifier</a>
-                          <form class="inline-delete-form" method="post" action="gestion-brainstormings.php" data-delete-form>
-                            <input type="hidden" name="action" value="delete" />
+                          <form class="inline-delete-form" method="post" action="gestion-brainstormings.php" data-status-form data-status-label="approuver">
+                            <input type="hidden" name="action" value="approve" />
                             <input type="hidden" name="id" value="<?= (int) $brainstorming['id'] ?>" />
-                            <button class="ghost-button danger" type="submit">Supprimer</button>
+                            <button class="ghost-button" type="submit" <?= $currentStatus === 'approuve' ? 'disabled' : '' ?>>Approuver</button>
+                          </form>
+                          <form class="inline-delete-form" method="post" action="gestion-brainstormings.php" data-status-form data-status-label="desapprouver">
+                            <input type="hidden" name="action" value="disapprove" />
+                            <input type="hidden" name="id" value="<?= (int) $brainstorming['id'] ?>" />
+                            <button class="ghost-button danger" type="submit" <?= $currentStatus === 'desapprouve' ? 'disabled' : '' ?>>Desapprouver</button>
                           </form>
                         </div>
                       </td>
@@ -365,10 +386,11 @@ $brainstormings = $controller->getBrainstormings([
           });
         }
 
-        const deleteForms = document.querySelectorAll('[data-delete-form]');
-        deleteForms.forEach(form => {
+        const statusForms = document.querySelectorAll('[data-status-form]');
+        statusForms.forEach(form => {
           form.addEventListener('submit', function (event) {
-            const confirmed = confirm('Etes-vous sur de vouloir supprimer ce brainstorming ?');
+            const actionLabel = form.getAttribute('data-status-label') || 'changer le statut de';
+            const confirmed = confirm(`Etes-vous sur de vouloir ${actionLabel} ce brainstorming ?`);
             if (!confirmed) {
               event.preventDefault();
             }

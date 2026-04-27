@@ -39,9 +39,27 @@ function h($value): string
     return htmlspecialchars((string) $value, ENT_QUOTES, 'UTF-8');
 }
 
+function ensureImageCaptchaCode(): void
+{
+    $current = (string) ($_SESSION['client_login_image_captcha_code'] ?? '');
+    if ($current !== '' && strlen($current) === 5) {
+        return;
+    }
+
+    $alphabet = '23456789ABCDEFGHJKLMNPQRSTUVWXYZ';
+    $code = '';
+    $maxIndex = strlen($alphabet) - 1;
+    for ($i = 0; $i < 5; $i++) {
+        $code .= $alphabet[random_int(0, $maxIndex)];
+    }
+
+    $_SESSION['client_login_image_captcha_code'] = $code;
+}
+
 $feedback = '';
 $feedbackType = '';
 $emailValue = '';
+$captchaInput = '';
 $loginMode = 'client';
 
 if (isset($_GET['status']) && $_GET['status'] === 'logged_out') {
@@ -54,12 +72,42 @@ if (isset($_GET['status']) && $_GET['status'] === 'forbidden') {
     $feedback = 'Acces refuse: seul un admin ou un agent peut acceder au dashboard.';
     $feedbackType = 'error';
 }
+if (isset($_GET['status']) && $_GET['status'] === 'verify_email_sent') {
+    $feedback = 'Compte cree. Verifiez votre e-mail puis cliquez sur le lien de confirmation.';
+}
+if (isset($_GET['status']) && $_GET['status'] === 'verify_email_sent_log') {
+    $feedback = "Compte cree. L'e-mail n'a pas pu etre envoye automatiquement. Verifiez la config e-mail et storage/mail/outbox.log.";
+}
+if (isset($_GET['status']) && $_GET['status'] === 'email_verified') {
+    $feedback = 'E-mail verifie avec succes. Vous pouvez maintenant vous connecter.';
+}
+if (isset($_GET['status']) && $_GET['status'] === 'email_verify_failed') {
+    $feedback = 'Lien de verification invalide ou expire.';
+    $feedbackType = 'error';
+}
+if (isset($_GET['status']) && $_GET['status'] === 'reset_link_sent') {
+    $feedback = 'Si cet e-mail existe, un lien de reinitialisation a ete envoye.';
+}
+if (isset($_GET['status']) && $_GET['status'] === 'reset_link_sent_log') {
+    $feedback = "Lien genere mais e-mail non envoye. Verifiez la config e-mail ou consultez storage/mail/outbox.log.";
+    $feedbackType = 'error';
+}
+if (isset($_GET['status']) && $_GET['status'] === 'password_reset_done') {
+    $feedback = 'Mot de passe mis a jour. Connectez-vous avec le nouveau mot de passe.';
+}
+if (isset($_GET['status']) && $_GET['status'] === 'reset_invalid') {
+    $feedback = 'Lien de reinitialisation invalide ou expire.';
+    $feedbackType = 'error';
+}
+
+ensureImageCaptchaCode();
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $emailValue = trim((string) ($_POST['email'] ?? ''));
     $password = (string) ($_POST['password'] ?? '');
     $loginMode = (string) ($_POST['login_mode'] ?? 'client');
     $authKey = trim((string) ($_POST['auth_key'] ?? ''));
+    $captchaInput = strtoupper(trim((string) ($_POST['captcha_code'] ?? '')));
 
     try {
         if ($loginMode !== 'client' && $loginMode !== 'agent') {
@@ -72,6 +120,22 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
         if (strlen($password) < 6) {
             throw new InvalidArgumentException('Le mot de passe doit contenir au moins 6 caracteres.');
+        }
+
+        if ($loginMode === 'client') {
+            ensureImageCaptchaCode();
+            $expectedCaptcha = strtoupper(trim((string) ($_SESSION['client_login_image_captcha_code'] ?? '')));
+            if ($captchaInput === '') {
+                throw new InvalidArgumentException("Veuillez saisir le texte de l'image captcha.");
+            }
+            if ($expectedCaptcha === '' || !hash_equals($expectedCaptcha, $captchaInput)) {
+                unset($_SESSION['client_login_image_captcha_code']);
+                ensureImageCaptchaCode();
+                throw new InvalidArgumentException('Captcha image invalide. Merci de reessayer.');
+            }
+
+            // Evite la reutilisation d'un captcha deja valide.
+            unset($_SESSION['client_login_image_captcha_code']);
         }
 
         $controller = new UtilisateurController();
@@ -113,6 +177,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         header('Location: profile.php?status=logged_in');
         exit;
     } catch (Throwable $exception) {
+        if ($loginMode === 'client') {
+            ensureImageCaptchaCode();
+        }
         $feedback = $exception->getMessage();
         $feedbackType = 'error';
     }
@@ -184,6 +251,27 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             <p class="field-error" data-error-for="email"></p>
             <input class="field" type="password" name="password" placeholder="Mot de passe" />
             <p class="field-error" data-error-for="password"></p>
+            <div id="captcha-container" style="<?= $loginMode === 'agent' ? 'display:none;' : '' ?>">
+              <img
+                id="captcha-image"
+                src="captcha-image.php?t=<?= time() ?>"
+                alt="Captcha image"
+                style="width:100%; max-width:280px; height:auto; border-radius:10px; border:1px solid rgba(128,128,128,0.3);"
+              />
+              <button class="btn btn-secondary" type="button" id="captcha-refresh-btn" style="margin-top:10px;">
+                Actualiser l'image
+              </button>
+              <input
+                class="field"
+                type="text"
+                name="captcha_code"
+                id="captcha-code-field"
+                value="<?= h($captchaInput) ?>"
+                placeholder="Saisissez le texte de l'image"
+                autocomplete="off"
+              />
+            </div>
+            <p class="field-error" id="captcha-error" data-error-for="captcha" style="<?= $loginMode === 'agent' ? 'display:none;' : '' ?>"></p>
             <input
               class="field"
               type="text"
@@ -203,6 +291,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
           <div class="user-panel-footer">
             <a class="btn btn-secondary" href="register.php">Creer un compte</a>
+          </div>
+          <div class="auth-links" style="margin-top: 10px; text-align: center;">
+            <a href="forgot-password.php">Mot de passe oublie ?</a>
           </div>
         </section>
       </section>
@@ -234,20 +325,27 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
 
         const form = document.getElementById("login-form");
+        if (!form) return;
+
         const feedback = document.getElementById("login-feedback");
         const clientBtn = document.getElementById("login-client-btn");
         const agentBtn = document.getElementById("login-agent-btn");
         const loginModeInput = document.getElementById("login-mode");
         const authKeyField = document.getElementById("auth-key-field");
         const authKeyError = document.getElementById("auth-key-error");
+        const captchaContainer = document.getElementById("captcha-container");
+        const captchaError = document.getElementById("captcha-error");
+        const captchaCodeField = document.getElementById("captcha-code-field");
+        const captchaImage = document.getElementById("captcha-image");
+        const captchaRefreshBtn = document.getElementById("captcha-refresh-btn");
         const title = document.getElementById("login-title");
         const helper = document.getElementById("login-helper");
         const fieldErrors = {
           email: form.querySelector('[data-error-for="email"]'),
           password: form.querySelector('[data-error-for="password"]'),
-          auth_key: form.querySelector('[data-error-for="auth_key"]')
+          auth_key: form.querySelector('[data-error-for="auth_key"]'),
+          captcha: form.querySelector('[data-error-for="captcha"]')
         };
-        if (!form) return;
 
         function clearFieldErrors() {
           Object.values(fieldErrors).forEach(function (node) {
@@ -264,8 +362,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
           if (loginModeInput) loginModeInput.value = active ? "agent" : "client";
           if (authKeyField) authKeyField.style.display = active ? "" : "none";
           if (authKeyError) authKeyError.style.display = active ? "" : "none";
+          if (captchaContainer) captchaContainer.style.display = active ? "none" : "";
+          if (captchaError) captchaError.style.display = active ? "none" : "";
           if (!active) {
             setFieldError("auth_key", "");
+          } else {
+            setFieldError("captcha", "");
           }
           if (title) title.textContent = active ? "Connexion agent" : "Connexion utilisateur";
           if (helper) {
@@ -280,6 +382,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
           const email = (form.email.value || "").trim();
           const password = form.password.value || "";
           const authKey = authKeyField ? (authKeyField.value || "").trim() : "";
+          const captchaCode = captchaCodeField ? (captchaCodeField.value || "").trim() : "";
           const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
           let hasError = false;
@@ -296,6 +399,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
           if (agentMode && !authKey) {
             setFieldError("auth_key", "La cle d'authentification est obligatoire.");
+            hasError = true;
+          }
+
+          if (!agentMode && !captchaCode) {
+            setFieldError("captcha", "Veuillez saisir le texte de l'image captcha.");
             hasError = true;
           }
 
@@ -348,6 +456,22 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             const isAgent = loginModeInput && loginModeInput.value === "agent";
             const authKey = (authKeyField.value || "").trim();
             setFieldError("auth_key", isAgent && !authKey ? "La cle d'authentification est obligatoire." : "");
+          });
+        }
+
+        if (captchaCodeField) {
+          captchaCodeField.addEventListener("input", function () {
+            const isClient = !loginModeInput || loginModeInput.value === "client";
+            const value = (captchaCodeField.value || "").trim();
+            setFieldError("captcha", isClient && !value ? "Veuillez saisir le texte de l'image captcha." : "");
+          });
+        }
+
+        if (captchaRefreshBtn && captchaImage) {
+          captchaRefreshBtn.addEventListener("click", function () {
+            captchaImage.src = "captcha-image.php?refresh=1&t=" + Date.now();
+            if (captchaCodeField) captchaCodeField.value = "";
+            setFieldError("captcha", "");
           });
         }
       })();
