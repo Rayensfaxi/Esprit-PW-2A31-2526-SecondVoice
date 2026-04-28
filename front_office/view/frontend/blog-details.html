@@ -1,0 +1,178 @@
+﻿<!DOCTYPE html>
+<html lang="fr">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Details du blog | SecondVoice</title>
+    <link rel="icon" type="image/png" sizes="32x32" href="assets/media/favicon-32.png" />
+    <link rel="icon" type="image/png" sizes="16x16" href="assets/media/favicon-16.png" />
+    <link rel="apple-touch-icon" href="assets/media/apple-touch-icon.png" />
+    <link rel="shortcut icon" href="assets/media/favicon.png" />
+    <script>
+      const savedTheme = localStorage.getItem("theme");
+      const initialTheme =
+        savedTheme || (window.matchMedia("(prefers-color-scheme: light)").matches ? "light" : "dark");
+      document.documentElement.dataset.theme = initialTheme;
+    </script>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=Space+Grotesk:wght@500;700&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="assets/css/style.css" />
+  </head>
+  <body>
+    <div class="page-shell">
+      <header class="site-header">
+        <div class="container nav-inner">
+          <a class="brand" href="index.html"><img class="brand-logo" src="assets/media/secondvoice-logo.png" alt="SecondVoice logo" /></a>
+          <button class="menu-toggle" type="button" data-menu-toggle aria-label="Ouvrir le menu">
+            <span class="icon-lines"></span>
+          </button>
+          <div class="nav" data-nav>
+            <nav>
+              <ul class="nav-links">
+                <li><a href="index.html">Accueil</a></li>
+                <li><a href="about.html">A propos</a></li>
+                <li><a href="services.html">Services</a></li>
+                <li><a class="is-active" href="blog.html">Blog</a></li>
+                <li><a href="contact.html">Contact</a></li>
+              </ul>
+            </nav>
+            <div class="header-actions">
+              <button class="icon-btn theme-toggle" type="button" data-theme-toggle aria-label="Changer le theme">
+                <span class="theme-toggle-label" data-theme-label>Clair</span>
+              </button>
+              <div class="user-shell" data-user-shell>
+                <a class="icon-btn user-trigger" href="login.html" aria-label="Ouvrir la page de connexion"><span>Profil</span></a>
+                <div class="user-backdrop"></div>
+                <div class="user-panel">
+                  <div class="user-panel-head">
+                    <div class="user-panel-intro">
+                      <div class="user-avatar">JT</div>
+                      <div>
+                        <p class="user-panel-title">Bon retour</p>
+                        <p class="user-modal-copy">Connectez-vous pour acceder a vos projets, factures et demandes de support.</p>
+                      </div>
+                    </div>
+                    <button class="icon-btn user-close" type="button" data-user-close aria-label="Fermer la fenetre utilisateur">X</button>
+                  </div>
+                  <div class="auth-tabs">
+                    <a class="auth-tab is-active" href="login.html">Connexion</a>
+                    <a class="auth-tab" href="register.html">Inscription</a>
+                  </div>
+                  <section class="auth-panel is-active" data-auth-panel="login">
+                    <h3 class="auth-title">Connexion Client</h3>
+                    <p class="auth-helper">Utilisez votre e-mail et mot de passe pour continuer.</p>
+                    <form class="auth-form">
+                      <input class="field" type="email" placeholder="Adresse e-mail" />
+                      <input class="field" type="password" placeholder="Mot de passe" />
+                      <div class="auth-options">
+                        <label class="check-row"><input type="checkbox" /> Se souvenir de moi</label>
+                        <a href="contact.html">Mot de passe oublie ?</a>
+                      </div>
+                      <button class="btn btn-primary" type="button">Se connecter</button>
+                    </form>
+                    <div class="user-panel-footer">
+                      <a class="btn btn-secondary" href="contact.html">Support client</a>
+                    </div>
+                  </section>
+                  <section class="auth-panel" data-auth-panel="register">
+                    <h3 class="auth-title">Creer un compte</h3>
+                    <p class="auth-helper">Creez un compte de demonstration pour le suivi, le support et la gestion de vos demandes.</p>
+                    <form class="auth-form">
+                      <input class="field" type="text" placeholder="Nom complet" />
+                      <input class="field" type="email" placeholder="E-mail professionnel" />
+                      <input class="field" type="password" placeholder="Creer un mot de passe" />
+                      <button class="btn btn-primary" type="button">Creer un compte</button>
+                    </form>
+                    <ul class="auth-links">
+                      <li><a href="services.html">Voir les offres de service</a></li>
+                      <li><a href="contact.html">Demander un acces entreprise</a></li>
+                    </ul>
+                  </section>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </header>
+
+      <main>
+        <section class="page-hero">
+          <div class="container">
+            <div class="page-hero-card fade-up">
+              <div class="breadcrumbs"><span>Accueil</span><span>/</span><span>Details du blog</span></div>
+              <h1>Construire des interfaces IA qui preservent la confiance des le premier jour.</h1>
+              <p>Utilisez ce modele de page pour des articles longs, etudes de cas et billets d'analyse.</p>
+            </div>
+          </div>
+        </section>
+
+        <section class="section">
+          <div class="container blog-layout">
+            <article class="post-content fade-up">
+              <div class="post-banner">
+                <div class="post-banner-content">
+                  <div class="post-meta"><span class="tag">AI</span><span>23 Mar 2026</span><span>6 min de lecture</span></div>
+                  <h2>La confiance n'est pas une option ajoutee a la fin. C'est une decision de conception systeme.</h2>
+                </div>
+              </div>
+                            <p>
+                Quand les equipes lancent des interfaces avec IA, elles priorisent souvent la puissance
+                avant la lisibilite. Les utilisateurs doivent comprendre ce que le systeme fait,
+                ce qu'il peut mal interpreter et comment garder le controle dans les situations sensibles.
+              </p>
+              <h3>1. Rendre l'etat du systeme evident</h3>
+                            <p>
+                Il faut clarifier si une reponse est generee, relue, en attente de validation ou partiellement inferee.
+                De petits libelles, des resumes structures et des prochaines etapes visibles reduisent l'hesitation.
+              </p>
+              <h3>2. Montrer la boucle de controle</h3>
+                            <p>
+                Les decideurs font davantage confiance a l'IA quand la supervision humaine est clairement integree
+                au modele d'interaction. C'est essentiel dans le conseil, la securite et les contextes operationnels exigeants.
+              </p>
+              <blockquote>
+                Les bonnes interfaces IA ne cachent pas l'incertitude. Elles la cadrent, la maitrisent et font avancer l'utilisateur.
+              </blockquote>
+              <h3>3. Aligner le visuel avec le niveau d'exigence</h3>
+                            <p>
+                Un systeme visuel premium signale la maturite, mais il doit rester structure.
+                Une hierarchie claire, un texte concis et des patterns UI coherents comptent plus que la decoration.
+              </p>
+            </article>
+            <aside class="sidebar">
+              <div class="sidebar-card fade-up">
+                <h3>Articles recents</h3>
+                <ul class="footer-list">
+                  <li><a href="blog-details.html">Le vrai cout des systemes front-office fragmentes</a></li>
+                  <li><a href="blog-details.html">Un discours securite qui renforce la confiance des entreprises</a></li>
+                  <li><a href="blog-details.html">Operations de service orientees automatisation</a></li>
+                </ul>
+              </div>
+              <div class="sidebar-card fade-up">
+                <h3>Besoin d'actualiser le contenu ?</h3>
+                <p>Associez ce format d'article a des pages service orientees conversion et une page d'accueil plus percutante.</p>
+                <a class="btn btn-primary" href="contact.html">Contactez-nous</a>
+              </div>
+            </aside>
+          </div>
+        </section>
+      </main>
+
+      <footer class="footer">
+        <div class="container">
+          <div class="footer-bottom">
+            <span>&copy; 2026 SecondVoice. Tous droits reserves.</span>
+            <div class="footer-links"><a href="blog.html">Retour au blog</a><a href="contact.html">Contact</a></div>
+          </div>
+        </div>
+      </footer>
+    </div>
+    <script src="assets/js/main.js"></script>
+  </body>
+</html>
+
+

@@ -1,0 +1,443 @@
+﻿<!DOCTYPE html>
+<html lang="fr">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>SecondVoice | Accueil</title>
+    <link rel="icon" type="image/png" sizes="32x32" href="assets/media/favicon-32.png" />
+    <link rel="icon" type="image/png" sizes="16x16" href="assets/media/favicon-16.png" />
+    <link rel="apple-touch-icon" href="assets/media/apple-touch-icon.png" />
+    <link rel="shortcut icon" href="assets/media/favicon.png" />
+    <meta
+      name="description"
+      content="Modele front office multi-pages pour une plateforme IA, cybersecurite et innovation numerique."
+    />
+    <script>
+      const savedTheme = localStorage.getItem("theme");
+      const initialTheme =
+        savedTheme || (window.matchMedia("(prefers-color-scheme: light)").matches ? "light" : "dark");
+      document.documentElement.dataset.theme = initialTheme;
+    </script>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=Space+Grotesk:wght@500;700&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="assets/css/style.css" />
+  </head>
+  <body>
+    <div class="logo-splash" id="logo-splash" aria-hidden="true">
+      <div class="logo-splash-inner">
+        <img src="assets/media/logo white.png" alt="SecondVoice" />
+      </div>
+    </div>
+    <div class="page-shell">
+      <header class="site-header">
+        <div class="container nav-inner">
+          <a class="brand" href="index.html"><img class="brand-logo" src="assets/media/secondvoice-logo.png" alt="SecondVoice logo" /></a>
+          <button class="menu-toggle" type="button" data-menu-toggle aria-label="Ouvrir le menu">
+            <span class="icon-lines"></span>
+          </button>
+          <div class="nav" data-nav>
+            <nav>
+              <ul class="nav-links">
+                <li><a class="is-active" href="index.html">Accueil</a></li>
+                <li><a href="about.html">A propos</a></li>
+                <li><a href="services.html">Services</a></li>
+                <li><a href="blog.html">Blog</a></li>
+                <li><a href="contact.html">Contact</a></li>
+              </ul>
+            </nav>
+            <div class="header-actions">
+              <button class="icon-btn theme-toggle" type="button" data-theme-toggle aria-label="Changer le theme">
+                <span class="theme-toggle-label" data-theme-label>Clair</span>
+              </button>
+              <div class="user-shell" data-user-shell>
+                <a class="icon-btn user-trigger" href="login.html" aria-label="Ouvrir la page de connexion"><span>Profil</span></a>
+                <div class="user-backdrop"></div>
+                <div class="user-panel">
+                  <div class="user-panel-head">
+                    <div class="user-panel-intro">
+                      <div class="user-avatar">JT</div>
+                      <div>
+                        <p class="user-panel-title">Bon retour</p>
+                        <p class="user-modal-copy">Connectez-vous pour acceder a vos projets, factures et demandes de support.</p>
+                      </div>
+                    </div>
+                    <button class="icon-btn user-close" type="button" data-user-close aria-label="Fermer la fenetre utilisateur">X</button>
+                  </div>
+                  <div class="auth-tabs">
+                    <a class="auth-tab is-active" href="login.html">Connexion</a>
+                    <a class="auth-tab" href="register.html">Inscription</a>
+                  </div>
+                  <section class="auth-panel is-active" data-auth-panel="login">
+                    <h3 class="auth-title">Connexion Client</h3>
+                    <p class="auth-helper">Utilisez votre e-mail et mot de passe pour continuer.</p>
+                    <form class="auth-form">
+                      <input class="field" type="email" placeholder="Adresse e-mail" />
+                      <input class="field" type="password" placeholder="Mot de passe" />
+                      <div class="auth-options">
+                        <label class="check-row"><input type="checkbox" /> Se souvenir de moi</label>
+                        <a href="contact.html">Mot de passe oublie ?</a>
+                      </div>
+                      <button class="btn btn-primary" type="button">Se connecter</button>
+                    </form>
+                    <div class="user-panel-footer">
+                      <a class="btn btn-secondary" href="contact.html">Support client</a>
+                    </div>
+                  </section>
+                  <section class="auth-panel" data-auth-panel="register">
+                    <h3 class="auth-title">Creer un compte</h3>
+                    <p class="auth-helper">Creez un compte de demonstration pour le suivi, le support et la gestion de vos demandes.</p>
+                    <form class="auth-form">
+                      <input class="field" type="text" placeholder="Nom complet" />
+                      <input class="field" type="email" placeholder="E-mail professionnel" />
+                      <input class="field" type="password" placeholder="Creer un mot de passe" />
+                      <button class="btn btn-primary" type="button">Creer un compte</button>
+                    </form>
+                    <ul class="auth-links">
+                      <li><a href="services.html">Voir les offres de service</a></li>
+                      <li><a href="contact.html">Demander un acces entreprise</a></li>
+                    </ul>
+                  </section>
+                </div>
+              </div>
+              <a class="btn btn-primary" href="../../../back_office/view/backend/index.html">Tableau de bord</a>
+            </div>
+          </div>
+        </div>
+      </header>
+
+      <main>
+        <section class="hero">
+          <div class="container hero-grid">
+            <div class="fade-up">
+              <div class="eyebrow">
+                <span class="eyebrow-dot"></span>
+                <span>Plateforme d'assistance vocale et administrative</span>
+              </div>
+              <h1>SecondVoice simplifie vos demarches du quotidien.</h1>
+              <p class="hero-copy">
+                Une plateforme digitale qui vous aide a envoyer vos demandes administratives, prendre des rendez-vous,
+                deposer des documents et obtenir de l'accompagnement facilement.
+              </p>
+              <div class="hero-actions">
+                <a class="btn btn-primary" href="services.html">Voir les services</a>
+                <a class="btn btn-secondary" href="contact.html">Contacter l'equipe</a>
+              </div>
+              <div class="hero-metrics">
+                <article class="metric-card">
+                  <strong>+100</strong>
+                  <span>utilisateurs actifs</span>
+                </article>
+                <article class="metric-card">
+                  <strong>+50</strong>
+                  <span>demandes traitees</span>
+                </article>
+                <article class="metric-card">
+                  <strong>24/7</strong>
+                  <span>support disponible</span>
+                </article>
+              </div>
+            </div>
+
+            <div class="hero-visual fade-up">
+              <img class="hero-icon" src="assets/media/icone.png" alt="Icone SecondVoice" />
+            </div>
+          </div>
+
+          <div class="container panel-grid fade-up">
+            <article class="glass-card">
+              <h3>Notre impact en chiffres</h3>
+              <p>Lancements de plateformes, programmes de securite et automatisations IA avec un ROI mesurable.</p>
+            </article>
+            <article class="glass-card">
+              <h3>Solutions innovantes pour la croissance des entreprises modernes</h3>
+              <p>Nous combinons vision produit, rigueur technique et modeles operationnels clairs.</p>
+            </article>
+            <article class="glass-card">
+              <h3>Systemes centres utilisateur avec resilence niveau entreprise</h3>
+              <p>Langage visuel, infrastructure fiable et modeles de support adaptes a la croissance.</p>
+            </article>
+          </div>
+        </section>
+
+        <section class="section">
+          <div class="container">
+            <div class="section-header fade-up">
+              <div>
+                <div class="section-kicker">Presentation du projet</div>
+                <h2>Un assistant digital pense pour les citoyens et les equipes de support.</h2>
+              </div>
+              <p class="section-copy">
+                SecondVoice a pour objectif de reduire la complexite des procedures et de fournir
+                des reponses plus rapides, plus claires et plus accessibles.
+              </p>
+            </div>
+            <div class="grid-2">
+              <article class="image-card fade-up">
+                <div class="image-card-content">
+                  <div class="eyebrow">20+ ans d'experience en conseil et produit</div>
+                  <h3>Concu pour la rapidite de lancement, la gouvernance et la maintenabilite long terme.</h3>
+                  <ul class="feature-list">
+                    <li>Copilotes IA et automatisation des workflows</li>
+                    <li>Portails clients et plateformes de service</li>
+                    <li>Modeles de livraison cloud avec observabilite</li>
+                  </ul>
+                </div>
+              </article>
+            </div>
+          </div>
+        </section>
+
+        <section class="section">
+          <div class="container">
+            <div class="section-header fade-up">
+              <div>
+                <div class="section-kicker">Nos services</div>
+                <h2>Nos services</h2>
+              </div>
+              <a class="btn btn-secondary" href="services.html">Explorer tous les services</a>
+            </div>
+            <div class="grid-4">
+              <article class="stat-card fade-up">
+                <strong>01</strong>
+                <h3>Demandes administratives</h3>
+                <p class="meta">Creer, envoyer et suivre vos demandes simplement.</p>
+              </article>
+              <article class="stat-card fade-up">
+                <strong>02</strong>
+                <h3>Prise de rendez-vous</h3>
+                <p class="meta">Planifier et recevoir des rappels automatiques.</p>
+              </article>
+              <article class="stat-card fade-up">
+                <strong>03</strong>
+                <h3>Accompagnement</h3>
+                <p class="meta">Guidage pas a pas pour chaque demarche.</p>
+              </article>
+              <article class="stat-card fade-up">
+                <strong>04</strong>
+                <h3>Reclamations</h3>
+                <p class="meta">Depot, suivi et reponse centralisee.</p>
+              </article>
+            </div>
+          </div>
+        </section>
+
+        <section class="section">
+          <div class="container">
+            <div class="section-header fade-up">
+              <div>
+                <div class="section-kicker">Comment ca marche ?</div>
+                <h2>Comment ca marche ?</h2>
+              </div>
+              <p class="section-copy">
+                Un parcours simple pour realiser vos demarches en ligne.
+              </p>
+            </div>
+            <div class="grid-4">
+              <article class="stat-card fade-up">
+                <strong>01</strong>
+                <h3>Creer un compte</h3>
+                <p class="meta">Accedez a votre espace personnel.</p>
+              </article>
+              <article class="stat-card fade-up">
+                <strong>02</strong>
+                <h3>Envoyer une demande</h3>
+                <p class="meta">Remplissez votre formulaire en ligne.</p>
+              </article>
+              <article class="stat-card fade-up">
+                <strong>03</strong>
+                <h3>Suivre le traitement</h3>
+                <p class="meta">Recevez les mises a jour en temps reel.</p>
+              </article>
+              <article class="stat-card fade-up">
+                <strong>04</strong>
+                <h3>Recevoir une reponse</h3>
+                <p class="meta">Consultez vos documents et decisions.</p>
+              </article>
+            </div>
+          </div>
+        </section>
+
+        <section class="section">
+          <div class="container grid-2">
+            <div class="fade-up">
+              <div class="section-kicker">Notre objectif</div>
+              <h2>Notre objectif</h2>
+              <p class="section-copy">
+                Faciliter l'acces aux services administratifs et reduire la complexite des demarches pour tous les utilisateurs.
+              </p>
+              <a class="btn btn-primary" href="about.html">En savoir plus</a>
+            </div>
+            <div class="timeline">
+              <article class="timeline-item fade-up">
+                <div class="timeline-step">01</div>
+                <h3>Simple</h3>
+                <p>Des demarches claires et faciles a comprendre.</p>
+              </article>
+              <article class="timeline-item fade-up">
+                <div class="timeline-step">02</div>
+                <h3>Accessible</h3>
+                <p>Un service disponible pour tous, sur web et mobile.</p>
+              </article>
+              <article class="timeline-item fade-up">
+                <div class="timeline-step">03</div>
+                <h3>Utile</h3>
+                <p>Un suivi precis et des reponses rapides.</p>
+              </article>
+            </div>
+          </div>
+        </section>
+
+        <section class="section">
+          <div class="container">
+            <div class="section-header fade-up">
+              <div>
+                <div class="section-kicker">Temoignages</div>
+                <h2>Retours clients qui renforcent la confiance.</h2>
+              </div>
+            </div>
+            <div class="grid-3">
+              <article class="testimonial fade-up">
+                <p class="quote">"Plateforme simple et rapide pour mes demarches administratives."</p>
+                <div class="post-meta">
+                  <span class="tag">Utilisateur</span>
+                  <span>SecondVoice</span>
+                </div>
+              </article>
+            </div>
+          </div>
+        </section>
+
+        <section class="section">
+          <div class="container achievement fade-up">
+            <div class="grid-4">
+              <div>
+                <strong class="price">1400+</strong>
+                <div class="meta">Projets realises en conception et technologies</div>
+              </div>
+              <div>
+                <strong class="price">8M</strong>
+                <div class="meta">Interactions clients optimisees grace a l'automatisation</div>
+              </div>
+              <div>
+                <strong class="price">3K</strong>
+                <div class="meta">Heures operationnelles recuperees via la refonte des workflows</div>
+              </div>
+              <div>
+                <strong class="price">20+</strong>
+                <div class="meta">Annees d'experience cumulee en conseil numerique</div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <section class="section">
+          <div class="container grid-2">
+            <div class="fade-up">
+              <div class="section-kicker">FAQ</div>
+              <h2>Questions frequentes</h2>
+              <p class="section-copy">
+                Retrouvez ici les reponses aux questions les plus courantes.
+              </p>
+            </div>
+            <div class="faq-list">
+              <details class="faq-item fade-up" open>
+                <summary>
+                  Comment envoyer une demande ?
+                  <span class="faq-icon">+</span>
+                </summary>
+                <p>Rendez-vous dans Mes demandes, remplissez le formulaire et validez l'envoi.</p>
+              </details>
+              <details class="faq-item fade-up">
+                <summary>
+                  Comment suivre mon dossier ?
+                  <span class="faq-icon">+</span>
+                </summary>
+                <p>Votre espace affiche l'etat et l'historique de chaque demande.</p>
+              </details>
+              <details class="faq-item fade-up">
+                <summary>
+                  Comment prendre un rendez-vous ?
+                  <span class="faq-icon">+</span>
+                </summary>
+                <p>Choisissez un motif, une date et recevez une confirmation automatique.</p>
+              </details>
+            </div>
+          </div>
+        </section>
+      </main>
+
+      <footer class="footer">
+        <div class="container">
+          <div class="footer-cta fade-up">
+            <div>
+              <div class="section-kicker">Parlons-en</div>
+              <h2>Lancez un front-office clair, moderne et performant.</h2>
+              <p class="section-copy">
+                Ce modele statique fournit une page d'accueil, des pages services, a propos, FAQ, blog et contact.
+              </p>
+            </div>
+            <div class="newsletter-form">
+              <input type="email" placeholder="Votre adresse e-mail" />
+              <a class="btn btn-primary" href="../../../back_office/view/backend/index.html">Tableau de bord</a>
+            </div>
+          </div>
+
+          <div class="footer-main">
+            <div>
+              <a class="brand" href="index.html"><img class="brand-logo" src="assets/media/secondvoice-logo.png" alt="SecondVoice logo" /></a>
+              <p>
+                Un modele front-office HTML premium pour l'IA, la technologie, la securite
+                et les marques en transformation numerique.
+              </p>
+            </div>
+            <div>
+              <h3 class="footer-title">Solutions</h3>
+              <ul class="footer-list">
+                <li><a href="about.html">A propos</a></li>
+                <li><a href="services.html">Services</a></li>
+                <li><a href="service-systemes-ia.html">Systemes IA appliques</a></li>
+                <li><a href="blog.html">Blog</a></li>
+              </ul>
+            </div>
+            <div>
+              <h3 class="footer-title">Entreprise</h3>
+              <ul class="footer-list">
+                <li><a href="contact.html">Parler a un expert</a></li>
+                <li><a href="blog-details.html">Analyses</a></li>
+                <li><a href="index.html">Hub solutions IA</a></li>
+              </ul>
+            </div>
+            <div>
+              <h3 class="footer-title">Nous contacter</h3>
+              <ul class="footer-list">
+                <li>lac 2, Tunis, Tunisia</li>
+                <li>+216 70 000 000</li>
+                <li>Lun - Ven 9:00 - 17:00</li>
+                <li>support@secondvoice.app</li>
+              </ul>
+            </div>
+          </div>
+
+          <div class="footer-bottom">
+            <span>&copy; 2026 SecondVoice. Tous droits reserves.</span>
+            <div class="footer-links">
+              <a href="index.html">Confidentialite</a>
+              <a href="index.html">Conditions</a>
+            </div>
+          </div>
+        </div>
+      </footer>
+    </div>
+
+    <script src="assets/js/main.js"></script>
+  </body>
+</html>
+
+
+
+
+
