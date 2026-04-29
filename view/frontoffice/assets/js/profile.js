@@ -151,8 +151,8 @@
       role: storedProfile.role
     });
 
-    if (!normalized.fullName || normalized.fullName.length < 2) {
-      feedback.textContent = "Veuillez saisir un nom complet valide (2 caracteres minimum).";
+    if (!normalized.fullName || normalized.fullName.length < 6) {
+      feedback.textContent = "Veuillez saisir un nom complet valide (6 caracteres minimum).";
       feedback.classList.add("error");
       return;
     }

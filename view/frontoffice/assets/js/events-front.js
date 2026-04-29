@@ -129,14 +129,14 @@ document.addEventListener('DOMContentLoaded', function () {
 
   function validateDateIsAfterToday(dateString) {
     if (!dateString) return true; // Champ vide sera validé par la validation des champs obligatoires
-    
+
     const selectedDate = new Date(dateString);
     const today = new Date();
-    
+
     // Remettre à 0 les heures pour comparer uniquement les dates
     today.setHours(0, 0, 0, 0);
     selectedDate.setHours(0, 0, 0, 0);
-    
+
     // La date doit être strictement supérieure à aujourd'hui
     return selectedDate > today;
   }
@@ -145,6 +145,63 @@ document.addEventListener('DOMContentLoaded', function () {
     if (!value || value.trim() === '') return true; // Champ vide autorisé
     const capacity = Number(value);
     return !isNaN(capacity) && capacity >= 1;
+  }
+
+  function showFieldValidationError(fieldId, message) {
+    const errorElement = document.getElementById(fieldId + '-error');
+    if (!errorElement) return;
+
+    errorElement.textContent = message;
+    errorElement.classList.add('visible');
+    errorElement.style.display = 'block';
+    errorElement.style.color = '#dc3545';
+    errorElement.style.visibility = 'visible';
+    errorElement.style.opacity = '1';
+  }
+
+  function clearFieldValidationError(fieldId) {
+    const errorElement = document.getElementById(fieldId + '-error');
+    if (!errorElement) return;
+
+    errorElement.textContent = '';
+    errorElement.classList.remove('visible');
+    errorElement.style.display = 'none';
+  }
+
+  function validateEventTitleField() {
+    const titleInput = document.getElementById('evt-name');
+    const value = titleInput?.value.trim() || '';
+
+    if (!titleInput) return true;
+
+    if (value === '') {
+      showFieldValidationError('evt-name', 'Ce champ est obligatoire');
+      return false;
+    }
+
+    if (value.length < 6) {
+      showFieldValidationError('evt-name', 'Le titre doit contenir au moins 6 caractères');
+      return false;
+    }
+
+    clearFieldValidationError('evt-name');
+    return true;
+  }
+
+  function applyBackendEventFieldErrors(message) {
+    const normalizedMessage = String(message || '').toLowerCase();
+
+    if (
+      normalizedMessage.includes('titre doit contenir au moins 6') ||
+      (normalizedMessage.includes('obligatoire') && normalizedMessage.includes('nom'))
+    ) {
+      if (!validateEventTitleField()) {
+        document.getElementById('evt-name')?.focus();
+        return true;
+      }
+    }
+
+    return false;
   }
 
   // Ouvrir le formulaire d'événement (mode création ou modification)
@@ -191,11 +248,11 @@ document.addEventListener('DOMContentLoaded', function () {
       document.getElementById('evt-location').value = eventData.location || '';
       document.getElementById('evt-max').value = eventData.max || '';
       document.getElementById('evt-status').value = eventData.status || 'en cours';
-      
+
       // Changer le titre du formulaire
       const titleEl = document.querySelector('#tab-add-form h2');
       if (titleEl) titleEl.textContent = 'Modifier l\'événement';
-      
+
       // Changer le texte du bouton
       const saveBtn = document.getElementById('btn-save-event');
       if (saveBtn) saveBtn.textContent = 'Enregistrer les modifications';
@@ -204,10 +261,10 @@ document.addEventListener('DOMContentLoaded', function () {
       form.reset();
       document.getElementById('evt-id').value = '';
       document.getElementById('evt-status').value = 'en cours';
-      
+
       const titleEl = document.querySelector('#tab-add-form h2');
       if (titleEl) titleEl.textContent = 'Créer un nouvel événement';
-      
+
       const saveBtn = document.getElementById('btn-save-event');
       if (saveBtn) saveBtn.textContent = 'Enregistrer l\'événement';
     }
@@ -313,9 +370,9 @@ document.addEventListener('DOMContentLoaded', function () {
         console.error('[FRONT] Carte événement non trouvée');
         return;
       }
-      
+
       console.log('[FRONT] Données de la carte:', card.dataset);
-      
+
       const eventData = {
         id: card.dataset.id,
         name: card.dataset.name,
@@ -352,6 +409,26 @@ document.addEventListener('DOMContentLoaded', function () {
       return;
     }
 
+    // Handler pour le bouton Retirer (suppression définitive d'un événement refusé)
+    const retirerButton = event.target.closest('.retirer');
+    if (retirerButton) {
+      const eventId = Number(retirerButton.getAttribute('data-id'));
+      showConfirm('Êtes-vous sûr de vouloir retirer cet événement refusé ? Cette action est définitive.', async function() {
+        retirerButton.disabled = true;
+        const result = await postJson('events.php?action=delete', { id: eventId });
+        if (result?.success) {
+          showSuccess('Événement retiré avec succès');
+          setTimeout(() => window.location.reload(), 1500);
+        } else {
+          retirerButton.disabled = false;
+          showFeedback(result?.message || 'Impossible de retirer cet événement.', 'danger');
+        }
+      }, function() {
+        // User cancelled - do nothing
+      });
+      return;
+    }
+
     const card = event.target.closest('.event-card');
     if (card && btnAdd && (event.ctrlKey || event.metaKey)) {
       const eventId = encodeURIComponent(card.getAttribute('data-id'));
@@ -365,19 +442,25 @@ document.addEventListener('DOMContentLoaded', function () {
     }
   });
 
-  document.getElementById('btn-save-event')?.addEventListener('click', async function () {
+  document.getElementById('event-form')?.addEventListener('submit', function (event) {
+    event.preventDefault();
+    document.getElementById('btn-save-event')?.click();
+  });
+
+  document.getElementById('btn-save-event')?.addEventListener('click', async function (event) {
+    event?.preventDefault();
     console.log('=== DÉBUT SOUMISSION FORMULAIRE ===');
-    
-    try {
-      // Validation des champs obligatoires
-      const requiredFields = [
-        { id: 'evt-name', name: 'Titre' },
-        { id: 'evt-start', name: 'Date début' },
+    console.log('[DEBUG] Bouton Enregistrer cliqué - début validation');
+
+    // Validation des champs obligatoires - FAITE EN DEHORS du try/catch pour bloquer correctement
+    const requiredFields = [
+      { id: 'evt-name', name: 'Titre' },
+      { id: 'evt-start', name: 'Date début' },
       { id: 'evt-end', name: 'Date fin' },
       { id: 'evt-deadline', name: 'Date limite' },
       { id: 'evt-location', name: 'Lieu' }
     ];
-    
+
     console.log('Champs obligatoires à vérifier:', requiredFields);
 
     let isValid = true;
@@ -385,32 +468,37 @@ document.addEventListener('DOMContentLoaded', function () {
 
     // Réinitialiser tous les messages d'erreur
     requiredFields.forEach(field => {
-      const errorElement = document.getElementById(field.id + '-error');
-      if (errorElement) {
-        errorElement.textContent = '';
-        errorElement.classList.remove('visible');
-        errorElement.style.display = 'none';
-      }
+      clearFieldValidationError(field.id);
     });
 
     // Valider chaque champ obligatoire
     requiredFields.forEach(field => {
       const input = document.getElementById(field.id);
-      const errorElement = document.getElementById(field.id + '-error');
-      
-      console.log(`Validation champ ${field.id}:`, input ? input.value : 'INPUT NON TROUVÉ');
-      
-      if (!input || !input.value.trim()) {
-        isValid = false;
-        console.log(`ERREUR: Champ ${field.id} invalide ou vide`);
-        if (errorElement) {
-          errorElement.textContent = 'Ce champ est obligatoire';
-          errorElement.classList.add('visible');
-          errorElement.style.display = 'block';
-          errorElement.style.color = '#dc3545';
-          errorElement.style.visibility = 'visible';
-          errorElement.style.opacity = '1';
+      console.log(`[DEBUG] Validation champ ${field.id}:`, input ? `"${input.value}"` : 'INPUT NON TROUVÉ');
+
+      clearFieldValidationError(field.id);
+
+      let errorMessage = '';
+      if (!input) {
+        errorMessage = 'Ce champ est obligatoire';
+      } else {
+        const trimmedValue = input.value.trim();
+        console.log(`[DEBUG] Valeur trimmée pour ${field.id}: "${trimmedValue}" (longueur: ${trimmedValue.length})`);
+
+        if (field.id === 'evt-name') {
+          errorMessage = validateEventTitleField() ? '' : (trimmedValue.length === 0 ? 'Ce champ est obligatoire' : 'Le titre doit contenir au moins 6 caractères');
+        } else {
+          // Pour les autres champs, garder la logique normale
+          if (!trimmedValue) {
+            errorMessage = 'Ce champ est obligatoire';
+          }
         }
+      }
+
+      if (errorMessage) {
+        isValid = false;
+        console.log(`[DEBUG] ERREUR: Champ ${field.id} - ${errorMessage}`);
+        showFieldValidationError(field.id, errorMessage);
         if (!firstInvalidField) {
           firstInvalidField = input;
         }
@@ -421,21 +509,13 @@ document.addEventListener('DOMContentLoaded', function () {
     const dateFields = ['evt-start', 'evt-end', 'evt-deadline'];
     dateFields.forEach(fieldId => {
       const input = document.getElementById(fieldId);
-      const errorElement = document.getElementById(fieldId + '-error');
-      
+
       if (input && input.value.trim()) {
         console.log(`Validation date ${fieldId}:`, input.value, '->', validateDateIsAfterToday(input.value));
         if (!validateDateIsAfterToday(input.value)) {
           isValid = false;
           console.log(`ERREUR: Date ${fieldId} invalide (pas postérieure à aujourd'hui)`);
-          if (errorElement) {
-            errorElement.textContent = 'La date doit être postérieure à la date actuelle';
-            errorElement.classList.add('visible');
-            errorElement.style.display = 'block';
-            errorElement.style.color = '#dc3545';
-            errorElement.style.visibility = 'visible';
-            errorElement.style.opacity = '1';
-          }
+          showFieldValidationError(fieldId, 'La date doit être postérieure à la date actuelle');
           if (!firstInvalidField) {
             firstInvalidField = input;
           }
@@ -445,19 +525,14 @@ document.addEventListener('DOMContentLoaded', function () {
 
     // Validation du champ "Capacité max" (doit être >= 1 si rempli)
     const capacityInput = document.getElementById('evt-max');
-    const capacityErrorElement = document.getElementById('evt-max-error');
-    
+    clearFieldValidationError('evt-max');
+
     if (capacityInput && capacityInput.value.trim()) {
       console.log(`Validation capacité:`, capacityInput.value, '->', validateCapacity(capacityInput.value));
       if (!validateCapacity(capacityInput.value)) {
         isValid = false;
         console.log(`ERREUR: Capacité invalide (< 1)`);
-        capacityErrorElement.textContent = 'La capacité doit être au moins 1';
-        capacityErrorElement.classList.add('visible');
-        capacityErrorElement.style.display = 'block';
-        capacityErrorElement.style.color = '#dc3545';
-        capacityErrorElement.style.visibility = 'visible';
-        capacityErrorElement.style.opacity = '1';
+        showFieldValidationError('evt-max', 'La capacité doit être au moins 1');
         if (!firstInvalidField) {
           firstInvalidField = capacityInput;
         }
@@ -465,17 +540,34 @@ document.addEventListener('DOMContentLoaded', function () {
     }
 
     console.log('Résultat validation:', isValid);
-    
+
+    // BLOCAGE CRITIQUE : Si validation invalide, ARRÊTER ICI de manière explicite
     if (!isValid) {
-      console.log('FORMULAIRE INVALIDE - ARRÊT DE LA SOUMISSION');
-      firstInvalidField.focus();
+      console.log('🚫 FORMULAIRE INVALIDE - BLOCAGE TOTAL DE L\'ENVOI BACKEND');
+      console.log('🚫 PREMIER CHAMP INVALIDE:', firstInvalidField);
+      if (firstInvalidField) {
+        firstInvalidField.focus();
+        console.log('🚫 FOCUS APPLIQUÉ SUR LE CHAMP INVALIDE');
+      }
+      console.log('🚫 FIN DE LA FONCTION - REQUÊTE BACKEND NON ENVOYÉE - PAS DE POPUP');
+      // BLOCAGE TOTAL - PLUS AUCUN CODE NE SERA EXÉCUTÉ APRÈS CETTE LIGNE
       return;
     }
 
+    console.log('✅ FORMULAIRE VALIDE - CONTINUER VERS L\'ENVOI BACKEND');
+
     console.log('FORMULAIRE VALIDE - CRÉATION DU PAYLOAD');
-    
+
+    // Récupérer l'ID et s'assurer qu'il est correctement interprété
+    const eventIdRaw = document.getElementById('evt-id').value;
+    const eventId = eventIdRaw && eventIdRaw.trim() !== '' ? parseInt(eventIdRaw, 10) : 0;
+
+    console.log('[DEBUG] ID brut du champ evt-id:', eventIdRaw);
+    console.log('[DEBUG] ID parsé:', eventId);
+    console.log('[DEBUG] ID > 0 ?', eventId > 0);
+
     const payload = {
-      id: document.getElementById('evt-id').value || null,
+      id: eventId > 0 ? eventId : null,
       name: document.getElementById('evt-name').value.trim(),
       description: document.getElementById('evt-description').value.trim(),
       start_date: document.getElementById('evt-start').value || null,
@@ -483,37 +575,159 @@ document.addEventListener('DOMContentLoaded', function () {
       deadline: document.getElementById('evt-deadline').value || null,
       location: document.getElementById('evt-location').value.trim(),
       max: Number(document.getElementById('evt-max').value) || 1,
-      status: document.getElementById('evt-status').value || 'en cours', // Double sécurité
+      status: document.getElementById('evt-status').value || 'en cours',
       resources: []
     };
 
     console.log('PAYLOAD À ENVOYER:', JSON.stringify(payload, null, 2));
 
-    const url = payload.id ? 'events.php?action=update' : 'events.php?action=create';
+    // Utiliser update si on a un ID valide, sinon create
+    const url = eventId > 0 ? 'events.php?action=update' : 'events.php?action=create';
+    console.log('[DEBUG] URL choisie:', url, '(eventId=' + eventId + ')');
     console.log('URL APPELÉE:', url);
-    
-    console.log('ENVOI DE LA REQUÊTE...');
-    
+
+    console.log('🌐 ENVOI DE LA REQUÊTE BACKEND...');
+
     let result;
     try {
       result = await postJson(url, payload);
+      console.log('✅ REQUÊTE BACKEND TERMINÉE AVEC SUCCÈS');
     } catch (fetchError) {
+      console.error('❌ ERREUR RÉSEAU:', fetchError);
       showError('Erreur réseau: ' + fetchError.message);
       return;
     }
-    
-    console.log('RÉPONSE DU BACKEND:', result);
-    
+
+    console.log('📥 RÉPONSE DU BACKEND REÇUE:', result);
+
     if (result?.success) {
+      console.log('✅ BACKEND A RETOURNÉ SUCCÈS');
       modal && modal.hide();
-      showSuccess(result?.message || 'Événement enregistré avec succès');
+      const eventId = result?.id;
+      // Si création (pas d'ID dans le payload initial), rediriger vers gestion des ressources
+      if (!payload.id && eventId) {
+        showSuccess('Événement créé. Redirection vers la gestion des ressources...');
+        setTimeout(() => {
+          window.location.href = 'resources.php?event_id=' + eventId;
+        }, 1500);
+      } else {
+        showSuccess(result?.message || 'Événement enregistré avec succès');
+        setTimeout(() => window.location.reload(), 1500);
+      }
     } else {
+      console.log('❌ BACKEND A RETOURNÉ UNE ERREUR:', result?.message);
+      if (applyBackendEventFieldErrors(result?.message)) {
+        return;
+      }
       showError(result?.message || 'Erreur lors de l\'enregistrement de l\'événement');
     }
-  } catch (error) {
-    console.error('ERREUR GLOBALE:', error);
-    showError('Une erreur est survenue: ' + error.message);
+  }); // Fin de l'event listener
+
+  // Validation en temps réel pour le champ "Titre"
+  const titleInput = document.getElementById('evt-name');
+  if (titleInput) {
+    console.log('[DEBUG] Validation en temps réel activée pour evt-name');
+    titleInput.addEventListener('input', function() {
+      const trimmedValue = this.value.trim();
+
+      console.log(`[DEBUG] Input实时 - Valeur: "${trimmedValue}" (longueur: ${trimmedValue.length})`);
+
+      if (trimmedValue.length === 0) {
+        console.log('[DEBUG] Input实时 - Champ vide, afficher "obligatoire"');
+        showFieldValidationError('evt-name', 'Ce champ est obligatoire');
+      } else if (trimmedValue.length < 6) {
+        console.log('[DEBUG] Input实时 - Champ trop court (< 6 caractères), afficher message');
+        showFieldValidationError('evt-name', 'Le titre doit contenir au moins 6 caractères');
+      } else {
+        console.log('[DEBUG] Input实时 - Champ valide (>= 6 caractères), masquer l\'erreur');
+        clearFieldValidationError('evt-name');
+      }
+    });
+  } else {
+    console.log('[DEBUG] ERREUR: Champ evt-name non trouvé pour la validation en temps réel');
   }
-});
+
+  const searchInput = document.getElementById('events-search');
+
+  function normalizeSearchValue(value) {
+    return String(value || '')
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .toLowerCase()
+      .trim();
+  }
+
+  function getActiveSearchScope() {
+    const activePanel = document.querySelector('.tab-panel.active');
+    if (!activePanel) return null;
+
+    if (activePanel.id === 'tab-requests') {
+      return activePanel.querySelector('.request-subpanel.active') || activePanel;
+    }
+
+    return activePanel;
+  }
+
+  function getCardSearchText(card) {
+    const explicitSearch = card.getAttribute('data-search');
+    if (explicitSearch) return explicitSearch;
+
+    return [
+      card.dataset.name,
+      card.dataset.desc,
+      card.dataset.start,
+      card.dataset.end,
+      card.dataset.deadline,
+      card.dataset.location,
+      card.dataset.status,
+      card.dataset.materials,
+      card.dataset.rules,
+      card.textContent
+    ].filter(Boolean).join(' ');
+  }
+
+  function getSearchEmptyMessage(scope) {
+    let message = scope.querySelector(':scope > .search-empty');
+    if (!message) {
+      message = document.createElement('p');
+      message.className = 'muted fade-up search-empty';
+      message.textContent = 'Aucun résultat trouvé';
+      message.hidden = true;
+      scope.appendChild(message);
+    }
+    return message;
+  }
+
+  function applyEventSearch() {
+    if (!searchInput) return;
+
+    const query = normalizeSearchValue(searchInput.value);
+    const scope = getActiveSearchScope();
+    if (!scope) return;
+
+    const cards = Array.from(scope.querySelectorAll('.event-card'));
+    let visibleCount = 0;
+
+    cards.forEach(function(card) {
+      const matches = query === '' || normalizeSearchValue(getCardSearchText(card)).includes(query);
+      card.style.display = matches ? '' : 'none';
+      if (matches) visibleCount += 1;
+    });
+
+    const emptyMessage = getSearchEmptyMessage(scope);
+    emptyMessage.hidden = query === '' || visibleCount > 0 || cards.length === 0;
+  }
+
+  if (searchInput) {
+    searchInput.addEventListener('input', applyEventSearch);
+
+    document.addEventListener('click', function(event) {
+      if (event.target.closest('.tab-toggle') || event.target.closest('.request-filter')) {
+        window.setTimeout(applyEventSearch, 0);
+      }
+    });
+
+    applyEventSearch();
+  }
 
 }); // Fin du DOMContentLoaded handler

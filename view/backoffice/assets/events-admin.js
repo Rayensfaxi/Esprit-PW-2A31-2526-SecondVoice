@@ -123,6 +123,26 @@ document.addEventListener('DOMContentLoaded', function () {
     requiredFields.forEach(fieldId => clearFieldError(fieldId));
   }
 
+  function validateAdminTitleField() {
+    const input = document.getElementById('evt-name');
+    const value = input?.value.trim() || '';
+
+    if (!input) return true;
+
+    if (value === '') {
+      showFieldError('evt-name', 'Ce champ est obligatoire');
+      return false;
+    }
+
+    if (value.length < 6) {
+      showFieldError('evt-name', 'Le titre doit contenir au moins 6 caractères');
+      return false;
+    }
+
+    clearFieldError('evt-name');
+    return true;
+  }
+
   function createRow(container, value = '') {
     const row = document.createElement('div');
     row.className = 'dyn-row';
@@ -166,7 +186,7 @@ document.addEventListener('DOMContentLoaded', function () {
       })
       .filter(Boolean)
       .map(function (name) {
-        return { resource_name: name, quantity: 0, type: type };
+        return { name: name, description: '', type: type };
       });
   }
 
@@ -196,8 +216,76 @@ document.addEventListener('DOMContentLoaded', function () {
       this.classList.add('active');
       const target = document.querySelector(this.getAttribute('data-target'));
       target && target.classList.add('active');
+      window.setTimeout(applyAdminSearch, 0);
     });
   });
+
+  const adminSearchInput = document.getElementById('admin-events-search');
+
+  function normalizeSearchValue(value) {
+    return String(value || '')
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .toLowerCase()
+      .trim();
+  }
+
+  function getActiveAdminSearchScope() {
+    return document.querySelector('.tab-panel.active');
+  }
+
+  function getAdminCardSearchText(card) {
+    const explicitSearch = card.getAttribute('data-search');
+    if (explicitSearch) return explicitSearch;
+
+    return [
+      card.dataset.name,
+      card.dataset.desc,
+      card.dataset.start,
+      card.dataset.end,
+      card.dataset.deadline,
+      card.dataset.location,
+      card.dataset.status,
+      card.dataset.materials,
+      card.dataset.rules,
+      card.textContent
+    ].filter(Boolean).join(' ');
+  }
+
+  function getAdminSearchEmptyMessage(scope) {
+    let message = scope.querySelector(':scope > .admin-search-empty');
+    if (!message) {
+      message = document.createElement('div');
+      message.className = 'small admin-search-empty';
+      message.textContent = 'Aucun résultat trouvé';
+      message.hidden = true;
+      scope.appendChild(message);
+    }
+    return message;
+  }
+
+  function applyAdminSearch() {
+    if (!adminSearchInput) return;
+
+    const scope = getActiveAdminSearchScope();
+    if (!scope) return;
+
+    const query = normalizeSearchValue(adminSearchInput.value);
+    const cards = $all('.event-card', scope);
+    let visibleCount = 0;
+
+    cards.forEach(function(card) {
+      const matches = query === '' || normalizeSearchValue(getAdminCardSearchText(card)).includes(query);
+      card.style.display = matches ? '' : 'none';
+      if (matches) visibleCount += 1;
+    });
+
+    const emptyMessage = getAdminSearchEmptyMessage(scope);
+    emptyMessage.hidden = query === '' || visibleCount > 0 || cards.length === 0;
+  }
+
+  adminSearchInput?.addEventListener('input', applyAdminSearch);
+  applyAdminSearch();
 
   $all('.view-registrants').forEach(function (button) {
     button.addEventListener('click', function () {
@@ -281,6 +369,16 @@ document.addEventListener('DOMContentLoaded', function () {
     // Validate each required field
     requiredFields.forEach(field => {
       const input = document.getElementById(field.id);
+      if (field.id === 'evt-name') {
+        if (!validateAdminTitleField()) {
+          isValid = false;
+          if (!firstInvalidField) {
+            firstInvalidField = input;
+          }
+        }
+        return;
+      }
+
       if (!input || !input.value.trim()) {
         isValid = false;
         showFieldError(field.id, 'Ce champ est obligatoire');
@@ -322,12 +420,22 @@ document.addEventListener('DOMContentLoaded', function () {
     }
   });
 
+  $('#admin-event-form')?.addEventListener('submit', function (event) {
+    event.preventDefault();
+    $('#admin-save')?.click();
+  });
+
   // Clear error messages on input
   const requiredFieldIds = ['evt-name', 'evt-start', 'evt-end', 'evt-deadline', 'evt-location'];
   requiredFieldIds.forEach(fieldId => {
     const input = document.getElementById(fieldId);
     if (input) {
       input.addEventListener('input', function() {
+        if (fieldId === 'evt-name') {
+          validateAdminTitleField();
+          return;
+        }
+
         if (this.value.trim()) {
           clearFieldError(fieldId);
         }
@@ -432,6 +540,41 @@ document.addEventListener('DOMContentLoaded', function () {
         const result = await postJson(apiBase + '?action=reject_modification', { request_id: requestId });
         if (result?.success) {
           showSuccess('Modification refusée');
+          setTimeout(() => window.location.reload(), 1500);
+        } else {
+          showFeedback(result?.message || 'Erreur lors du refus.', true);
+        }
+      });
+    });
+  });
+
+  // Approve / Reject resource modification request handlers
+  $all('.approve-resource-mod').forEach(function (button) {
+    button.addEventListener('click', async function () {
+      const requestId = Number(this.getAttribute('data-request-id'));
+      if (!requestId) return;
+
+      showConfirm('Êtes-vous sûr de vouloir approuver cette modification des ressources ? Les nouvelles ressources remplaceront les anciennes.', async function() {
+        const result = await postJson(apiBase + '?action=approve_resource_modification', { request_id: requestId });
+        if (result?.success) {
+          showSuccess('Modification des ressources approuvée');
+          setTimeout(() => window.location.reload(), 1500);
+        } else {
+          showFeedback(result?.message || 'Erreur lors de l\'approbation.', true);
+        }
+      });
+    });
+  });
+
+  $all('.reject-resource-mod').forEach(function (button) {
+    button.addEventListener('click', async function () {
+      const requestId = Number(this.getAttribute('data-request-id'));
+      if (!requestId) return;
+
+      showConfirm('Êtes-vous sûr de vouloir refuser cette modification des ressources ? Les ressources actuelles seront conservées.', async function() {
+        const result = await postJson(apiBase + '?action=reject_resource_modification', { request_id: requestId });
+        if (result?.success) {
+          showSuccess('Modification des ressources refusée');
           setTimeout(() => window.location.reload(), 1500);
         } else {
           showFeedback(result?.message || 'Erreur lors du refus.', true);
