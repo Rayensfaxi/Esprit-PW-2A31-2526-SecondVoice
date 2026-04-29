@@ -62,17 +62,25 @@ $formValues = [
 
 $search = trim((string) ($_GET['q'] ?? ''));
 $selectedCategorie = trim((string) ($_GET['categorie'] ?? 'toutes'));
+$selectedStatus = trim((string) ($_GET['status'] ?? 'toutes'));
 $allowedCategorieFilters = ['toutes', 'innovation', 'amelioration', 'nouveau produit', 'autre'];
+$allowedStatusFilters = ['toutes', 'en attente', 'approuve', 'desapprouve'];
 
 if (!in_array($selectedCategorie, $allowedCategorieFilters, true)) {
     $selectedCategorie = 'toutes';
+}
+
+if (!in_array($selectedStatus, $allowedStatusFilters, true)) {
+    $selectedStatus = 'toutes';
 }
 
 $status = (string) ($_GET['status'] ?? '');
 $statusMessages = [
     'added' => 'Brainstorming ajoute avec succes.',
     'updated' => 'Brainstorming modifie avec succes.',
-    'deleted' => 'Brainstorming supprime avec succes.'
+    'deleted' => 'Brainstorming supprime avec succes.',
+    'approved' => 'Brainstorming approuve avec succes.',
+    'disapproved' => 'Brainstorming desapprouve avec succes.'
 ];
 if (isset($statusMessages[$status])) {
     $feedbackType = 'success';
@@ -100,7 +108,20 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $description = trim((string) ($_POST['description'] ?? ''));
             $categorie = trim((string) ($_POST['categorie'] ?? ''));
 
-            $controller->addBrainstorming($titre, $description, $categorie);
+            if ($titre === '') {
+                throw new InvalidArgumentException('Le titre est obligatoire.');
+            }
+            if (strlen($titre) < 3) {
+                throw new InvalidArgumentException('Le titre doit contenir au moins 3 caracteres.');
+            }
+            if ($description === '') {
+                throw new InvalidArgumentException('La description est obligatoire.');
+            }
+            if ($categorie === '') {
+                throw new InvalidArgumentException('La categorie est obligatoire.');
+            }
+
+            $controller->addBrainstorming($titre, $description, $categorie, true);
             header('Location: gestion-brainstormings.php?status=added');
             exit;
         }
@@ -111,6 +132,19 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $description = trim((string) ($_POST['description'] ?? ''));
             $categorie = trim((string) ($_POST['categorie'] ?? ''));
 
+            if ($titre === '') {
+                throw new InvalidArgumentException('Le titre est obligatoire.');
+            }
+            if (strlen($titre) < 3) {
+                throw new InvalidArgumentException('Le titre doit contenir au moins 3 caracteres.');
+            }
+            if ($description === '') {
+                throw new InvalidArgumentException('La description est obligatoire.');
+            }
+            if ($categorie === '') {
+                throw new InvalidArgumentException('La categorie est obligatoire.');
+            }
+
             $controller->updateBrainstorming($id, $titre, $description, $categorie);
             header('Location: gestion-brainstormings.php?status=updated');
             exit;
@@ -120,6 +154,20 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $id = (int) ($_POST['id'] ?? 0);
             $controller->deleteBrainstorming($id);
             header('Location: gestion-brainstormings.php?status=deleted');
+            exit;
+        }
+
+        if ($action === 'approve') {
+            $id = (int) ($_POST['id'] ?? 0);
+            $controller->updateBrainstormingStatus($id, 'approuve');
+            header('Location: gestion-brainstormings.php?status=approved');
+            exit;
+        }
+
+        if ($action === 'disapprove') {
+            $id = (int) ($_POST['id'] ?? 0);
+            $controller->updateBrainstormingStatus($id, 'desapprouve');
+            header('Location: gestion-brainstormings.php?status=disapproved');
             exit;
         }
 
@@ -140,7 +188,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
 $brainstormings = $controller->getBrainstormings([
     'q' => $search,
-    'categorie' => $selectedCategorie
+    'categorie' => $selectedCategorie,
+    'statut' => $selectedStatus
 ]);
 ?>
 <!DOCTYPE html>
@@ -169,6 +218,7 @@ $brainstormings = $controller->getBrainstormings([
               <a class="nav-link" href="index.php" data-nav="home"><span class="nav-icon icon-home"></span><span>Tableau de bord</span></a>
               <a class="nav-link" href="gestion-utilisateurs.php" data-nav="profile"><span class="nav-icon icon-profile"></span><span>Gestion des utilisateurs</span></a>
               <a class="nav-link" href="gestion-brainstormings.php" data-nav="community"><span class="nav-icon icon-community"></span><span>Gestion des brainstormings</span></a>
+              <a class="nav-link" href="gestion-idees.php" data-nav="community"><span class="nav-icon icon-community"></span><span>Gestion des idees</span></a>
               <a class="nav-link" href="gestion-rendezvous.php" data-nav="subscription"><span class="nav-icon icon-card"></span><span>Gestion des rendez-vous</span></a>
               <a class="nav-link" href="gestion-accompagnements.php" data-nav="chatbot"><span class="nav-icon icon-chat"></span><span>Gestion des accompagnements</span></a>
               <a class="nav-link" href="gestion-evenements.php" data-nav="images"><span class="nav-icon icon-image"></span><span>Gestion des evenements</span></a>
@@ -198,7 +248,7 @@ $brainstormings = $controller->getBrainstormings([
             <div class="users-header">
               <div>
                 <h2 class="section-title">Liste des brainstormings</h2>
-                <p class="helper">Filtrez, modifiez et supprimez les brainstormings.</p>
+                <p class="helper">Filtrez, approuvez et desapprouvez les brainstormings.</p>
               </div>
               <div class="users-actions">
                 <a class="ghost-button" href="gestion-brainstormings.php">Reinitialiser</a>
@@ -222,6 +272,15 @@ $brainstormings = $controller->getBrainstormings([
                 </select>
               </div>
               <div class="filter-field">
+                <label for="brainstorming-status">Statut</label>
+                <select id="brainstorming-status" name="status">
+                  <option value="toutes" <?= $selectedStatus === 'toutes' ? 'selected' : '' ?>>Tous</option>
+                  <option value="en attente" <?= $selectedStatus === 'en attente' ? 'selected' : '' ?>>En attente</option>
+                  <option value="approuve" <?= $selectedStatus === 'approuve' ? 'selected' : '' ?>>Approuve</option>
+                  <option value="desapprouve" <?= $selectedStatus === 'desapprouve' ? 'selected' : '' ?>>Desapprouve</option>
+                </select>
+              </div>
+              <div class="filter-field">
                 <label for="brainstorming-filter-submit">Action</label>
                 <button id="brainstorming-filter-submit" class="ghost-button" type="submit">Filtrer</button>
               </div>
@@ -230,23 +289,20 @@ $brainstormings = $controller->getBrainstormings([
 
           <section class="users-hero user-form-card" id="brainstorming-form">
             <div>
-              <h2 class="section-title"><?= $editBrainstorming ? 'Modifier un brainstorming' : 'Ajouter un brainstorming' ?></h2>
+              <h2 class="section-title">Ajouter un brainstorming</h2>
             </div>
 
             <?php if ($feedbackMessage !== ''): ?>
               <div class="form-feedback <?= h($feedbackType) ?>"><?= h($feedbackMessage) ?></div>
             <?php endif; ?>
 
-            <form id="crud-brainstorming-form" class="users-crud-form" method="post" action="gestion-brainstormings.php<?= $editBrainstorming ? '?edit=' . (int) $editBrainstorming['id'] : '' ?>" novalidate>
-              <input type="hidden" name="action" value="<?= $editBrainstorming ? 'update' : 'add' ?>" />
-              <?php if ($editBrainstorming): ?>
-                <input type="hidden" name="id" value="<?= (int) $editBrainstorming['id'] ?>" />
-              <?php endif; ?>
+            <form id="crud-brainstorming-form" class="users-crud-form" method="post" action="gestion-brainstormings.php" novalidate>
+              <input type="hidden" name="action" value="add" />
 
               <div class="user-form-grid">
                 <div class="filter-field">
                   <label for="titre">Titre *</label>
-                  <input id="titre" name="titre" type="text" value="<?= h($formValues['titre']) ?>" placeholder="Titre du brainstorming" required />
+                  <input id="titre" name="titre" type="text" value="<?= h($formValues['titre']) ?>" placeholder="Titre du brainstorming" />
                 </div>
                 <div class="filter-field">
                   <label for="categorie">Categorie</label>
@@ -266,10 +322,7 @@ $brainstormings = $controller->getBrainstormings([
               <p id="crud-feedback" class="form-feedback"></p>
 
               <div class="users-actions">
-                <button class="action-button" type="submit"><?= $editBrainstorming ? 'Enregistrer les modifications' : 'Ajouter' ?></button>
-                <?php if ($editBrainstorming): ?>
-                  <a class="ghost-button" href="gestion-brainstormings.php">Annuler</a>
-                <?php endif; ?>
+                <button class="action-button" type="submit">Ajouter</button>
               </div>
             </form>
           </section>
@@ -293,6 +346,7 @@ $brainstormings = $controller->getBrainstormings([
                   </tr>
                 <?php else: ?>
                   <?php foreach ($brainstormings as $brainstorming): ?>
+                    <?php $currentStatus = strtolower(trim((string) $brainstorming['statut'])); ?>
                     <tr>
                       <td>
                         <div class="user-cell">
@@ -308,7 +362,18 @@ $brainstormings = $controller->getBrainstormings([
                       <td><?= h(formatCreationDate((string) $brainstorming['dateCreation'])) ?></td>
                       <td>
                         <div class="table-actions">
-                          <a class="ghost-button" href="gestion-brainstormings.php?edit=<?= (int) $brainstorming['id'] ?>#brainstorming-form">Modifier</a>
+                          <?php if ($currentStatus !== 'approuve' && $currentStatus !== 'desapprouve'): ?>
+                          <form class="inline-delete-form" method="post" action="gestion-brainstormings.php" data-status-form data-status-label="approuver">
+                            <input type="hidden" name="action" value="approve" />
+                            <input type="hidden" name="id" value="<?= (int) $brainstorming['id'] ?>" />
+                            <button class="ghost-button" type="submit">Approuver</button>
+                          </form>
+                          <form class="inline-delete-form" method="post" action="gestion-brainstormings.php" data-status-form data-status-label="desapprouver">
+                            <input type="hidden" name="action" value="disapprove" />
+                            <input type="hidden" name="id" value="<?= (int) $brainstorming['id'] ?>" />
+                            <button class="ghost-button danger" type="submit">Desapprouver</button>
+                          </form>
+                          <?php endif; ?>
                           <form class="inline-delete-form" method="post" action="gestion-brainstormings.php" data-delete-form>
                             <input type="hidden" name="action" value="delete" />
                             <input type="hidden" name="id" value="<?= (int) $brainstorming['id'] ?>" />
@@ -365,10 +430,11 @@ $brainstormings = $controller->getBrainstormings([
           });
         }
 
-        const deleteForms = document.querySelectorAll('[data-delete-form]');
-        deleteForms.forEach(form => {
+        const statusForms = document.querySelectorAll('[data-status-form]');
+        statusForms.forEach(form => {
           form.addEventListener('submit', function (event) {
-            const confirmed = confirm('Etes-vous sur de vouloir supprimer ce brainstorming ?');
+            const actionLabel = form.getAttribute('data-status-label') || 'changer le statut de';
+            const confirmed = confirm(`Etes-vous sur de vouloir ${actionLabel} ce brainstorming ?`);
             if (!confirmed) {
               event.preventDefault();
             }

@@ -1,16 +1,100 @@
 <?php
 declare(strict_types=1);
 
+session_start();
+
 require_once __DIR__ . '/../../config.php';
 require_once __DIR__ . '/../../controller/BrainstormingController.php';
 
 $controller = new BrainstormingController();
-$brainstormings = $controller->getBrainstormings($_GET);
+
+$currentUserId = (int) ($_SESSION['user_id'] ?? 0);
+$currentRole = strtolower((string) ($_SESSION['user_role'] ?? 'client'));
+$isAdmin = $currentUserId > 0 && $currentRole === 'admin';
+$isConnected = $currentUserId > 0;
 
 $currentSearch = $_GET['q'] ?? '';
 $currentCategorie = $_GET['categorie'] ?? 'toutes';
+$currentStatus = $_GET['status'] ?? 'toutes';
 $submitted = isset($_GET['submitted']) && (string) $_GET['submitted'] === '1';
+$updated = isset($_GET['updated']) && (string) $_GET['updated'] === '1';
+$deleted = isset($_GET['deleted']) && (string) $_GET['deleted'] === '1';
 $error = $_GET['error'] ?? '';
+$generalError = '';
+$editIdea = null;
+$formValues = [
+    'titre' => '',
+    'description' => '',
+    'categorie' => ''
+];
+$fieldErrors = [
+    'titre' => '',
+    'description' => '',
+    'categorie' => ''
+];
+
+$flashErrors = $_SESSION['brainstorming_form_errors'] ?? null;
+$flashOldValues = $_SESSION['brainstorming_form_old'] ?? null;
+$flashGeneralError = $_SESSION['brainstorming_form_general_error'] ?? null;
+
+unset($_SESSION['brainstorming_form_errors'], $_SESSION['brainstorming_form_old'], $_SESSION['brainstorming_form_general_error'], $_SESSION['brainstorming_form_action'], $_SESSION['brainstorming_form_id']);
+
+if (is_array($flashErrors)) {
+    $fieldErrors['titre'] = (string) ($flashErrors['titre'] ?? '');
+    $fieldErrors['description'] = (string) ($flashErrors['description'] ?? '');
+    $fieldErrors['categorie'] = (string) ($flashErrors['categorie'] ?? '');
+}
+
+if (is_array($flashOldValues)) {
+    $formValues['titre'] = (string) ($flashOldValues['titre'] ?? '');
+    $formValues['description'] = (string) ($flashOldValues['description'] ?? '');
+    $formValues['categorie'] = (string) ($flashOldValues['categorie'] ?? '');
+}
+
+if (is_string($flashGeneralError) && $flashGeneralError !== '') {
+    $generalError = $flashGeneralError;
+} elseif ($error !== '') {
+    $generalError = (string) $error;
+}
+
+if (isset($_GET['edit']) && ctype_digit((string) $_GET['edit'])) {
+    $editIdea = $controller->getBrainstormingById((int) $_GET['edit'], $currentUserId, false);
+    if ($editIdea !== null) {
+        if (!is_array($flashOldValues)) {
+            $formValues = [
+                'titre' => (string) ($editIdea['titre'] ?? ''),
+                'description' => (string) ($editIdea['description'] ?? ''),
+                'categorie' => (string) ($editIdea['categorie'] ?? '')
+            ];
+        }
+    }
+}
+
+$brainstormings = [];
+if ($isAdmin) {
+    $brainstormings = $controller->getBrainstormings([
+        'q' => $currentSearch,
+        'categorie' => $currentCategorie,
+        'statut' => $currentStatus
+    ]);
+} elseif ($isConnected) {
+    $brainstormings = $controller->getBrainstormings([
+        'q' => $currentSearch,
+        'categorie' => $currentCategorie,
+        'statut' => $currentStatus,
+        'owner_id' => $currentUserId,
+        'include_global' => true,
+        'approved_only' => true
+    ]);
+} else {
+    $brainstormings = $controller->getBrainstormings([
+        'q' => $currentSearch,
+        'categorie' => $currentCategorie,
+        'statut' => $currentStatus,
+        'global_only' => true,
+        'approved_only' => true
+    ]);
+}
 
 function h(?string $value): string
 {
@@ -219,10 +303,42 @@ function statusClass(string $status): string
         color: #991b1b;
       }
 
+      .field-error {
+        display: block;
+        margin-top: 0.35rem;
+        color: #ef4444;
+        font-size: 0.78rem;
+        line-height: 1.3;
+      }
+
       .no-results {
         text-align: center;
         padding: 2rem;
         color: var(--color-text-secondary);
+      }
+
+      .brainstorming-actions {
+        display: flex;
+        gap: 0.5rem;
+        margin-top: 1rem;
+        flex-wrap: wrap;
+      }
+
+      .brainstorming-actions .btn {
+        min-height: 40px;
+        padding: 0 16px;
+        font-size: 0.82rem;
+        font-weight: 700;
+      }
+
+      .btn-danger {
+        color: #fff;
+        background: linear-gradient(135deg, #ef4444, #dc2626);
+        box-shadow: 0 10px 24px rgba(220, 38, 38, 0.28);
+      }
+
+      .btn-danger:hover {
+        background: linear-gradient(135deg, #f87171, #dc2626);
       }
 
       @media (max-width: 768px) {
@@ -318,9 +434,9 @@ function statusClass(string $status): string
           <div class="container">
             <div class="page-hero-card fade-up">
               <div class="breadcrumbs"><span>Accueil</span><span>/</span><span>Brainstorming</span></div>
-              <h1>Partagez vos idees pour ameliorer nos services.</h1>
+              <h1>Partagez vos brainstormings pour ameliorer nos services.</h1>
               <p>
-                Contribuez au developpement de SecondVoice en proposant vos idees d'innovation et d'amelioration.
+                Contribuez au developpement de SecondVoice en proposant vos brainstormings d'innovation et d'amelioration.
               </p>
             </div>
           </div>
@@ -330,59 +446,88 @@ function statusClass(string $status): string
           <div class="container">
             <div class="brainstorming-container">
               <aside class="brainstorming-form fade-up">
-                <h3 style="margin-top: 0;">Soumettre une idee</h3>
+                <h3 style="margin-top: 0;"><?= $editIdea ? 'Modifier un brainstorming' : 'Soumettre un brainstorming' ?></h3>
 
                 <?php if ($submitted): ?>
                 <div class="success-message">
-                  Votre idee a ete soumise avec succes. Merci de votre contribution.
+                  Votre brainstorming a ete soumis avec succes. Merci de votre contribution.
                 </div>
                 <?php endif; ?>
 
-                <?php if ($error): ?>
+                <?php if ($updated): ?>
+                <div class="success-message">
+                  Votre brainstorming a ete modifie avec succes.
+                </div>
+                <?php endif; ?>
+
+                <?php if ($deleted): ?>
+                <div class="success-message">
+                  Le brainstorming a ete supprime avec succes.
+                </div>
+                <?php endif; ?>
+
+                <?php if ($generalError !== ''): ?>
                 <div class="error-message">
-                  <?= h($error) ?>
+                  <?= h($generalError) ?>
                 </div>
                 <?php endif; ?>
 
                 <form action="service-brainstorming-submit.php" method="POST" id="brainstorming-form">
+                  <input type="hidden" name="action" value="<?= $editIdea ? 'update' : 'add' ?>" />
+                  <?php if ($editIdea): ?>
+                  <input type="hidden" name="id" value="<?= (int) ($editIdea['id'] ?? 0) ?>" />
+                  <?php endif; ?>
+
                   <div class="form-group">
-                    <label for="titre">Titre de l'idee *</label>
-                    <input type="text" id="titre" name="titre" placeholder="Donnez un titre a votre idee" />
-                    <small id="titre-error" style="color: #ef4444; display: none; font-size: 0.75rem; margin-top: 0.25rem;">Les chiffres ne sont pas autorises.</small>
+                    <label for="titre">Titre du brainstorming *</label>
+                    <input type="text" id="titre" name="titre" placeholder="Donnez un titre a votre brainstorming" value="<?= h($formValues['titre']) ?>" />
+                    <?php if ($fieldErrors['titre'] !== ''): ?>
+                      <small class="field-error"><?= h($fieldErrors['titre']) ?></small>
+                    <?php endif; ?>
                   </div>
 
                   <div class="form-group">
                     <label for="description">Description *</label>
-                    <textarea id="description" name="description" placeholder="Decrivez votre idee en detail..."></textarea>
-                    <small id="description-error" style="color: #ef4444; display: none; font-size: 0.75rem; margin-top: 0.25rem;">Les chiffres ne sont pas autorises.</small>
+                    <textarea id="description" name="description" placeholder="Decrivez votre brainstorming en detail..."><?= h($formValues['description']) ?></textarea>
+                    <?php if ($fieldErrors['description'] !== ''): ?>
+                      <small class="field-error"><?= h($fieldErrors['description']) ?></small>
+                    <?php endif; ?>
                   </div>
 
                   <div class="form-group">
                     <label for="categorie">Categorie *</label>
                     <select id="categorie" name="categorie">
                       <option value="">Selectionnez une categorie</option>
-                      <option value="innovation">Innovation</option>
-                      <option value="amelioration">Amelioration</option>
-                      <option value="processus">Processus</option>
-                      <option value="client">Experience client</option>
-                      <option value="autre">Autre</option>
+                      <option value="innovation" <?= strtolower($formValues['categorie']) === 'innovation' ? 'selected' : '' ?>>Innovation</option>
+                      <option value="amelioration" <?= strtolower($formValues['categorie']) === 'amelioration' ? 'selected' : '' ?>>Amelioration</option>
+                      <option value="processus" <?= strtolower($formValues['categorie']) === 'processus' ? 'selected' : '' ?>>Processus</option>
+                      <option value="client" <?= strtolower($formValues['categorie']) === 'client' ? 'selected' : '' ?>>Experience client</option>
+                      <option value="autre" <?= strtolower($formValues['categorie']) === 'autre' ? 'selected' : '' ?>>Autre</option>
                     </select>
+                    <?php if ($fieldErrors['categorie'] !== ''): ?>
+                      <small class="field-error"><?= h($fieldErrors['categorie']) ?></small>
+                    <?php endif; ?>
                   </div>
 
-                  <button type="submit" class="btn btn-primary" style="width: 100%;">Soumettre l'idee</button>
+                  <div style="display: flex; gap: 0.75rem; flex-wrap: wrap;">
+                    <button type="submit" class="btn btn-primary" style="width: 100%;"><?= $editIdea ? 'Enregistrer les modifications' : 'Soumettre le brainstorming' ?></button>
+                    <?php if ($editIdea): ?>
+                    <a href="service-brainstorming.php" class="btn btn-secondary" style="width: 100%; text-decoration: none;">Annuler</a>
+                    <?php endif; ?>
+                  </div>
                 </form>
 
                 <p style="font-size: 0.75rem; color: var(--color-text-secondary); margin-top: 1rem;">
-                  * Champs obligatoires. Vos idees seront examinees par notre equipe.
+                  * Champs obligatoires. Vos brainstormings seront examines par notre equipe.
                 </p>
               </aside>
 
               <div class="fade-up">
-                <h3 style="margin-top: 0;">Idees en cours</h3>
+                <h3 style="margin-top: 0;">Brainstormings en cours</h3>
 
                 <div class="search-box">
                   <form action="" method="GET" style="display: flex; gap: 0.75rem; width: 100%;">
-                    <input type="text" name="q" placeholder="Rechercher une idee..." value="<?= h($currentSearch) ?>" />
+                    <input type="text" name="q" placeholder="Rechercher un brainstorming..." value="<?= h($currentSearch) ?>" />
                     <button type="submit" class="btn btn-primary">Rechercher</button>
                   </form>
                 </div>
@@ -392,6 +537,7 @@ function statusClass(string $status): string
                     <label for="categorie-filter">Filtrer par categorie</label>
                     <form action="" method="GET" id="filter-form">
                       <input type="hidden" name="q" value="<?= h($currentSearch) ?>" />
+                      <input type="hidden" name="status" value="<?= h($currentStatus) ?>" />
                       <select id="categorie-filter" name="categorie" onchange="document.getElementById('filter-form').submit()">
                         <option value="toutes" <?= $currentCategorie === 'toutes' ? 'selected' : '' ?>>Toutes les categories</option>
                         <option value="innovation" <?= $currentCategorie === 'innovation' ? 'selected' : '' ?>>Innovation</option>
@@ -402,15 +548,29 @@ function statusClass(string $status): string
                       </select>
                     </form>
                   </div>
+                  <div class="filter-group">
+                    <label for="status-filter">Filtrer par statut</label>
+                    <form action="" method="GET" id="status-filter-form">
+                      <input type="hidden" name="q" value="<?= h($currentSearch) ?>" />
+                      <input type="hidden" name="categorie" value="<?= h($currentCategorie) ?>" />
+                      <select id="status-filter" name="status" onchange="document.getElementById('status-filter-form').submit()">
+                        <option value="toutes" <?= $currentStatus === 'toutes' ? 'selected' : '' ?>>Tous les statuts</option>
+                        <option value="en attente" <?= $currentStatus === 'en attente' ? 'selected' : '' ?>>En attente</option>
+                        <option value="approuve" <?= $currentStatus === 'approuve' ? 'selected' : '' ?>>Approuve</option>
+                        <option value="desapprouve" <?= $currentStatus === 'desapprouve' ? 'selected' : '' ?>>Desapprouve</option>
+                      </select>
+                    </form>
+                  </div>
                 </div>
 
                 <div class="brainstorming-list">
                   <?php if (count($brainstormings) === 0): ?>
                     <div class="no-results">
-                      <p>Aucune idee trouvee. Soyez le premier a soumettre une idee.</p>
+                      <p>Aucun brainstorming trouve. Soyez le premier a soumettre un brainstorming.</p>
                     </div>
                   <?php else: ?>
                     <?php foreach ($brainstormings as $idea): ?>
+                      <?php $canManageIdea = $currentUserId > 0 && (int) ($idea['user_id'] ?? 0) === $currentUserId; ?>
                       <div class="brainstorming-card">
                         <div class="brainstorming-card-header">
                           <h4 class="brainstorming-title"><?= h((string) ($idea['titre'] ?? '')) ?></h4>
@@ -422,6 +582,20 @@ function statusClass(string $status): string
                         <div class="brainstorming-meta">
                           <span>Categorie: <?= h((string) ($idea['categorie'] ?? '')) ?></span>
                           <span>Date: <?= h(date('d/m/Y', strtotime((string) ($idea['dateCreation'] ?? 'now')))) ?></span>
+                          <?php if ((int) ($idea['user_id'] ?? 0) === 0): ?>
+                          <span>Publication: Administration</span>
+                          <?php endif; ?>
+                        </div>
+                        <div class="brainstorming-actions">
+                          <a class="btn btn-primary" href="brainstorming-detail.php?id=<?= (int) ($idea['id'] ?? 0) ?>">Voir les idées</a>
+                          <?php if ($canManageIdea): ?>
+                            <a class="btn btn-secondary" href="service-brainstorming.php?edit=<?= (int) ($idea['id'] ?? 0) ?>">Modifier</a>
+                            <form method="POST" action="service-brainstorming-submit.php" data-delete-idea-form>
+                              <input type="hidden" name="action" value="delete" />
+                              <input type="hidden" name="id" value="<?= (int) ($idea['id'] ?? 0) ?>" />
+                              <button type="submit" class="btn btn-danger">Supprimer</button>
+                            </form>
+                          <?php endif; ?>
                         </div>
                       </div>
                     <?php endforeach; ?>
@@ -445,52 +619,14 @@ function statusClass(string $status): string
     <script src="assets/js/main.js"></script>
     <script>
       (function () {
-        const form = document.getElementById('brainstorming-form');
-        if (!form) return;
-
-        const titreInput = document.getElementById('titre');
-        const descriptionInput = document.getElementById('description');
-        const titreError = document.getElementById('titre-error');
-        const descriptionError = document.getElementById('description-error');
-
-        const hasNumbers = (str) => /[0-9]/.test(str);
-
-        const validateField = (input, errorElement) => {
-          if (hasNumbers(input.value)) {
-            errorElement.style.display = 'block';
-            input.style.borderColor = '#ef4444';
-            return false;
-          }
-
-          errorElement.style.display = 'none';
-          input.style.borderColor = 'var(--color-border)';
-          return true;
-        };
-
-        titreInput.addEventListener('blur', () => validateField(titreInput, titreError));
-        descriptionInput.addEventListener('blur', () => validateField(descriptionInput, descriptionError));
-
-        form.addEventListener('submit', (e) => {
-          const titreValid = !hasNumbers(titreInput.value) && titreInput.value.trim() !== '';
-          const descriptionValid = !hasNumbers(descriptionInput.value) && descriptionInput.value.trim() !== '';
-          const categorieValid = document.getElementById('categorie').value !== '';
-
-          if (!titreValid) {
-            e.preventDefault();
-            titreError.textContent = titreInput.value.trim() === '' ? 'Le titre est obligatoire.' : 'Les chiffres ne sont pas autorises.';
-            titreError.style.display = 'block';
-          }
-
-          if (!descriptionValid) {
-            e.preventDefault();
-            descriptionError.textContent = descriptionInput.value.trim() === '' ? 'La description est obligatoire.' : 'Les chiffres ne sont pas autorises.';
-            descriptionError.style.display = 'block';
-          }
-
-          if (!categorieValid) {
-            e.preventDefault();
-            alert('Veuillez selectionner une categorie.');
-          }
+        const deleteForms = document.querySelectorAll('[data-delete-idea-form]');
+        deleteForms.forEach((deleteForm) => {
+          deleteForm.addEventListener('submit', (e) => {
+            const confirmed = confirm('Etes-vous sur de vouloir supprimer ce brainstorming ?');
+            if (!confirmed) {
+              e.preventDefault();
+            }
+          });
         });
       })();
     </script>
