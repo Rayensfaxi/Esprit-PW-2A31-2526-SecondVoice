@@ -115,6 +115,13 @@ function getAuthorName(array $idea): string
         padding: 0 1rem;
       }
 
+      .field-error {
+        margin: -6px 0 2px;
+        min-height: 16px;
+        font-size: 0.84rem;
+        color: #ef4444;
+      }
+
       .brainstorming-header {
         background: var(--color-surface);
         border-radius: 12px;
