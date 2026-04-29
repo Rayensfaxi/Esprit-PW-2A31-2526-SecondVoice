@@ -77,7 +77,7 @@
     position: relative;
     z-index: 1;
     max-width: 15000px;
-    margin: 0 auto 0 30px;
+    margin: 0 auto 0 5px;
     display: flex;
     flex-direction: column;
     gap: 20px;
@@ -291,4 +291,49 @@
         padding: 6px 12px;
         font-size: 12px;
     }
+    
 }
+/* ============================================
+   BADGE D'ÉTAT - À DROITE DANS LA BULLE
+   ============================================ */
+
+   /* ============================================
+   BADGE D'ÉTAT - À DROITE DANS LA BULLE
+   ============================================ */
+
+.reclamation-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 8px;
+    width: 100%;
+}
+
+.status-badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 6px 14px;
+    border-radius: 8px;
+    font-size: 11px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    min-width: 90px;
+    text-align: center;
+    white-space: nowrap;
+    order: 2;                         /* ← Met le badge après la date */
+}
+
+.reclamation-date {
+    font-size: 12px;
+    color: var(--muted);
+    opacity: 0.8;
+    order: 1;                         /* ← Met la date avant le badge */
+}
+
+/* Couleurs */
+.status-en_attente { background: #f59e0b; color: #ffffff; }
+.status-en_cours   { background: #3b82f6; color: #ffffff; }
+.status-resolu     { background: #10b981; color: #ffffff; }
+.status-rejete     { background: #ef4444; color: #ffffff; }

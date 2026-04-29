@@ -197,7 +197,7 @@
           </div>
         </div>
 
-        <div class="tabs-menu">
+        <!--<div class="tabs-menu">
           <a href="gestion-reclamation.php" class="tab-button active"
             >Réclamations</a
           >
@@ -205,7 +205,7 @@
           <a href="gestion-justification.php" class="tab-button"
             >Justifications</a
           >
-        </div>
+        </div>-->
 
         <div class="page-grid users-page">
           <section class="users-hero">
@@ -219,9 +219,9 @@
               </div>
               <div class="users-actions">
                 <button class="ghost-button" type="button">Exporter</button>
-                <a href="form-reclamation.php" class="action-button"
+                <!--<a href="form-reclamation.php" class="action-button"
                   >Nouvelle réclamation</a
-                >
+                >-->
               </div>
             </div>
 
@@ -290,9 +290,18 @@
                         >Modifier</a
                       >-->
                       <a
-                        href="form-reponse.php?reclamation=<?=$Reclamation->getId_reclamation() ?>"
+                        href="reponse-assist.php?reclamation=<?=$Reclamation->getId_reclamation() ?>"
                         class="ghost-button"
                         >Répondre</a
+                      >
+                      <a
+                        href="justification-ajout.php?reclamation=<?=$Reclamation->getId_reclamation() ?>"
+                        class="ghost-button"
+                        >justif+</a
+                      >
+                      <a href="gestion-justifications.php?reclamation=<?=$Reclamation->getId_reclamation() ?>"
+                        class="ghost-button"
+                        >justifl</a
                       >
                     </div>
                   </td>

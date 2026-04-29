@@ -1,6 +1,39 @@
 ﻿<?php
+session_start();
+include '../../../controller/utilisateurcontroller.php';
 
+$error = "";
+
+if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    $email = trim($_POST['email']);
+    $password = $_POST['password'];
+    
+    $userController = new UtilisateurController();
+    $user = $userController->getUserByEmail($email);
+    
+    if ($user && password_verify($password, $user->getMot_de_passe())) {
+        $_SESSION['user_id'] = $user->getId();
+        $_SESSION['user_email'] = $user->getEmail();
+        $_SESSION['user_role'] = $user->getRole();
+        $_SESSION['user_nom'] = $user->getNom();
+        $_SESSION['user_prenom'] = $user->getPrenom();
+        
+        // ✅ Redirection selon le rôle
+        if ($user->getRole() === 'assistant') {
+            header("Location: gestion-reclamations.php");  // ← Même dossier
+        } else if ($user->getRole() === 'admin') {
+            header("Location: ../admin/index.php");
+        } else {
+            header("Location: ../../front_office/index.php");
+        }
+        exit;
+    } else {
+        $error = "Email ou mot de passe incorrect.";
+    }
+}
 ?>
+
+
 
 <!DOCTYPE html>
 <html lang="fr">
@@ -82,18 +115,13 @@
             Utilisez votre e-mail et mot de passe pour continuer.
           </p>
 
-          <form
-            class="auth-form"
-            id="login-form"
-            action="profile.php"
-            method="get"
-          >
+          <form class="auth-form" id="login-form" action="" method="POST">
             <input
               class="field"
               type="email"
               name="email"
               placeholder="Adresse e-mail"
-              required
+              
             />
             <input
               class="field"
@@ -101,7 +129,7 @@
               name="password"
               placeholder="Mot de passe"
               minlength="4"
-              required
+              
             />
 
             <div class="auth-options">
@@ -117,69 +145,18 @@
           </form>
 
           <div class="user-panel-footer">
-            <a class="btn btn-secondary" href="profile.php">Aller au profil</a>
+            <a class="btn btn-secondary" href="reponse-assist.php">Aller au profil</a>
           </div>
         </section>
       </section>
     </main>
 
     <script>
-      (function () {
-        const form = document.getElementById("login-form");
-        const feedback = document.getElementById("login-feedback");
-        const SESSION_KEY = "intellectai-session";
-        const PROFILE_KEY = "intellectai-profile";
-
-        function save(key, value) {
-          try {
-            localStorage.setItem(key, JSON.stringify(value));
-          } catch (error) {
-            // Continue even if storage is unavailable.
-          }
-        }
-
-        function resolveFrontProfileUrl() {
-          return "profile.php";
-        }
-
-        form.addEventListener("submit", function (event) {
-          event.preventDefault();
-
-          const email = form.email.value.trim();
-          const password = form.password.value;
-
-          if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
-            feedback.textContent = "Veuillez saisir une adresse e-mail valide.";
-            feedback.classList.add("error");
-            return;
-          }
-
-          if (!password || password.length < 4) {
-            feedback.textContent =
-              "Veuillez saisir un mot de passe (4 caracteres minimum).";
-            feedback.classList.add("error");
-            return;
-          }
-
-          const localPart = email.split("@")[0] || "Invite";
-          const profile = {
-            fullName: localPart,
-            firstName: localPart,
-            lastName: "",
-            email: email,
-            role: "client",
-          };
-
-          save(PROFILE_KEY, profile);
-          save(SESSION_KEY, {
-            token: "demo-token-" + Date.now(),
-            user: profile,
-            issuedAt: new Date().toISOString(),
-          });
-
-          window.location.href = resolveFrontProfileUrl();
-        });
-      })();
-    </script>
+    // Affichage simple des erreurs PHP
+    <?php if (!empty($error)): ?>
+        document.getElementById('login-feedback').textContent = "<?= htmlspecialchars($error) ?>";
+        document.getElementById('login-feedback').classList.add('error');
+    <?php endif; ?>
+</script>
   </body>
 </html>

@@ -10,8 +10,12 @@ $id_user = $_SESSION['user_id'];
 include '../../controller/reclamationcontroller.php';
 require_once __DIR__ . '/../../model/reclamation.php';
 
-$reclamationController = new ReclamationController();
+include '../../controller/reponsecontroller.php';
+require_once __DIR__ . '/../../model/reponse.php';
 
+$reclamationController = new ReclamationController();
+$reponseController = new ReponseController();
+$hasResponses=$reponseController->listReponses();
 // ✅ SUPPRESSION EN POST
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['action'] === 'delete') {
     $id_delete = (int)$_POST['id_reclamation'];
@@ -147,14 +151,19 @@ $reclamations = $reclamationController->getReclamationsByUserAndStatut($id_user,
                                 <a href="edit-reclamation.php?id=<?= $reclamation->getId_reclamation() ?>" 
                                 class="reclamation-bubble-link">
                                     
-                                    <div class="reclamation-bubble">
-                                        <div class="reclamation-content">
-                                            <p class="reclamation-text"><?= htmlspecialchars($firstLine) ?></p>
+                                <div class="reclamation-bubble">
+                                    <div class="reclamation-content">
+                                        <div class="reclamation-header">
                                             <span class="reclamation-date">
                                                 <?= date('d/m/Y H:i', strtotime($reclamation->getDate_creation())) ?>
                                             </span>
+                                            <span class="status-badge status-<?= strtolower($reclamation->getStatut()) ?>">
+                                                <?= htmlspecialchars($reclamation->getStatut()) ?>
+                                            </span>
                                         </div>
+                                        <p class="reclamation-text"><?= htmlspecialchars($firstLine) ?></p>
                                     </div>
+                                </div>
                                 </a>
 
                                 <!-- Supprimer reste séparé -->
@@ -168,7 +177,7 @@ $reclamations = $reclamationController->getReclamationsByUserAndStatut($id_user,
                                 </div>
                             
                                 <!-- Bouton réponse -->
-                                <?php /*if ($hasResponses): ?>
+                                <?php if ($hasResponses): ?>
                                     <a href="client-reponse.php?id_reclamation=<?= $reclamation->getId_reclamation() ?>" 
                                        class="response-btn response-btn--active">
                                         <span class="response-icon">💬</span>
@@ -180,7 +189,7 @@ $reclamations = $reclamationController->getReclamationsByUserAndStatut($id_user,
                                         <span class="response-icon">🕐</span>
                                         <span class="response-text">Aucune réponse</span>
                                     </button>
-                                <?php endif;*/ ?>
+                                <?php endif; ?>
                             </div>
                         <?php endforeach; ?>
                     <?php endif; ?>
