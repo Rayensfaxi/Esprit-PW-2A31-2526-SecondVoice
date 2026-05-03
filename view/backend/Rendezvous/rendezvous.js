@@ -108,7 +108,7 @@ function closeDetails() {
 function editRdv(rdv) {
     document.getElementById('edit-id').value = rdv.id;
     document.getElementById('edit-id-citoyen').value = rdv.id_citoyen;
-    document.getElementById('edit-service').value = rdv.service;
+    document.getElementById('edit-service').value = rdv.service_id;
     document.getElementById('edit-assistant').value = rdv.assistant;
     document.getElementById('edit-date').value = rdv.date_rdv;
     document.getElementById('edit-heure').value = rdv.heure_rdv;

@@ -1,15 +1,28 @@
+console.log("--- CHARGEMENT DE RENDEZVOUS.JS ---");
+
 // Fonction pour valider un champ individuellement
 function validateField(fieldId) {
+    console.log("Validation du champ:", fieldId);
     const field = document.getElementById(fieldId);
-    const errorElement = document.getElementById(fieldId + '-error') || document.getElementById(fieldId.replace('_rdv', '') + '-error');
+    const errorElement = document.getElementById(fieldId + '-error');
     
-    if (!field || !errorElement) return;
+    if (!field) {
+        console.warn("Champ non trouvé:", fieldId);
+        return true;
+    }
+    if (!errorElement) {
+        console.warn("Élément d'erreur non trouvé pour:", fieldId);
+        return true;
+    }
 
     let isFieldValid = true;
     let errorMessage = "";
 
-    if (fieldId === 'service' || fieldId === 'assistant') {
-        if (!field.value || field.value === "") {
+    if (fieldId === 'service_id' || fieldId === 'assistant') {
+        // Si le champ est désactivé, il est considéré comme valide (car il a une valeur prédéfinie et ne peut pas être changé)
+        if (field.disabled) {
+            isFieldValid = true;
+        } else if (!field.value || field.value === "" || field.value === "null") {
             isFieldValid = false;
             errorMessage = "Veuillez faire un choix.";
         }
@@ -66,7 +79,7 @@ function validateField(fieldId) {
 }
 
 // Ajouter des écouteurs d'événements pour la validation en temps réel
-['service', 'assistant', 'date_rdv', 'heure_rdv', 'remarques'].forEach(id => {
+['service_id', 'assistant', 'date_rdv', 'heure_rdv', 'remarques'].forEach(id => {
     const el = document.getElementById(id);
     if (el) {
         el.addEventListener('input', () => validateField(id));
@@ -79,16 +92,21 @@ if (rdvForm) {
     rdvForm.addEventListener('submit', function(e) {
         let isValid = true;
         
-        ['service', 'assistant', 'date_rdv', 'heure_rdv', 'remarques'].forEach(id => {
+        ['service_id', 'assistant', 'date_rdv', 'heure_rdv', 'remarques'].forEach(id => {
             if (!validateField(id)) isValid = false;
         });
 
+        console.log("Validation terminée. isValid:", isValid);
+
         if (!isValid) {
             e.preventDefault();
+            console.log("Formulaire invalide, arrêt de la soumission.");
             const firstInvalid = document.querySelector('.field.invalid');
             if (firstInvalid) {
                 firstInvalid.scrollIntoView({ behavior: 'smooth', block: 'center' });
             }
+        } else {
+            console.log("Formulaire valide, soumission en cours...");
         }
     });
 }
@@ -150,3 +168,126 @@ window.confirmDelete = function(id) {
         }
     });
 }
+
+// Fonction pour filtrer et trier les rendez-vous via AJAX
+let debounceTimer;
+window.filterAppointments = function() {
+    console.log("--- Début filterAppointments() (AJAX) ---");
+    const searchInput = document.getElementById('searchRdv');
+    const statusSelect = document.getElementById('filterStatus');
+    const sortSelect = document.getElementById('sortRdv');
+    const listContainer = document.getElementById('rendezvousList');
+
+    if (!listContainer) {
+        console.error("ERREUR: Conteneur #rendezvousList non trouvé dans le DOM");
+        return;
+    }
+
+    const search = searchInput ? searchInput.value.trim() : '';
+    const status = statusSelect ? statusSelect.value : '';
+    const sort = sortSelect ? sortSelect.value : 'date_desc';
+    
+    console.log("Paramètres envoyés:", {search, status, sort});
+    
+    // Effet visuel de chargement
+    listContainer.style.opacity = '0.5';
+    listContainer.style.transition = 'opacity 0.2s ease-in-out';
+
+    // Construction de l'URL avec les paramètres
+    const url = `get_rendezvous_list.php?search=${encodeURIComponent(search)}&status=${encodeURIComponent(status)}&sort=${encodeURIComponent(sort)}`;
+    console.log("Appel fetch vers URL:", url);
+
+    fetch(url)
+        .then(response => {
+            console.log("Réponse reçue du serveur, statut:", response.status);
+            if (!response.ok) throw new Error('Erreur réseau lors de la récupération des données');
+            return response.text();
+        })
+        .then(html => {
+            console.log("Données HTML reçues (taille: " + html.length + " caractères)");
+            listContainer.innerHTML = html;
+            listContainer.style.opacity = '1';
+            console.log("Mise à jour du DOM réussie sans rechargement de page");
+        })
+        .catch(error => {
+            console.error("ERREUR lors de la recherche AJAX:", error);
+            listContainer.style.opacity = '1';
+            listContainer.innerHTML = '<div class="error-message">Une erreur est survenue lors de la recherche. Veuillez réessayer.</div>';
+        });
+}
+
+window.resetFilters = function() {
+    console.log("resetFilters appelé !");
+    const searchInput = document.getElementById('searchRdv');
+    const statusSelect = document.getElementById('filterStatus');
+    const sortSelect = document.getElementById('sortRdv');
+
+    if (searchInput) searchInput.value = '';
+    if (statusSelect) statusSelect.value = '';
+    if (sortSelect) sortSelect.value = 'date_desc';
+
+    window.filterAppointments();
+}
+
+// Initialisation globale
+function initRendezvousFeatures() {
+    console.log("Exécution de initRendezvousFeatures()");
+    
+    const searchInput = document.getElementById('searchRdv');
+    const statusSelect = document.getElementById('filterStatus');
+    const sortSelect = document.getElementById('sortRdv');
+    
+    console.log("Éléments trouvés:", {
+        search: !!searchInput,
+        status: !!statusSelect,
+        sort: !!sortSelect
+    });
+    
+    // Écouteurs pour la recherche et les filtres
+    if (searchInput) {
+        console.log("Attachement des événements à #searchRdv");
+        // Empêcher tout rechargement sur Enter
+        searchInput.addEventListener('keydown', function(e) {
+            if (e.key === 'Enter') {
+                console.log("Touche Enter détectée");
+                e.preventDefault();
+                clearTimeout(debounceTimer);
+                window.filterAppointments();
+            }
+        });
+
+        // Recherche dynamique en temps réel (input event)
+        searchInput.addEventListener('input', function() {
+            console.log("Saisie: " + this.value);
+            clearTimeout(debounceTimer);
+            debounceTimer = setTimeout(() => {
+                window.filterAppointments();
+            }, 500);
+        });
+    }
+
+    // Changement de statut ou tri
+    if (statusSelect) {
+        statusSelect.addEventListener('change', () => {
+            console.log("Changement statut -> filtrage");
+            window.filterAppointments();
+        });
+    }
+    if (sortSelect) {
+        sortSelect.addEventListener('change', () => {
+            console.log("Changement tri -> filtrage");
+            window.filterAppointments();
+        });
+    }
+}
+
+// Lancement de l'initialisation
+if (document.readyState === 'complete' || document.readyState === 'interactive') {
+    console.log("DOM déjà prêt, initialisation immédiate.");
+    initRendezvousFeatures();
+} else {
+    console.log("Attente de DOMContentLoaded pour l'initialisation.");
+    document.addEventListener('DOMContentLoaded', initRendezvousFeatures);
+}
+
+console.log("--- RENDEZVOUS.JS PRÊT ET INJECTÉ ---");

@@ -1,12 +1,15 @@
 <?php
 require_once '../../../controller/RendezvousC.php';
+require_once '../../../controller/ServiceC.php';
 require_once '../../../model/Rendezvous.php';
 
 $rendezvousC = new RendezvousC();
+$serviceC = new ServiceC();
 $id_citoyen = 1; // Simulé pour l'exemple
 
 if (isset($_POST['save_rdv'])) {
     $id = $_POST['id'] ?? null;
+    $service_id = $_POST['service_id'] ?? null;
     $service = $_POST['service'] ?? '';
     $assistant = $_POST['assistant'] ?? '';
     $date_rdv = $_POST['date_rdv'] ?? '';
@@ -14,7 +17,15 @@ if (isset($_POST['save_rdv'])) {
     $mode = $_POST['mode'] ?? '';
     $remarques = $_POST['remarques'] ?? '';
 
-    if (!empty($service) && !empty($assistant) && !empty($date_rdv) && !empty($heure_rdv) && !empty($mode)) {
+    // Si service_id est présent, on récupère le nom du service pour l'objet model (utilisé pour l'affichage)
+    if (!empty($service_id)) {
+        $sObj = $serviceC->getServiceById((int)$service_id);
+        if ($sObj) {
+            $service = $sObj->getNom();
+        }
+    }
+
+    if (!empty($service_id) && !empty($assistant) && !empty($date_rdv) && !empty($heure_rdv) && !empty($mode)) {
         $date_selectionnee = new DateTime($date_rdv);
         $aujourdhui = new DateTime();
         $aujourdhui->setTime(0, 0, 0);
@@ -44,6 +55,7 @@ if (isset($_POST['save_rdv'])) {
                 $rendezvous = new Rendezvous(
                     $id,
                     $id_citoyen,
+                    $service_id ? (int)$service_id : null,
                     htmlspecialchars($service),
                     htmlspecialchars($assistant),
                     $date_selectionnee,

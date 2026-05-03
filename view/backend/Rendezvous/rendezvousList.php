@@ -95,7 +95,7 @@ $liste = $rendezvousC->listRendezvous($search, $filterStatus);
             <button type="button" class="view-btn" onclick='event.stopPropagation(); editRdv(<?php echo json_encode([
                 "id" => $rdv->getId(),
                 "id_citoyen" => $rdv->getIdCitoyen(),
-                "service" => $rdv->getService(),
+                "service_id" => $rdv->getServiceId(),
                 "assistant" => $rdv->getAssistant(),
                 "date_rdv" => $rdv->getDateRdv()->format("Y-m-d"),
                 "heure_rdv" => $rdv->getHeureRdv(),

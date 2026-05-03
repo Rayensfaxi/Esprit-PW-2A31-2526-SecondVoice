@@ -1,11 +1,14 @@
 <?php
 require_once '../../../controller/RendezvousC.php';
+require_once '../../../controller/ServiceC.php';
 
 $rendezvousC = new RendezvousC();
+$serviceC = new ServiceC();
 $id_citoyen = 1; // Simulé pour l'exemple
 
 $error = $_GET['error'] ?? "";
 $success = $_GET['success'] ?? "";
+$selectedServiceId = $_GET['service_id'] ?? null;
 $rdvToEdit = null;
 
 // Chargement pour modification
@@ -14,6 +17,7 @@ if (isset($_GET['edit'])) {
 }
 
 $liste = $rendezvousC->listRendezvousByCitoyen($id_citoyen);
+$listeServices = $serviceC->listServices();
 ?>
 <!DOCTYPE html>
 <html lang="fr">
@@ -41,8 +45,12 @@ $liste = $rendezvousC->listRendezvousByCitoyen($id_citoyen);
     <style>
         .error-message { color: #e74c3c; background: rgba(231, 76, 60, 0.1); padding: 10px; border-radius: 5px; margin-bottom: 20px; border-left: 5px solid #e74c3c; }
         .success-message { color: #27ae60; background: rgba(39, 174, 96, 0.1); padding: 10px; border-radius: 5px; margin-bottom: 20px; border-left: 5px solid #27ae60; }
-        .js-error { display: none; color: #e74c3c; font-size: 0.85rem; margin-top: 5px; }
-        .field.invalid { border-color: #e74c3c; }
+        .js-error { display: none; color: #e74c3c; font-size: 0.85rem; margin-top: 5px; font-weight: 500; }
+        .field.invalid { border: 1px solid #e74c3c !important; background-color: rgba(231, 76, 60, 0.05) !important; }
+        select.field { cursor: pointer; }
+        .btn-primary:disabled { opacity: 0.7; cursor: not-allowed; }
+        .field:focus { outline: none; border-color: var(--primary); box-shadow: 0 0 0 4px rgba(127, 61, 255, 0.1); }
+        .field.invalid:focus { border-color: #e74c3c; box-shadow: 0 0 0 4px rgba(231, 76, 60, 0.1); }
     </style>
   </head>
   <body>
@@ -58,7 +66,7 @@ $liste = $rendezvousC->listRendezvousByCitoyen($id_citoyen);
               <ul class="nav-links">
                 <li><a href="../index.html">Accueil</a></li>
                 <li><a href="../about.html">A propos</a></li>
-                <li><a class="is-active" href="../services.html">Services</a></li>
+                <li><a class="is-active" href="../services.php">Services</a></li>
                 <li><a href="mes_rendezvous.php">Mes Rendez-vous</a></li>
                 <li><a href="../blog.html">Blog</a></li>
                 <li><a href="../contact.html">Contact</a></li>
@@ -101,6 +109,6 @@ $liste = $rendezvousC->listRendezvousByCitoyen($id_citoyen);
     </div>
 
     <script src="../assets/js/main.js"></script>
-    <script src="rendezvous.js"></script>
+    <script src="rendezvous.js?v=<?php echo time(); ?>"></script>
   </body>
 </html>

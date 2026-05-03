@@ -16,7 +16,7 @@
         <div class="success-message"><?php echo $success; ?></div>
       <?php endif; ?>
 
-        <form id="rdvForm" method="POST" action="addRendezvous.php" class="auth-form" style="max-width: 100%; margin-top: 2.5rem;" novalidate>
+        <form id="rdvForm" method="POST" action="addRendezvous.php" class="rdv-form" style="max-width: 100%; margin-top: 2.5rem;" novalidate>
           <?php if ($rdvToEdit): ?>
             <input type="hidden" name="id" value="<?php echo $rdvToEdit->getId(); ?>">
             <input type="hidden" name="statut" value="<?php echo $rdvToEdit->getStatut(); ?>">
@@ -24,22 +24,27 @@
           <div class="input-row" style="display: flex; gap: 1.5rem; flex-wrap: wrap; margin-bottom: 2rem;">
             <div style="flex: 1; min-width: 250px;">
               <label style="display: block; margin-bottom: 0.75rem; font-weight: 600; color: var(--text); opacity: 0.9;">Service souhaité</label>
-              <select id="service" name="service" class="field" style="width: 100%;">
-                <option value="" disabled <?php echo !$rdvToEdit ? 'selected' : ''; ?>>Choisir un service...</option>
+              <select id="service_id" name="service_id" class="field" style="width: 100%;" onchange="document.getElementById('service_name').value = this.options[this.selectedIndex].text" required <?php echo ($selectedServiceId && !$rdvToEdit) ? 'disabled' : ''; ?>>
+                <option value="" disabled selected hidden>Choisir un service...</option>
                 <?php 
-                $services = ["Accompagnement administratif", "Suivi de dossier", "Gestion de réclamation", "Support technique"];
-                foreach($services as $s) {
-                    $selected = ($rdvToEdit && $rdvToEdit->getService() == $s) ? 'selected' : '';
-                    echo "<option value=\"$s\" $selected>$s</option>";
+                foreach($listeServices as $s) {
+                    $selected = ($rdvToEdit && $rdvToEdit->getServiceId() == $s->getId()) || ($selectedServiceId == $s->getId()) ? 'selected' : '';
+                    if ($selected) $initialServiceName = $s->getNom();
+                    echo "<option value=\"".$s->getId()."\" $selected>".$s->getNom()."</option>";
                 }
                 ?>
               </select>
-          <div id="service-error" class="js-error">Veuillez choisir un service.</div>
-        </div>
+              <?php if ($selectedServiceId && !$rdvToEdit): ?>
+                <input type="hidden" name="service_id" value="<?php echo $selectedServiceId; ?>">
+              <?php endif; ?>
+              <div id="service_id-error" class="js-error">Veuillez choisir un service.</div>
+            </div>
+            <!-- On garde un champ caché pour le nom du service si nécessaire pour compatibilité descendante -->
+            <input type="hidden" id="service_name" name="service" value="<?php echo $initialServiceName ?? ''; ?>">
         <div style="flex: 1; min-width: 250px;">
           <label style="display: block; margin-bottom: 0.75rem; font-weight: 600; color: var(--text); opacity: 0.9;">Assistant préféré</label>
-          <select id="assistant" name="assistant" class="field" style="width: 100%;">
-                <option value="" disabled <?php echo !$rdvToEdit ? 'selected' : ''; ?>>Choisir un assistant...</option>
+          <select id="assistant" name="assistant" class="field" style="width: 100%;" required>
+                <option value="" disabled selected hidden>Choisir un assistant...</option>
                 <?php 
                 $assistants = [
                     "Amira Selmi" => "Amira Selmi (Administration)",
@@ -60,12 +65,12 @@
             <div style="flex: 1; min-width: 250px;">
               <label style="display: block; margin-bottom: 0.75rem; font-weight: 600; color: var(--text); opacity: 0.9;">Date du rendez-vous</label>
               <input id="date_rdv" name="date_rdv" class="field" type="date" style="width: 100%;" value="<?php echo $rdvToEdit ? $rdvToEdit->getDateRdv()->format('Y-m-d') : ''; ?>" />
-              <div id="date-error" class="js-error">Veuillez choisir une date valide.</div>
+              <div id="date_rdv-error" class="js-error">Veuillez choisir une date valide.</div>
             </div>
             <div style="flex: 1; min-width: 250px;">
               <label style="display: block; margin-bottom: 0.75rem; font-weight: 600; color: var(--text); opacity: 0.9;">Heure du rendez-vous</label>
               <input id="heure_rdv" name="heure_rdv" class="field" type="time" style="width: 100%;" value="<?php echo $rdvToEdit ? $rdvToEdit->getHeureRdv() : ''; ?>" />
-              <div id="heure-error" class="js-error">Veuillez choisir une heure.</div>
+              <div id="heure_rdv-error" class="js-error">Veuillez choisir une heure.</div>
             </div>
           </div>
 

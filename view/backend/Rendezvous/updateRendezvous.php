@@ -1,13 +1,16 @@
 <?php
 require_once '../../../controller/RendezvousC.php';
+require_once '../../../controller/ServiceC.php';
 require_once '../../../model/Rendezvous.php';
 
 $rendezvousC = new RendezvousC();
+$serviceC = new ServiceC();
+$listeServices = $serviceC->listServices();
 
 if (isset($_POST['update_rdv'])) {
     $id = $_POST['id'] ?? null;
     $id_citoyen = $_POST['id_citoyen'] ?? null;
-    $service = $_POST['service'] ?? '';
+    $service_id = $_POST['service_id'] ?? null;
     $assistant = $_POST['assistant'] ?? '';
     $date_rdv = $_POST['date_rdv'] ?? '';
     $heure_rdv = $_POST['heure_rdv'] ?? '';
@@ -15,7 +18,7 @@ if (isset($_POST['update_rdv'])) {
     $remarques = $_POST['remarques'] ?? '';
     $statut = $_POST['statut'] ?? 'En attente';
 
-    if ($id && $id_citoyen && !empty($service) && !empty($assistant) && !empty($date_rdv) && !empty($heure_rdv)) {
+    if ($id && $id_citoyen && !empty($service_id) && !empty($assistant) && !empty($date_rdv) && !empty($heure_rdv)) {
         $currentRdv = $rendezvousC->getRendezvousById($id);
         if ($currentRdv && $currentRdv->getStatut() == 'Annulé') {
             header('Location: HomeRendezvous.php?error=Impossible de modifier un rendez-vous annulé');
@@ -43,7 +46,8 @@ if (isset($_POST['update_rdv'])) {
         $rdv = new Rendezvous(
             $id,
             $id_citoyen,
-            htmlspecialchars($service),
+            (int)$service_id,
+            '', // Nom vide, géré par le controller via service_id
             htmlspecialchars($assistant),
             new DateTime($date_rdv),
             htmlspecialchars($heure_rdv),
@@ -71,11 +75,10 @@ if (isset($_POST['update_rdv'])) {
             <input type="hidden" name="id_citoyen" id="edit-id-citoyen">
             <div style="margin-bottom: 15px;">
                 <label style="display: block; margin-bottom: 5px; font-weight: 600;">Service</label>
-                <select name="service" id="edit-service" class="form-control" style="width: 100%; height: 42px; padding: 0 10px; border-radius: 8px; border: 1px solid var(--line); background: var(--panel-2); color: var(--text);">
-                  <option value="Accompagnement administratif">Accompagnement administratif</option>
-                  <option value="Suivi de dossier">Suivi de dossier</option>
-                  <option value="Gestion de réclamation">Gestion de réclamation</option>
-                  <option value="Support technique">Support technique</option>
+                <select name="service_id" id="edit-service" class="form-control" style="width: 100%; height: 42px; padding: 0 10px; border-radius: 8px; border: 1px solid var(--line); background: var(--panel-2); color: var(--text);">
+                  <?php foreach($listeServices as $s): ?>
+                    <option value="<?php echo $s->getId(); ?>"><?php echo htmlspecialchars($s->getNom()); ?></option>
+                  <?php endforeach; ?>
                 </select>
                 <div id="edit-service-error" class="js-error" style="display:none; color: #ef4444; font-size: 0.8rem;">Veuillez choisir un service.</div>
             </div>

@@ -358,7 +358,8 @@ textarea {
   line-height: 1.65;
 }
 
-.auth-form {
+.auth-form,
+.rdv-form {
   display: grid;
   gap: 14px;
 }
@@ -937,7 +938,7 @@ body.menu-open .icon-lines::after {
   align-items: center;
   gap: 10px;
   margin-top: 18px;
-  color: white;
+  color: var(--muted);
   font-weight: 800;
 }
 
@@ -1690,19 +1691,19 @@ textarea.field {
   letter-spacing: 0.02em;
 }
 
-.status-badge.confirmed {
+.status-badge.confirme {
   background: rgba(31, 180, 122, 0.12);
   color: #1fb47a;
   border: 1px solid rgba(31, 180, 122, 0.2);
 }
 
-.status-badge.pending {
+.status-badge.en-attente {
   background: rgba(255, 184, 77, 0.12);
   color: #ffb84d;
   border: 1px solid rgba(255, 184, 77, 0.2);
 }
 
-.status-badge.cancelled {
+.status-badge.annule {
   background: rgba(255, 107, 107, 0.12);
   color: #ff6b6b;
   border: 1px solid rgba(255, 107, 107, 0.2);

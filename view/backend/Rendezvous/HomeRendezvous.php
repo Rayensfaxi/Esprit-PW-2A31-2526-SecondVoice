@@ -37,7 +37,7 @@ foreach ($allRdvStats as $r) {
               <div class="nav-title">Gestion</div>
               <a class="nav-link" href="../index.html" data-nav="home"><span class="nav-icon icon-home"></span><span>Tableau de bord</span></a>
               <a class="nav-link" href="../gestion-utilisateurs.html" data-nav="profile"><span class="nav-icon icon-profile"></span><span>Gestion des utilisateurs</span></a>
-              <a class="nav-link" href="../gestion-demandes.html" data-nav="community"><span class="nav-icon icon-community"></span><span>Gestion des demandes</span></a>
+              <a class="nav-link" href="../Service/HomeService.php" data-nav="services"><span class="nav-icon icon-card"></span><span>Gestion des services</span></a>
               <a class="nav-link" href="HomeRendezvous.php" data-nav="subscription"><span class="nav-icon icon-card"></span><span>Gestion des rendez-vous</span></a>
               <a class="nav-link" href="../gestion-accompagnements.html" data-nav="chatbot"><span class="nav-icon icon-chat"></span><span>Gestion des accompagnements</span></a>
               <a class="nav-link" href="../gestion-documents.html" data-nav="images"><span class="nav-icon icon-image"></span><span>Gestion des documents</span></a>
@@ -128,5 +128,12 @@ foreach ($allRdvStats as $r) {
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <script src="../assets/app.js"></script>
     <script src="rendezvous.js"></script>
+    <script>
+        // Gestion des erreurs via SweetAlert2 (on ne l'affiche plus pour les succès selon la demande)
+        const urlParams = new URLSearchParams(window.location.search);
+        if (urlParams.has('error')) {
+            Swal.fire('Erreur !', urlParams.get('error'), 'error');
+        }
+    </script>
   </body>
 </html>

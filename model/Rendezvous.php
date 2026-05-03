@@ -2,6 +2,7 @@
 class Rendezvous {
     private ?int $id = null;
     private ?int $id_citoyen = null;
+    private ?int $service_id = null;
     private ?string $service = null;
     private ?string $assistant = null;
     private ?DateTime $date_rdv = null;
@@ -13,6 +14,7 @@ class Rendezvous {
     public function __construct(
         ?int $id = null,
         ?int $id_citoyen = null,
+        ?int $service_id = null,
         ?string $service = null,
         ?string $assistant = null,
         ?DateTime $date_rdv = null,
@@ -23,6 +25,7 @@ class Rendezvous {
     ) {
         $this->id = $id;
         $this->id_citoyen = $id_citoyen;
+        $this->service_id = $service_id;
         $this->service = $service;
         $this->assistant = $assistant;
         $this->date_rdv = $date_rdv;
@@ -38,6 +41,9 @@ class Rendezvous {
 
     public function getIdCitoyen(): ?int { return $this->id_citoyen; }
     public function setIdCitoyen(?int $id_citoyen): self { $this->id_citoyen = $id_citoyen; return $this; }
+
+    public function getServiceId(): ?int { return $this->service_id; }
+    public function setServiceId(?int $service_id): self { $this->service_id = $service_id; return $this; }
 
     public function getService(): ?string { return $this->service; }
     public function setService(?string $service): self { $this->service = $service; return $this; }

@@ -8,7 +8,8 @@ class RendezvousC {
         return new Rendezvous(
             (int)$row['id'],
             (int)$row['id_citoyen'],
-            $row['service'],
+            isset($row['service_id']) ? (int)$row['service_id'] : null,
+            isset($row['service_nom']) ? $row['service_nom'] : 'Service inconnu',
             $row['assistant'],
             new DateTime($row['date_rdv']),
             $row['heure_rdv'],
@@ -19,20 +20,20 @@ class RendezvousC {
     }
 
     public function listRendezvous($search = '', $filterStatus = '') {
-        $sql = "SELECT * FROM rendezvous WHERE 1=1";
+        $sql = "SELECT r.*, s.nom as service_nom FROM rendezvous r LEFT JOIN service s ON r.service_id = s.id WHERE 1=1";
         $params = [];
 
         if (!empty($search)) {
-            $sql .= " AND (service LIKE :search OR assistant LIKE :search OR CAST(id_citoyen AS CHAR) LIKE :search)";
+            $sql .= " AND (s.nom LIKE :search OR r.assistant LIKE :search OR CAST(r.id_citoyen AS CHAR) LIKE :search)";
             $params['search'] = '%' . $search . '%';
         }
 
         if (!empty($filterStatus)) {
-            $sql .= " AND statut = :status";
+            $sql .= " AND r.statut = :status";
             $params['status'] = $filterStatus;
         }
 
-        $sql .= " ORDER BY date_rdv DESC, heure_rdv DESC";
+        $sql .= " ORDER BY r.date_rdv DESC, r.heure_rdv DESC";
 
         $db = Config::getConnexion();
         try {
@@ -48,12 +49,44 @@ class RendezvousC {
         }
     }
 
-    public function listRendezvousByCitoyen($id_citoyen) {
-        $sql = "SELECT * FROM rendezvous WHERE id_citoyen = :id_citoyen ORDER BY date_rdv DESC";
+    public function listRendezvousByCitoyen($id_citoyen, $search = '', $filterStatus = '', $sortBy = 'date_desc') {
+        $sql = "SELECT r.*, s.nom as service_nom 
+                FROM rendezvous r 
+                LEFT JOIN service s ON r.service_id = s.id 
+                WHERE r.id_citoyen = :id_citoyen";
+        
+        $params = ['id_citoyen' => $id_citoyen];
+
+        if (!empty($search)) {
+            $sql .= " AND (s.nom LIKE :search OR r.assistant LIKE :search OR r.remarques LIKE :search)";
+            $params['search'] = '%' . $search . '%';
+        }
+
+        if (!empty($filterStatus)) {
+            $sql .= " AND r.statut = :status";
+            $params['status'] = $filterStatus;
+        }
+
+        switch ($sortBy) {
+            case 'date_asc':
+                $sql .= " ORDER BY r.date_rdv ASC, r.heure_rdv ASC";
+                break;
+            case 'service_asc':
+                $sql .= " ORDER BY service_nom ASC";
+                break;
+            case 'service_desc':
+                $sql .= " ORDER BY service_nom DESC";
+                break;
+            case 'date_desc':
+            default:
+                $sql .= " ORDER BY r.date_rdv DESC, r.heure_rdv DESC";
+                break;
+        }
+
         $db = Config::getConnexion();
         try {
             $query = $db->prepare($sql);
-            $query->execute(['id_citoyen' => $id_citoyen]);
+            $query->execute($params);
             $liste = [];
             while ($row = $query->fetch()) {
                 $liste[] = $this->mapToRendezvous($row);
@@ -61,19 +94,20 @@ class RendezvousC {
             return $liste;
         } catch (Exception $e) {
             echo 'Error: ' . $e->getMessage();
+            return [];
         }
     }
 
     public function addRendezvous($rendezvous)
     {
-        $sql = "INSERT INTO rendezvous (id_citoyen, service, assistant, date_rdv, heure_rdv, mode, remarques, statut) 
-                VALUES (:id_citoyen, :service, :assistant, :date_rdv, :heure_rdv, :mode, :remarques, :statut)";
+        $sql = "INSERT INTO rendezvous (id_citoyen, service_id, assistant, date_rdv, heure_rdv, mode, remarques, statut) 
+                VALUES (:id_citoyen, :service_id, :assistant, :date_rdv, :heure_rdv, :mode, :remarques, :statut)";
         $db = Config::getConnexion();
         try {
             $query = $db->prepare($sql);
             $query->execute([
                 'id_citoyen' => $rendezvous->getIdCitoyen(),
-                'service' => $rendezvous->getService(),
+                'service_id' => $rendezvous->getServiceId(),
                 'assistant' => $rendezvous->getAssistant(),
                 'date_rdv' => $rendezvous->getDateRdv()->format('Y-m-d'),
                 'heure_rdv' => $rendezvous->getHeureRdv(),
@@ -102,7 +136,7 @@ class RendezvousC {
     public function updateRendezvous($rendezvous, $id)
     {
         $sql = "UPDATE rendezvous SET 
-                    service = :service, 
+                    service_id = :service_id,
                     assistant = :assistant, 
                     date_rdv = :date_rdv, 
                     heure_rdv = :heure_rdv, 
@@ -114,7 +148,7 @@ class RendezvousC {
         try {
             $query = $db->prepare($sql);
             $query->execute([
-                'service' => $rendezvous->getService(),
+                'service_id' => $rendezvous->getServiceId(),
                 'assistant' => $rendezvous->getAssistant(),
                 'date_rdv' => $rendezvous->getDateRdv()->format('Y-m-d'),
                 'heure_rdv' => $rendezvous->getHeureRdv(),
@@ -129,7 +163,10 @@ class RendezvousC {
     }
 
     public function getRendezvousById($id) {
-        $sql = "SELECT * from rendezvous where id = :id";
+        $sql = "SELECT r.*, s.nom as service_nom 
+                FROM rendezvous r 
+                LEFT JOIN service s ON r.service_id = s.id 
+                WHERE r.id = :id";
         $db = Config::getConnexion();
         try {
             $query = $db->prepare($sql);
@@ -169,7 +206,10 @@ class RendezvousC {
     }
 
     public function getRecentActivity($limit = 5) {
-        $sql = "SELECT * FROM rendezvous ORDER BY id DESC LIMIT :limit";
+        $sql = "SELECT r.*, s.nom as service_nom 
+                FROM rendezvous r 
+                LEFT JOIN service s ON r.service_id = s.id 
+                ORDER BY r.id DESC LIMIT :limit";
         $db = Config::getConnexion();
         try {
             $query = $db->prepare($sql);

@@ -4,8 +4,12 @@ require_once '../../../controller/RendezvousC.php';
 $rendezvousC = new RendezvousC();
 $id_citoyen = 1; // Simulé pour l'exemple
 
+$search = $_GET['search'] ?? "";
+$filterStatus = $_GET['status'] ?? "";
+$sortBy = $_GET['sort'] ?? "date_desc";
+
 $success = $_GET['success'] ?? "";
-$liste = $rendezvousC->listRendezvousByCitoyen($id_citoyen);
+$liste = $rendezvousC->listRendezvousByCitoyen($id_citoyen, $search, $filterStatus, $sortBy);
 ?>
 <!DOCTYPE html>
 <html lang="fr">
@@ -47,7 +51,7 @@ $liste = $rendezvousC->listRendezvousByCitoyen($id_citoyen);
               <ul class="nav-links">
                 <li><a href="../index.html">Accueil</a></li>
                 <li><a href="../about.html">A propos</a></li>
-                <li><a href="../services.html">Services</a></li>
+                <li><a href="../services.php">Services</a></li>
                 <li><a class="is-active" href="mes_rendezvous.php">Mes Rendez-vous</a></li>
                 <li><a href="../blog.html">Blog</a></li>
                 <li><a href="../contact.html">Contact</a></li>
@@ -102,6 +106,6 @@ $liste = $rendezvousC->listRendezvousByCitoyen($id_citoyen);
 
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <script src="../assets/js/main.js"></script>
-    <script src="rendezvous.js"></script>
+    <script src="rendezvous.js?v=<?php echo time(); ?>"></script>
   </body>
 </html>
