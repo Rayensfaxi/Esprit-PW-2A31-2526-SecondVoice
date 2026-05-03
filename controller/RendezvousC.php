@@ -225,13 +225,100 @@ class RendezvousC {
         }
     }
 
-    public function getRendezvousStatsByStatus() {
-        $sql = "SELECT statut, COUNT(*) as count FROM rendezvous GROUP BY statut";
+    public function getRendezvousStatsByStatus($startDate = null, $endDate = null) {
+        $sql = "SELECT statut, COUNT(*) as count FROM rendezvous WHERE 1=1";
+        $params = [];
+        if ($startDate) {
+            $sql .= " AND date_rdv >= :start";
+            $params['start'] = $startDate;
+        }
+        if ($endDate) {
+            $sql .= " AND date_rdv <= :end";
+            $params['end'] = $endDate;
+        }
+        $sql .= " GROUP BY statut";
         $db = Config::getConnexion();
         try {
             $query = $db->prepare($sql);
-            $query->execute();
-            return $query->fetchAll();
+            $query->execute($params);
+            return $query->fetchAll(PDO::FETCH_ASSOC);
+        } catch (Exception $e) {
+            throw new Exception('Error: ' . $e->getMessage());
+        }
+    }
+
+    public function getRendezvousStatsByService($startDate = null, $endDate = null) {
+        $sql = "SELECT s.nom as service_nom, COUNT(r.id) as count 
+                FROM service s 
+                LEFT JOIN rendezvous r ON s.id = r.service_id";
+        $params = [];
+        if ($startDate || $endDate) {
+            $sql .= " AND 1=1";
+            if ($startDate) {
+                $sql .= " AND r.date_rdv >= :start";
+                $params['start'] = $startDate;
+            }
+            if ($endDate) {
+                $sql .= " AND r.date_rdv <= :end";
+                $params['end'] = $endDate;
+            }
+        }
+        $sql .= " GROUP BY s.id, s.nom";
+        $db = Config::getConnexion();
+        try {
+            $query = $db->prepare($sql);
+            $query->execute($params);
+            return $query->fetchAll(PDO::FETCH_ASSOC);
+        } catch (Exception $e) {
+            throw new Exception('Error: ' . $e->getMessage());
+        }
+    }
+
+    public function getRendezvousStatsByDate($period = 'day', $startDate = null, $endDate = null) {
+        $dateFormat = ($period === 'month') ? '%Y-%m' : '%Y-%m-%d';
+        $sql = "SELECT DATE_FORMAT(date_rdv, '$dateFormat') as date_label, COUNT(*) as count 
+                FROM rendezvous 
+                WHERE 1=1";
+        $params = [];
+        if ($startDate) {
+            $sql .= " AND date_rdv >= :start";
+            $params['start'] = $startDate;
+        }
+        if ($endDate) {
+            $sql .= " AND date_rdv <= :end";
+            $params['end'] = $endDate;
+        }
+        $sql .= " GROUP BY date_label ORDER BY date_label ASC";
+        $db = Config::getConnexion();
+        try {
+            $query = $db->prepare($sql);
+            $query->execute($params);
+            return $query->fetchAll(PDO::FETCH_ASSOC);
+        } catch (Exception $e) {
+            throw new Exception('Error: ' . $e->getMessage());
+        }
+    }
+
+    public function getGlobalStats($startDate = null, $endDate = null) {
+        $sql = "SELECT COUNT(*) as total,
+                SUM(CASE WHEN statut = 'Confirmé' THEN 1 ELSE 0 END) as confirmed,
+                SUM(CASE WHEN statut = 'Annulé' THEN 1 ELSE 0 END) as cancelled,
+                SUM(CASE WHEN statut = 'En attente' THEN 1 ELSE 0 END) as pending
+                FROM rendezvous WHERE 1=1";
+        $params = [];
+        if ($startDate) {
+            $sql .= " AND date_rdv >= :start";
+            $params['start'] = $startDate;
+        }
+        if ($endDate) {
+            $sql .= " AND date_rdv <= :end";
+            $params['end'] = $endDate;
+        }
+        $db = Config::getConnexion();
+        try {
+            $query = $db->prepare($sql);
+            $query->execute($params);
+            return $query->fetch(PDO::FETCH_ASSOC);
         } catch (Exception $e) {
             throw new Exception('Error: ' . $e->getMessage());
         }

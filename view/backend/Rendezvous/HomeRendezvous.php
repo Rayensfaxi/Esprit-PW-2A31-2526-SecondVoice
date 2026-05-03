@@ -2,14 +2,20 @@
 require_once '../../../controller/RendezvousC.php';
 $rendezvousC = new RendezvousC();
 
-// On récupère les stats pour l'affichage
-$allRdvStats = $rendezvousC->listRendezvous();
-$stats = ['total' => 0, 'confirme' => 0, 'annule' => 0, 'attente' => 0];
-foreach ($allRdvStats as $r) {
-    $stats['total']++;
-    if ($r->getStatut() == 'Confirmé') $stats['confirme']++;
-    elseif ($r->getStatut() == 'Annulé') $stats['annule']++;
-    elseif ($r->getStatut() == 'En attente') $stats['attente']++;
+// Récupération des filtres
+$startDate = isset($_GET['start_date']) ? $_GET['start_date'] : null;
+$endDate = isset($_GET['end_date']) ? $_GET['end_date'] : null;
+
+// On récupère les stats pour l'affichage via les nouvelles méthodes optimisées
+$globalStats = $rendezvousC->getGlobalStats($startDate, $endDate);
+$statsByService = $rendezvousC->getRendezvousStatsByService($startDate, $endDate);
+
+// Préparation des données pour Chart.js
+$serviceLabels = [];
+$serviceData = [];
+foreach ($statsByService as $stat) {
+    $serviceLabels[] = $stat['service_nom'];
+    $serviceData[] = (int)$stat['count'];
 }
 ?>
 <!DOCTYPE html>
@@ -22,6 +28,7 @@ foreach ($allRdvStats as $r) {
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
     <link rel="stylesheet" href="../assets/style.css" />
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   </head>
   <body data-page="subscription">
     <div class="overlay" data-overlay></div>
@@ -80,7 +87,81 @@ foreach ($allRdvStats as $r) {
         </div>
 
         <div class="page-grid">
-           <?php include 'rendezvousList.php'; ?>
+           <!-- Section Statistiques -->
+           <section class="stats-section" style="grid-column: 1 / -1; margin-bottom: 30px;">
+              <div class="card" style="padding: 24px; margin-bottom: 24px;">
+                 <div class="card-header" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+                    <h3 class="panel-title">Filtres et Statistiques Globales</h3>
+                    <form method="GET" action="" style="display: flex; gap: 10px; align-items: center;">
+                       <input type="date" name="start_date" value="<?php echo $startDate; ?>" class="search-input" style="width: auto; padding: 8px;">
+                       <input type="date" name="end_date" value="<?php echo $endDate; ?>" class="search-input" style="width: auto; padding: 8px;">
+                       <button type="submit" class="update-button">Filtrer</button>
+                       <a href="HomeRendezvous.php" class="update-button" style="background: var(--muted-2);">Réinitialiser</a>
+                    </form>
+                 </div>
+                 
+                 <div class="stats-grid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 20px;">
+                    <div class="stat-card">
+                       <div class="small-label">Total Rendez-vous</div>
+                       <span class="metric-number"><?php echo $globalStats['total']; ?></span>
+                       <div class="status-note">Tous statuts confondus</div>
+                    </div>
+                    <div class="stat-card">
+                       <div class="small-label">Confirmés</div>
+                       <span class="metric-number" style="color: #31d0aa;"><?php echo $globalStats['confirmed']; ?></span>
+                       <div class="status-note">Prêts pour le service</div>
+                    </div>
+                    <div class="stat-card">
+                       <div class="small-label">En attente</div>
+                       <span class="metric-number" style="color: #ffb84d;"><?php echo $globalStats['pending']; ?></span>
+                       <div class="status-note">À traiter prochainement</div>
+                    </div>
+                    <div class="stat-card">
+                       <div class="small-label">Annulés</div>
+                       <span class="metric-number" style="color: #ff6b6b;"><?php echo $globalStats['cancelled']; ?></span>
+                       <div class="status-note">Rendez-vous annulés</div>
+                    </div>
+                 </div>
+              </div>
+
+              <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 24px; margin-bottom: 24px;">
+                 <div class="card" style="padding: 24px;">
+                    <h3 class="panel-title" style="margin-bottom: 20px;">Répartition par Service</h3>
+                    <div style="max-height: 300px; display: flex; justify-content: center;">
+                       <canvas id="serviceChart"></canvas>
+                    </div>
+                 </div>
+                 <div class="card" style="padding: 24px;">
+                    <h3 class="panel-title" style="margin-bottom: 20px;">Statistiques par Service (Tableau)</h3>
+                    <div style="max-height: 300px; overflow-y: auto;">
+                       <table class="table" style="width: 100%; border-collapse: collapse;">
+                          <thead>
+                             <tr>
+                                <th style="text-align: left; padding: 12px; border-bottom: 1px solid var(--line);">Service</th>
+                                <th style="text-align: right; padding: 12px; border-bottom: 1px solid var(--line);">Nombre</th>
+                                <th style="text-align: right; padding: 12px; border-bottom: 1px solid var(--line);">%</th>
+                             </tr>
+                          </thead>
+                          <tbody>
+                             <?php foreach ($statsByService as $s): ?>
+                             <tr>
+                                <td style="padding: 12px; border-bottom: 1px solid var(--line);"><?php echo $s['service_nom']; ?></td>
+                                <td style="text-align: right; padding: 12px; border-bottom: 1px solid var(--line);"><?php echo $s['count']; ?></td>
+                                <td style="text-align: right; padding: 12px; border-bottom: 1px solid var(--line);">
+                                   <?php echo $globalStats['total'] > 0 ? round(($s['count'] / $globalStats['total']) * 100, 1) : 0; ?>%
+                                </td>
+                             </tr>
+                             <?php endforeach; ?>
+                          </tbody>
+                       </table>
+                    </div>
+                 </div>
+              </div>
+           </section>
+
+           <div style="grid-column: 1 / -1;">
+              <?php include 'rendezvousList.php'; ?>
+           </div>
         </div>
       </main>
     </div>
@@ -129,6 +210,31 @@ foreach ($allRdvStats as $r) {
     <script src="../assets/app.js"></script>
     <script src="rendezvous.js"></script>
     <script>
+        // Graphique par Service
+        const serviceCtx = document.getElementById('serviceChart').getContext('2d');
+        new Chart(serviceCtx, {
+            type: 'doughnut',
+            data: {
+                labels: <?php echo json_encode($serviceLabels); ?>,
+                datasets: [{
+                    data: <?php echo json_encode($serviceData); ?>,
+                    backgroundColor: [
+                        '#635bff', '#31d0aa', '#ffb84d', '#ff6b6b', '#4cc9f0', '#f72585'
+                    ],
+                    borderWidth: 0
+                }]
+            },
+            options: {
+                responsive: true,
+                plugins: {
+                    legend: {
+                        position: 'bottom',
+                        labels: { color: '#96a0b8' }
+                    }
+                }
+            }
+        });
+
         // Gestion des erreurs via SweetAlert2 (on ne l'affiche plus pour les succès selon la demande)
         const urlParams = new URLSearchParams(window.location.search);
         if (urlParams.has('error')) {
