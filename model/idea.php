@@ -9,6 +9,9 @@ class Idea
     private string $contenu;
     private string $dateCreation;
     private string $statut;
+    private int $likesCount;
+    private int $dislikesCount;
+    private bool $isWinner;
 
     public function __construct(
         int $brainstormingId,
@@ -16,7 +19,10 @@ class Idea
         string $contenu,
         string $dateCreation,
         string $statut,
-        ?int $id = null
+        ?int $id = null,
+        int $likesCount = 0,
+        int $dislikesCount = 0,
+        bool $isWinner = false
     ) {
         $this->id = $id;
         $this->brainstormingId = $brainstormingId;
@@ -24,6 +30,9 @@ class Idea
         $this->contenu = $contenu;
         $this->dateCreation = $dateCreation;
         $this->statut = $statut;
+        $this->likesCount = $likesCount;
+        $this->dislikesCount = $dislikesCount;
+        $this->isWinner = $isWinner;
     }
 
     public static function fromDatabaseRow(array $row): self
@@ -34,7 +43,10 @@ class Idea
             (string) ($row['contenu'] ?? ''),
             (string) ($row['date_creation'] ?? ''),
             (string) ($row['statut'] ?? 'en attente'),
-            isset($row['id']) ? (int) $row['id'] : null
+            isset($row['id']) ? (int) $row['id'] : null,
+            (int) ($row['likes_count'] ?? 0),
+            (int) ($row['dislikes_count'] ?? 0),
+            (bool) ($row['is_winner'] ?? false)
         );
     }
 
@@ -96,5 +108,35 @@ class Idea
     public function setStatut(string $statut): void
     {
         $this->statut = $statut;
+    }
+
+    public function getLikesCount(): int
+    {
+        return $this->likesCount;
+    }
+
+    public function getDislikesCount(): int
+    {
+        return $this->dislikesCount;
+    }
+
+    public function getIsWinner(): bool
+    {
+        return $this->isWinner;
+    }
+
+    public function setLikesCount(int $likesCount): void
+    {
+        $this->likesCount = $likesCount;
+    }
+
+    public function setDislikesCount(int $dislikesCount): void
+    {
+        $this->dislikesCount = $dislikesCount;
+    }
+
+    public function setIsWinner(bool $isWinner): void
+    {
+        $this->isWinner = $isWinner;
     }
 }

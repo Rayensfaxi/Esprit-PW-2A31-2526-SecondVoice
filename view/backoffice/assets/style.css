@@ -1603,3 +1603,48 @@ textarea {
 }
 
 .page{position:relative;z-index:1;}
+
+/* Statistics Page Styles */
+.charts-section {
+  margin-top: 0;
+}
+
+.chart-container {
+  padding: 0;
+}
+
+.top-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+}
+
+.top-item {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 18px 0;
+  border-bottom: 1px solid var(--line);
+}
+
+.top-item:last-child {
+  border-bottom: none;
+}
+
+.medal {
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 800;
+  font-size: 1.4rem;
+  flex-shrink: 0;
+}
+
+@media (max-width: 1200px) {
+  .charts-section {
+    grid-template-columns: 1fr;
+  }
+}

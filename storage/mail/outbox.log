@@ -290,3 +290,39 @@ Si vous n'avez pas fait cette demande, ignorez ce message.
 
 ----
 
+----
+date: 2026-04-22 11:10:00
+to: Abessiyoussef0@gmail.com
+subject: Verification de votre e-mail SecondVoice
+provider: brevo
+mail_sent: yes
+body:
+Bonjour Youssef Abessi,
+
+Merci pour votre inscription sur SecondVoice.
+Cliquez sur ce lien pour verifier votre e-mail:
+http://localhost/Second%20voice/view/frontoffice/verify-email.php?token=6a8b36ff4793543ae08455bc33c07d06be88be22198047a4d76c010c9bd3828e
+
+Ce lien expire dans 24 heures.
+Si vous n'etes pas a l'origine de cette demande, ignorez ce message.
+
+----
+
+----
+date: 2026-04-22 11:12:15
+to: esprit1a2024@gmail.com
+subject: Verification de votre e-mail SecondVoice
+provider: brevo
+mail_sent: yes
+body:
+Bonjour Youssef abessi,
+
+Merci pour votre inscription sur SecondVoice.
+Cliquez sur ce lien pour verifier votre e-mail:
+http://localhost/Second%20voice/view/frontoffice/verify-email.php?token=91bd8f320de3511e781a25055145ad51f26bf706bb97374e0a16e802d992769c
+
+Ce lien expire dans 24 heures.
+Si vous n'etes pas a l'origine de cette demande, ignorez ce message.
+
+----
+

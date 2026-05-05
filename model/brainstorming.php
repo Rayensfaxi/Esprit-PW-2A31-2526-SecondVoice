@@ -9,6 +9,9 @@ class Brainstorming
     private string $categorie;
     private string $dateCreation;
     private string $statut;
+    private ?string $voteStart;
+    private ?string $voteEnd;
+    private string $voteStatus;
 
     public function __construct(
         string $titre,
@@ -16,7 +19,10 @@ class Brainstorming
         string $categorie,
         string $dateCreation,
         string $statut,
-        ?int $id = null
+        ?int $id = null,
+        ?string $voteStart = null,
+        ?string $voteEnd = null,
+        string $voteStatus = 'closed'
     ) {
         $this->id = $id;
         $this->titre = $titre;
@@ -24,6 +30,9 @@ class Brainstorming
         $this->categorie = $categorie;
         $this->dateCreation = $dateCreation;
         $this->statut = $statut;
+        $this->voteStart = $voteStart;
+        $this->voteEnd = $voteEnd;
+        $this->voteStatus = $voteStatus;
     }
 
     public static function fromDatabaseRow(array $row): self
@@ -34,7 +43,10 @@ class Brainstorming
             (string) ($row['categorie'] ?? ''),
             (string) ($row['dateCreation'] ?? ''),
             (string) ($row['statut'] ?? 'en attente'),
-            isset($row['id']) ? (int) $row['id'] : null
+            isset($row['id']) ? (int) $row['id'] : null,
+            isset($row['vote_start']) ? (string) $row['vote_start'] : null,
+            isset($row['vote_end']) ? (string) $row['vote_end'] : null,
+            (string) ($row['vote_status'] ?? 'closed')
         );
     }
 
@@ -96,5 +108,48 @@ class Brainstorming
     public function setStatut(string $statut): void
     {
         $this->statut = $statut;
+    }
+
+    public function getVoteStart(): ?string
+    {
+        return $this->voteStart;
+    }
+
+    public function getVoteEnd(): ?string
+    {
+        return $this->voteEnd;
+    }
+
+    public function getVoteStatus(): string
+    {
+        return $this->voteStatus;
+    }
+
+    public function setVoteStart(?string $voteStart): void
+    {
+        $this->voteStart = $voteStart;
+    }
+
+    public function setVoteEnd(?string $voteEnd): void
+    {
+        $this->voteEnd = $voteEnd;
+    }
+
+    public function setVoteStatus(string $voteStatus): void
+    {
+        $this->voteStatus = $voteStatus;
+    }
+
+    public function isVoteOpen(): bool
+    {
+        if ($this->voteStatus !== 'open' || !$this->voteStart || !$this->voteEnd) {
+            return false;
+        }
+
+        $now = new DateTime();
+        $start = new DateTime($this->voteStart);
+        $end = new DateTime($this->voteEnd);
+
+        return $now >= $start && $now <= $end;
     }
 }
