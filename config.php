@@ -12,7 +12,7 @@ class Config
     private static $pdo = null;
     private static array $mailManual = [
         // Provider: 'brevo', 'smtp', ou 'auto' (brevo puis smtp)
-        'provider' => 'brevo'
+        'provider' => 'auto'
     ];
     private static array $brevoManual = [
         // REMPLIS CES VALEURS POUR BREVO API
@@ -39,6 +39,11 @@ class Config
         // Remplace-les par tes vraies cles en production.
         'site_key' => '6LeIxAcTAAAAAJcZVRqyHh71UMIEGNQ_MXjiZKhI',
         'secret_key' => '6LeIxAcTAAAAAGG-vFI1TnRWxMZNFuojJ4WifJWe'
+    ];
+    private static array $appManual = [
+        // URL publique de frontoffice pour le QR mobile (sans slash final)
+        // Exemple LAN: http://192.168.1.5/Second%20voice/view/frontoffice
+        'public_base_url' => ''
     ];
     public static function getConnexion()
     {
@@ -161,6 +166,16 @@ class Config
             'site_key' => $siteKey !== false && trim($siteKey) !== '' ? trim($siteKey) : $manualSiteKey,
             'secret_key' => $secretKey !== false && trim($secretKey) !== '' ? trim($secretKey) : $manualSecretKey
         ];
+    }
+
+    public static function getPublicBaseUrl(): string
+    {
+        $env = getenv('SECONDVOICE_PUBLIC_BASE_URL');
+        if ($env !== false && trim($env) !== '') {
+            return rtrim(trim($env), '/');
+        }
+
+        return rtrim((string) (self::$appManual['public_base_url'] ?? ''), '/');
     }
 }
 Config::getConnexion();

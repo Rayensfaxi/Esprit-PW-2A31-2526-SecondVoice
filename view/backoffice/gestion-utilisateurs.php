@@ -1,4 +1,4 @@
-﻿<?php
+<?php
 
 session_start();
 
@@ -114,9 +114,54 @@ function validateUserInput(array $data, bool $isAdd): array
     return $errors;
 }
 
+function buildListUrl(string $search, string $role, string $status = ''): string
+{
+    $params = [];
+    if ($status !== '') {
+        $params['status'] = $status;
+    }
+    if ($search !== '') {
+        $params['q'] = $search;
+    }
+    if ($role !== '' && $role !== 'tout') {
+        $params['role'] = $role;
+    }
+
+    if ($params === []) {
+        return 'gestion-utilisateurs.php';
+    }
+
+    return 'gestion-utilisateurs.php?' . http_build_query($params);
+}
+
 $controller = new UtilisateurController();
 $feedbackType = '';
 $feedbackMessage = '';
+
+$search = trim((string) ($_GET['q'] ?? ''));
+$selectedRole = strtolower(trim((string) ($_GET['role'] ?? 'tout')));
+$allowedRoleFilters = ['tout', 'admin', 'agent', 'client'];
+if (!in_array($selectedRole, $allowedRoleFilters, true)) {
+    $selectedRole = 'tout';
+}
+
+$status = (string) ($_GET['status'] ?? '');
+$statusMessages = [
+    'added' => 'Utilisateur ajoute avec succes.',
+    'updated' => 'Utilisateur modifie avec succes.'
+];
+
+$requestedView = strtolower(trim((string) ($_GET['view'] ?? '')));
+if ($requestedView === '' && isset($_GET['edit'])) {
+    $requestedView = 'form';
+}
+$isFormView = $requestedView === 'form' || $_SERVER['REQUEST_METHOD'] === 'POST';
+
+$returnSearch = trim((string) ($_GET['return_q'] ?? $_POST['return_q'] ?? $search));
+$returnRole = strtolower(trim((string) ($_GET['return_role'] ?? $_POST['return_role'] ?? $selectedRole)));
+if (!in_array($returnRole, $allowedRoleFilters, true)) {
+    $returnRole = 'tout';
+}
 
 $formValues = [
     'nom' => '',
@@ -135,23 +180,6 @@ $fieldErrors = [
     'mot_de_passe' => '',
     'statut_compte' => ''
 ];
-
-$search = trim((string) ($_GET['q'] ?? ''));
-$selectedRole = strtolower(trim((string) ($_GET['role'] ?? 'tout')));
-$allowedRoleFilters = ['tout', 'admin', 'agent', 'client'];
-if (!in_array($selectedRole, $allowedRoleFilters, true)) {
-    $selectedRole = 'tout';
-}
-
-$status = (string) ($_GET['status'] ?? '');
-$statusMessages = [
-    'added' => 'Utilisateur ajoute avec succes.',
-    'updated' => 'Utilisateur modifie avec succes.'
-];
-if (isset($statusMessages[$status])) {
-    $feedbackType = 'success';
-    $feedbackMessage = $statusMessages[$status];
-}
 
 $editUser = null;
 if (isset($_GET['edit']) && ctype_digit((string) $_GET['edit'])) {
@@ -205,7 +233,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         $formValues['role'],
                         $formValues['statut_compte']
                     );
-                    header('Location: gestion-utilisateurs.php?status=added');
+                    header('Location: ' . buildListUrl($returnSearch, $returnRole, 'added'));
                     exit;
                 }
 
@@ -221,7 +249,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     $password !== '' ? $password : null,
                     $formValues['statut_compte']
                 );
-                header('Location: gestion-utilisateurs.php?status=updated');
+                header('Location: ' . buildListUrl($returnSearch, $returnRole, 'updated'));
                 exit;
             } catch (Throwable $exception) {
                 $feedbackType = 'error';
@@ -252,10 +280,27 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 }
 
-$users = $controller->getUsers([
-    'q' => $search,
-    'role' => $selectedRole
-]);
+$cancelUrl = buildListUrl($returnSearch, $returnRole);
+$formAction = 'gestion-utilisateurs.php?view=form';
+if ($editUser) {
+    $formAction .= '&edit=' . (int) $editUser['id'];
+}
+if ($returnSearch !== '') {
+    $formAction .= '&return_q=' . urlencode($returnSearch);
+}
+if ($returnRole !== '' && $returnRole !== 'tout') {
+    $formAction .= '&return_role=' . urlencode($returnRole);
+}
+
+$users = [];
+if (!$isFormView) {
+    $feedbackMessage = $statusMessages[$status] ?? '';
+    $feedbackType = $feedbackMessage !== '' ? 'success' : '';
+    $users = $controller->getUsers([
+        'q' => $search,
+        'role' => $selectedRole
+    ]);
+}
 ?>
 <!DOCTYPE html>
 <html lang="fr">
@@ -267,14 +312,16 @@ $users = $controller->getUsers([
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
     <link rel="stylesheet" href="assets/style.css" />
-    <style>
-      .field-error-inline {
-        margin: 6px 0 0;
-        min-height: 18px;
-        font-size: 0.84rem;
-        color: #dc4b67;
-      }
-    </style>
+    <?php if ($isFormView): ?>
+      <style>
+        .field-error-inline {
+          margin: 6px 0 0;
+          min-height: 18px;
+          font-size: 0.84rem;
+          color: #dc4b67;
+        }
+      </style>
+    <?php endif; ?>
   </head>
   <body data-page="profile">
     <div class="overlay" data-overlay></div>
@@ -306,329 +353,456 @@ $users = $controller->getUsers([
           <div>
             <button class="mobile-toggle" data-nav-toggle aria-label="Open navigation">=</button>
             <h1 class="page-title">Gestion des utilisateurs</h1>
-            
           </div>
           <div class="toolbar-actions">
-            <a class="update-button" href="../frontoffice/index.php">Revenir</a>
+            <?php if ($isFormView): ?>
+              <a class="update-button" href="<?= h($cancelUrl) ?>">Voir la liste</a>
+            <?php else: ?>
+              <a class="update-button" href="../frontoffice/index.php">Revenir</a>
+            <?php endif; ?>
             <button class="icon-button icon-moon" data-theme-toggle aria-label="Switch theme"></button>
           </div>
         </div>
 
         <div class="page-grid users-page">
-          <section class="users-hero">
-            <div class="users-header">
-              <div>
-                <h2 class="section-title">Liste des utilisateurs</h2>
-                <p class="helper">Filtrez, modifiez et gerez le statut des comptes en un seul endroit.</p>
+          <?php if (!$isFormView): ?>
+            <section class="users-hero">
+              <div class="users-header">
+                <div>
+                  <h2 class="section-title">Liste des utilisateurs</h2>
+                  <p class="helper">Filtrez, puis ouvrez le formulaire dans ce meme fichier.</p>
+                </div>
+                <div class="users-actions">
+                  <a class="ghost-button" href="gestion-utilisateurs.php">Reinitialiser</a>
+                  <?php
+                    $addQuery = ['view' => 'form'];
+                    if ($search !== '') {
+                        $addQuery['return_q'] = $search;
+                    }
+                    if ($selectedRole !== 'tout') {
+                        $addQuery['return_role'] = $selectedRole;
+                    }
+                  ?>
+                  <a class="action-button" href="gestion-utilisateurs.php?<?= h(http_build_query($addQuery)) ?>">Ajouter utilisateur</a>
+                </div>
               </div>
-              <div class="users-actions">
-                <a class="ghost-button" href="gestion-utilisateurs.php">Reinitialiser</a>
-                <a class="action-button" href="#user-form"><?= $editUser ? 'Modifier utilisateur' : 'Ajouter' ?></a>
-              </div>
-            </div>
 
-            <form class="users-filters" method="get" action="gestion-utilisateurs.php">
-              <div class="filter-field">
-                <label for="user-search">Recherche</label>
-                <input id="user-search" type="text" name="q" value="<?= h($search) ?>" placeholder="Nom, prenom, email, telephone" />
-              </div>
-              <div class="filter-field">
-                <label for="user-role">Role</label>
-                <select id="user-role" name="role">
-                  <option value="tout" <?= $selectedRole === 'tout' ? 'selected' : '' ?>>Tout</option>
-                  <option value="admin" <?= $selectedRole === 'admin' ? 'selected' : '' ?>>Admin</option>
-                  <option value="agent" <?= $selectedRole === 'agent' ? 'selected' : '' ?>>Agent</option>
-                  <option value="client" <?= $selectedRole === 'client' ? 'selected' : '' ?>>Client</option>
-                </select>
-              </div>
-              <div class="filter-field">
-                <label for="user-filter-submit">Action</label>
-                <button id="user-filter-submit" class="ghost-button" type="submit">Filtrer</button>
-              </div>
-            </form>
-          </section>
-
-          <section class="users-hero user-form-card" id="user-form">
-            <div>
-              <h2 class="section-title"><?= $editUser ? 'Modifier un utilisateur' : 'Ajouter un Admin/Agent' ?></h2>
-              
-            </div>
-
-            <?php if ($feedbackMessage !== ''): ?>
-              <div class="form-feedback <?= h($feedbackType) ?>"><?= h($feedbackMessage) ?></div>
-            <?php endif; ?>
-
-            <form id="crud-user-form" class="users-crud-form" method="post" action="gestion-utilisateurs.php<?= $editUser ? '?edit=' . (int) $editUser['id'] : '' ?>" novalidate>
-              <input type="hidden" name="action" value="<?= $editUser ? 'update' : 'add' ?>" />
-              <?php if ($editUser): ?>
-                <input type="hidden" name="id" value="<?= (int) $editUser['id'] ?>" />
+              <?php if ($feedbackMessage !== ''): ?>
+                <div class="form-feedback <?= h($feedbackType ?: 'success') ?>"><?= h($feedbackMessage) ?></div>
               <?php endif; ?>
 
-              <div class="user-form-grid">
+              <form class="users-filters" method="get" action="gestion-utilisateurs.php">
                 <div class="filter-field">
-                  <label for="nom">Nom</label>
-                  <input id="nom" name="nom" type="text" value="<?= h($formValues['nom']) ?>" placeholder="Nom" />
-                  <p class="field-error-inline" data-error-for="nom"><?= h($fieldErrors['nom']) ?></p>
+                  <label for="user-search">Recherche</label>
+                  <input id="user-search" type="text" name="q" value="<?= h($search) ?>" placeholder="Nom, prenom, email, telephone" />
                 </div>
                 <div class="filter-field">
-                  <label for="prenom">Prenom</label>
-                  <input id="prenom" name="prenom" type="text" value="<?= h($formValues['prenom']) ?>" placeholder="Prenom" />
-                  <p class="field-error-inline" data-error-for="prenom"><?= h($fieldErrors['prenom']) ?></p>
-                </div>
-                <div class="filter-field">
-                  <label for="email">E-mail</label>
-                  <input id="email" name="email" type="text" value="<?= h($formValues['email']) ?>" placeholder="utilisateur@mail.com" />
-                  <p class="field-error-inline" data-error-for="email"><?= h($fieldErrors['email']) ?></p>
-                </div>
-                <div class="filter-field">
-                  <label for="telephone">Telephone</label>
-                  <input id="telephone" name="telephone" type="text" value="<?= h($formValues['telephone']) ?>" placeholder="+21612345678" />
-                  <p class="field-error-inline" data-error-for="telephone"><?= h($fieldErrors['telephone']) ?></p>
-                </div>
-                <div class="filter-field">
-                  <label for="role">Role</label>
-                  <select id="role" name="role">
-                    <option value="admin" <?= strtolower((string) $formValues['role']) === 'admin' ? 'selected' : '' ?>>Admin</option>
-                    <option value="agent" <?= strtolower((string) $formValues['role']) === 'agent' ? 'selected' : '' ?>>Agent</option>
-                    <?php if ($editUser): ?>
-                      <option value="client" <?= strtolower((string) $formValues['role']) === 'client' ? 'selected' : '' ?>>Client</option>
-                    <?php endif; ?>
+                  <label for="user-role">Role</label>
+                  <select id="user-role" name="role">
+                    <option value="tout" <?= $selectedRole === 'tout' ? 'selected' : '' ?>>Tout</option>
+                    <option value="admin" <?= $selectedRole === 'admin' ? 'selected' : '' ?>>Admin</option>
+                    <option value="agent" <?= $selectedRole === 'agent' ? 'selected' : '' ?>>Agent</option>
+                    <option value="client" <?= $selectedRole === 'client' ? 'selected' : '' ?>>Client</option>
                   </select>
-                  <p class="field-error-inline" data-error-for="role"><?= h($fieldErrors['role']) ?></p>
                 </div>
                 <div class="filter-field">
-                  <label for="mot_de_passe">Mot de passe <?= $editUser ? '(laisser vide pour conserver)' : '' ?></label>
-                  <input id="mot_de_passe" name="mot_de_passe" type="password" placeholder="Minimum 6 caracteres" />
-                  <p class="field-error-inline" data-error-for="mot_de_passe"><?= h($fieldErrors['mot_de_passe']) ?></p>
+                  <label for="user-filter-submit">Action</label>
+                  <button id="user-filter-submit" class="ghost-button" type="submit">Filtrer</button>
                 </div>
-                <div class="filter-field">
-                  <label for="statut_compte">Statut du compte</label>
-                  <select id="statut_compte" name="statut_compte">
-                    <option value="actif" <?= strtolower((string) $formValues['statut_compte']) === 'actif' ? 'selected' : '' ?>>Actif</option>
-                    <option value="bloque" <?= strtolower((string) $formValues['statut_compte']) === 'bloque' ? 'selected' : '' ?>>Bloque</option>
-                    <option value="en_pause" <?= strtolower((string) $formValues['statut_compte']) === 'en_pause' ? 'selected' : '' ?>>En pause</option>
-                  </select>
-                  <p class="field-error-inline" data-error-for="statut_compte"><?= h($fieldErrors['statut_compte']) ?></p>
-                </div>
-              </div>
+              </form>
+            </section>
 
-              <p id="crud-feedback" class="form-feedback"></p>
-
-              <div class="users-actions">
-                <button class="action-button" type="submit"><?= $editUser ? 'Enregistrer les modifications' : 'Ajouter' ?></button>
-                <?php if ($editUser): ?>
-                  <a class="ghost-button" href="gestion-utilisateurs.php">Annuler</a>
-                <?php endif; ?>
-              </div>
-            </form>
-          </section>
-
-          <section class="table-card">
-            <table class="table users-table">
-              <thead>
-                <tr>
-                  <th>Utilisateur</th>
-                  <th>Email</th>
-                  <th>Telephone</th>
-                  <th>Role</th>
-                  <th>Statut compte</th>
-                  <th>Date creation</th>
-                  <th>Actions</th>
-                </tr>
-              </thead>
-              <tbody>
-                <?php if (count($users) === 0): ?>
+            <section class="table-card">
+              <table class="table users-table">
+                <thead>
                   <tr>
-                    <td colspan="7">Aucun utilisateur trouve.</td>
+                    <th>Utilisateur</th>
+                    <th>Email</th>
+                    <th>Telephone</th>
+                    <th>Role</th>
+                    <th>Statut compte</th>
+                    <th>Date creation</th>
+                    <th>Actions</th>
                   </tr>
-                <?php else: ?>
-                  <?php foreach ($users as $user): ?>
+                </thead>
+                <tbody>
+                  <?php if (count($users) === 0): ?>
                     <tr>
-                      <td>
-                        <div class="user-cell">
-                          <span class="user-avatar"><?= h(makeInitials((string) $user['nom'], (string) $user['prenom'])) ?></span>
-                          <div>
-                            <strong><?= h($user['nom'] . ' ' . $user['prenom']) ?></strong>
-                            <span>ID #<?= (int) $user['id'] ?></span>
-                          </div>
-                        </div>
-                      </td>
-                      <td><?= h($user['email']) ?></td>
-                      <td><?= h($user['telephone']) ?></td>
-                      <td><span class="status-pill active"><?= ucfirst(h((string) $user['role'])) ?></span></td>
-                      <td>
-                        <span class="status-pill <?= h(getStatusClass((string) ($user['statut_compte'] ?? 'actif'))) ?>">
-                          <?= h(ucfirst(str_replace('_', ' ', (string) ($user['statut_compte'] ?? 'actif')))) ?>
-                        </span>
-                      </td>
-                      <td><?= h(formatCreationDate((string) ($user['date_creation'] ?? ''))) ?></td>
-                      <td>
-                        <div class="table-actions">
-                          <a class="ghost-button" href="gestion-utilisateurs.php?edit=<?= (int) $user['id'] ?>#user-form">Modifier</a>
-                        </div>
-                      </td>
+                      <td colspan="7">Aucun utilisateur trouve.</td>
                     </tr>
-                  <?php endforeach; ?>
+                  <?php else: ?>
+                    <?php foreach ($users as $user): ?>
+                      <?php
+                        $editQueryParams = ['view' => 'form', 'edit' => (int) $user['id']];
+                        if ($search !== '') {
+                            $editQueryParams['return_q'] = $search;
+                        }
+                        if ($selectedRole !== 'tout') {
+                            $editQueryParams['return_role'] = $selectedRole;
+                        }
+                        $searchIndex = strtolower(trim(
+                            ((string) ($user['nom'] ?? '')) . ' '
+                            . ((string) ($user['prenom'] ?? '')) . ' '
+                            . ((string) ($user['email'] ?? '')) . ' '
+                            . ((string) ($user['telephone'] ?? '')) . ' '
+                            . ((string) ($user['role'] ?? ''))
+                        ));
+                      ?>
+                      <tr
+                        data-user-row
+                        data-role="<?= h(strtolower((string) ($user['role'] ?? 'client'))) ?>"
+                        data-search-index="<?= h($searchIndex) ?>"
+                      >
+                        <td>
+                          <div class="user-cell">
+                            <span class="user-avatar"><?= h(makeInitials((string) $user['nom'], (string) $user['prenom'])) ?></span>
+                            <div>
+                              <strong><?= h($user['nom'] . ' ' . $user['prenom']) ?></strong>
+                              <span>ID #<?= (int) $user['id'] ?></span>
+                            </div>
+                          </div>
+                        </td>
+                        <td><?= h($user['email']) ?></td>
+                        <td><?= h($user['telephone']) ?></td>
+                        <td><span class="status-pill active"><?= ucfirst(h((string) $user['role'])) ?></span></td>
+                        <td>
+                          <span class="status-pill <?= h(getStatusClass((string) ($user['statut_compte'] ?? 'actif'))) ?>">
+                            <?= h(ucfirst(str_replace('_', ' ', (string) ($user['statut_compte'] ?? 'actif')))) ?>
+                          </span>
+                        </td>
+                        <td><?= h(formatCreationDate((string) ($user['date_creation'] ?? ''))) ?></td>
+                        <td>
+                          <div class="table-actions">
+                            <a class="ghost-button" href="gestion-utilisateurs.php?<?= h(http_build_query($editQueryParams)) ?>">Modifier</a>
+                          </div>
+                        </td>
+                      </tr>
+                    <?php endforeach; ?>
+                  <?php endif; ?>
+                </tbody>
+              </table>
+            </section>
+          <?php else: ?>
+            <section class="users-hero user-form-card" id="user-form">
+              <div class="users-header">
+                <div>
+                  <h2 class="section-title"><?= $editUser ? 'Modifier un utilisateur' : 'Ajouter un Admin/Agent' ?></h2>
+                </div>
+                <div class="users-actions">
+                  <a class="ghost-button" href="<?= h($cancelUrl) ?>">Retour liste</a>
+                </div>
+              </div>
+
+              <?php if ($feedbackMessage !== ''): ?>
+                <div class="form-feedback <?= h($feedbackType) ?>"><?= h($feedbackMessage) ?></div>
+              <?php endif; ?>
+
+              <form id="crud-user-form" class="users-crud-form" method="post" action="<?= h($formAction) ?>" novalidate>
+                <input type="hidden" name="action" value="<?= $editUser ? 'update' : 'add' ?>" />
+                <input type="hidden" name="return_q" value="<?= h($returnSearch) ?>" />
+                <input type="hidden" name="return_role" value="<?= h($returnRole) ?>" />
+                <?php if ($editUser): ?>
+                  <input type="hidden" name="id" value="<?= (int) $editUser['id'] ?>" />
                 <?php endif; ?>
-              </tbody>
-            </table>
-          </section>
+
+                <div class="user-form-grid">
+                  <div class="filter-field">
+                    <label for="nom">Nom</label>
+                    <input id="nom" name="nom" type="text" value="<?= h($formValues['nom']) ?>" placeholder="Nom" />
+                    <p class="field-error-inline" data-error-for="nom"><?= h($fieldErrors['nom']) ?></p>
+                  </div>
+                  <div class="filter-field">
+                    <label for="prenom">Prenom</label>
+                    <input id="prenom" name="prenom" type="text" value="<?= h($formValues['prenom']) ?>" placeholder="Prenom" />
+                    <p class="field-error-inline" data-error-for="prenom"><?= h($fieldErrors['prenom']) ?></p>
+                  </div>
+                  <div class="filter-field">
+                    <label for="email">E-mail</label>
+                    <input id="email" name="email" type="text" value="<?= h($formValues['email']) ?>" placeholder="utilisateur@mail.com" />
+                    <p class="field-error-inline" data-error-for="email"><?= h($fieldErrors['email']) ?></p>
+                  </div>
+                  <div class="filter-field">
+                    <label for="telephone">Telephone</label>
+                    <input id="telephone" name="telephone" type="text" value="<?= h($formValues['telephone']) ?>" placeholder="+21612345678" />
+                    <p class="field-error-inline" data-error-for="telephone"><?= h($fieldErrors['telephone']) ?></p>
+                  </div>
+                  <div class="filter-field">
+                    <label for="role">Role</label>
+                    <select id="role" name="role">
+                      <option value="admin" <?= strtolower((string) $formValues['role']) === 'admin' ? 'selected' : '' ?>>Admin</option>
+                      <option value="agent" <?= strtolower((string) $formValues['role']) === 'agent' ? 'selected' : '' ?>>Agent</option>
+                      <?php if ($editUser): ?>
+                        <option value="client" <?= strtolower((string) $formValues['role']) === 'client' ? 'selected' : '' ?>>Client</option>
+                      <?php endif; ?>
+                    </select>
+                    <p class="field-error-inline" data-error-for="role"><?= h($fieldErrors['role']) ?></p>
+                  </div>
+                  <div class="filter-field">
+                    <label for="mot_de_passe">Mot de passe <?= $editUser ? '(laisser vide pour conserver)' : '' ?></label>
+                    <input id="mot_de_passe" name="mot_de_passe" type="password" placeholder="Minimum 6 caracteres" />
+                    <p class="field-error-inline" data-error-for="mot_de_passe"><?= h($fieldErrors['mot_de_passe']) ?></p>
+                  </div>
+                  <div class="filter-field">
+                    <label for="statut_compte">Statut du compte</label>
+                    <select id="statut_compte" name="statut_compte">
+                      <option value="actif" <?= strtolower((string) $formValues['statut_compte']) === 'actif' ? 'selected' : '' ?>>Actif</option>
+                      <option value="bloque" <?= strtolower((string) $formValues['statut_compte']) === 'bloque' ? 'selected' : '' ?>>Bloque</option>
+                      <option value="en_pause" <?= strtolower((string) $formValues['statut_compte']) === 'en_pause' ? 'selected' : '' ?>>En pause</option>
+                    </select>
+                    <p class="field-error-inline" data-error-for="statut_compte"><?= h($fieldErrors['statut_compte']) ?></p>
+                  </div>
+                </div>
+
+                <p id="crud-feedback" class="form-feedback"></p>
+
+                <div class="users-actions">
+                  <button class="action-button" type="submit"><?= $editUser ? 'Enregistrer les modifications' : 'Ajouter' ?></button>
+                  <a class="ghost-button" href="<?= h($cancelUrl) ?>">Annuler</a>
+                </div>
+              </form>
+            </section>
+          <?php endif; ?>
         </div>
       </main>
     </div>
 
-    <script>
-      (function () {
-        const form = document.getElementById("crud-user-form");
-        const feedback = document.getElementById("crud-feedback");
-        const fieldErrors = form
-          ? {
-              nom: form.querySelector('[data-error-for="nom"]'),
-              prenom: form.querySelector('[data-error-for="prenom"]'),
-              email: form.querySelector('[data-error-for="email"]'),
-              telephone: form.querySelector('[data-error-for="telephone"]'),
-              role: form.querySelector('[data-error-for="role"]'),
-              mot_de_passe: form.querySelector('[data-error-for="mot_de_passe"]'),
-              statut_compte: form.querySelector('[data-error-for="statut_compte"]')
+    <?php if (!$isFormView): ?>
+      <script>
+        (function () {
+          const filterForm = document.querySelector(".users-filters");
+          const searchInput = document.getElementById("user-search");
+          const roleSelect = document.getElementById("user-role");
+          const tableBody = document.querySelector(".users-table tbody");
+          const rows = tableBody ? Array.from(tableBody.querySelectorAll("tr[data-user-row]")) : [];
+
+          if (!filterForm || !searchInput || !roleSelect || !tableBody || rows.length === 0) return;
+
+          const emptyStateRow = document.createElement("tr");
+          emptyStateRow.hidden = true;
+          emptyStateRow.innerHTML = "<td colspan=\"7\">Aucun utilisateur trouve.</td>";
+          tableBody.appendChild(emptyStateRow);
+
+          function normalizeText(value) {
+            return String(value || "")
+              .toLowerCase()
+              .normalize("NFD")
+              .replace(/[\u0300-\u036f]/g, "")
+              .trim();
+          }
+
+          function syncUrl(searchValue, roleValue) {
+            if (typeof window.history.replaceState !== "function") return;
+
+            const params = new URLSearchParams(window.location.search);
+            if (searchValue) {
+              params.set("q", searchValue);
+            } else {
+              params.delete("q");
             }
-          : {};
 
-        if (!form) return;
+            if (roleValue && roleValue !== "tout") {
+              params.set("role", roleValue);
+            } else {
+              params.delete("role");
+            }
 
-        function clearFeedback() {
-          if (!feedback) return;
-          feedback.textContent = "";
-          feedback.classList.remove("error");
-          feedback.classList.remove("success");
-        }
+            const query = params.toString();
+            const nextUrl = `${window.location.pathname}${query ? `?${query}` : ""}${window.location.hash}`;
+            window.history.replaceState({}, "", nextUrl);
+          }
 
-        function clearFieldErrors() {
-          Object.values(fieldErrors).forEach(function (node) {
-            if (node) node.textContent = "";
+          function applyFilters() {
+            const searchValue = searchInput.value.trim();
+            const normalizedSearch = normalizeText(searchValue);
+            const roleValue = (roleSelect.value || "tout").toLowerCase().trim();
+            let visibleCount = 0;
+
+            rows.forEach((row) => {
+              const rowRole = String(row.dataset.role || "").toLowerCase();
+              const searchIndex = normalizeText(row.dataset.searchIndex || row.textContent);
+              const matchesSearch = normalizedSearch === "" || searchIndex.includes(normalizedSearch);
+              const matchesRole = roleValue === "tout" || rowRole === roleValue;
+              const isVisible = matchesSearch && matchesRole;
+
+              row.hidden = !isVisible;
+              if (isVisible) {
+                visibleCount += 1;
+              }
+            });
+
+            emptyStateRow.hidden = visibleCount !== 0;
+            syncUrl(searchValue, roleValue);
+          }
+
+          let searchDebounceTimer = null;
+          searchInput.addEventListener("input", function () {
+            if (searchDebounceTimer) {
+              clearTimeout(searchDebounceTimer);
+            }
+            searchDebounceTimer = setTimeout(applyFilters, 120);
           });
-        }
 
-        function setFieldError(fieldName, message) {
-          const node = fieldErrors[fieldName];
-          if (node) node.textContent = message;
-        }
-
-        function validateFields() {
-          clearFieldErrors();
-          const action = (form.querySelector('input[name="action"]')?.value || "").toLowerCase();
-          const nom = (form.nom.value || "").trim();
-          const prenom = (form.prenom.value || "").trim();
-          const email = (form.email.value || "").trim();
-          const telephone = (form.telephone.value || "").trim().replace(/\s+/g, "");
-          const role = (form.role.value || "").trim().toLowerCase();
-          const status = (form.statut_compte.value || "").trim().toLowerCase();
-          const password = form.mot_de_passe.value || "";
-
-          const namePattern = /^[A-Za-zÀ-ÖØ-öø-ÿ\s'-]{2,60}$/;
-          const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-          const phonePattern = /^\+?[0-9]{8,15}$/;
-          let hasError = false;
-
-          if (!namePattern.test(nom)) {
-            setFieldError("nom", "Le nom doit contenir 2 a 60 caracteres alphabetiques.");
-            hasError = true;
-          }
-
-          if (!namePattern.test(prenom)) {
-            setFieldError("prenom", "Le prenom doit contenir 2 a 60 caracteres alphabetiques.");
-            hasError = true;
-          }
-
-          if (!emailPattern.test(email)) {
-            setFieldError("email", "Adresse e-mail invalide.");
-            hasError = true;
-          } else if (email.length > 100) {
-            setFieldError("email", "Adresse e-mail trop longue (max 100 caracteres).");
-            hasError = true;
-          }
-
-          if (!phonePattern.test(telephone)) {
-            setFieldError("telephone", "Le telephone doit contenir entre 8 et 15 chiffres.");
-            hasError = true;
-          }
-
-          const validRoles = action === "add" ? ["admin", "agent"] : ["admin", "agent", "client"];
-          if (!validRoles.includes(role)) {
-            setFieldError(
-              "role",
-              action === "add"
-                ? "En creation, le role doit etre admin ou agent."
-                : "Le role doit etre admin, agent ou client."
-            );
-            hasError = true;
-          }
-
-          if ((action === "add" || password.length > 0) && password.length < 6) {
-            setFieldError("mot_de_passe", "Le mot de passe doit contenir au moins 6 caracteres.");
-            hasError = true;
-          }
-
-          if (!["actif", "bloque", "en_pause"].includes(status)) {
-            setFieldError("statut_compte", "Le statut du compte doit etre Actif, Bloque ou En pause.");
-            hasError = true;
-          }
-
-          return !hasError;
-        }
-
-        form.addEventListener("submit", function (event) {
-          clearFeedback();
-          if (!validateFields()) {
+          roleSelect.addEventListener("change", applyFilters);
+          filterForm.addEventListener("submit", function (event) {
             event.preventDefault();
-            if (feedback) {
-              feedback.textContent = "Veuillez corriger les erreurs sous les champs.";
-              feedback.classList.add("error");
-              feedback.classList.remove("success");
-            }
-          }
-        });
+            applyFilters();
+          });
+        })();
+      </script>
+    <?php else: ?>
+      <script>
+        (function () {
+          const form = document.getElementById("crud-user-form");
+          const feedback = document.getElementById("crud-feedback");
+          const fieldErrors = form
+            ? {
+                nom: form.querySelector('[data-error-for="nom"]'),
+                prenom: form.querySelector('[data-error-for="prenom"]'),
+                email: form.querySelector('[data-error-for="email"]'),
+                telephone: form.querySelector('[data-error-for="telephone"]'),
+                role: form.querySelector('[data-error-for="role"]'),
+                mot_de_passe: form.querySelector('[data-error-for="mot_de_passe"]'),
+                statut_compte: form.querySelector('[data-error-for="statut_compte"]')
+              }
+            : {};
 
-        form.nom.addEventListener("input", function () {
-          const namePattern = /^[A-Za-zÀ-ÖØ-öø-ÿ\s'-]{2,60}$/;
-          setFieldError("nom", namePattern.test((form.nom.value || "").trim()) ? "" : "Le nom doit contenir 2 a 60 caracteres alphabetiques.");
-        });
-        form.prenom.addEventListener("input", function () {
-          const namePattern = /^[A-Za-zÀ-ÖØ-öø-ÿ\s'-]{2,60}$/;
-          setFieldError("prenom", namePattern.test((form.prenom.value || "").trim()) ? "" : "Le prenom doit contenir 2 a 60 caracteres alphabetiques.");
-        });
-        form.email.addEventListener("input", function () {
-          const email = (form.email.value || "").trim();
-          const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-          if (!emailPattern.test(email)) {
-            setFieldError("email", "Adresse e-mail invalide.");
-          } else if (email.length > 100) {
-            setFieldError("email", "Adresse e-mail trop longue (max 100 caracteres).");
-          } else {
-            setFieldError("email", "");
+          if (!form) return;
+
+          function clearFeedback() {
+            if (!feedback) return;
+            feedback.textContent = "";
+            feedback.classList.remove("error");
+            feedback.classList.remove("success");
           }
-        });
-        form.telephone.addEventListener("input", function () {
-          const phonePattern = /^\+?[0-9]{8,15}$/;
-          const phone = (form.telephone.value || "").trim().replace(/\s+/g, "");
-          setFieldError("telephone", phonePattern.test(phone) ? "" : "Le telephone doit contenir entre 8 et 15 chiffres.");
-        });
-        form.role.addEventListener("change", function () {
-          setFieldError("role", "");
-        });
-        form.statut_compte.addEventListener("change", function () {
-          setFieldError("statut_compte", "");
-        });
-        form.mot_de_passe.addEventListener("input", function () {
-          const action = (form.querySelector('input[name="action"]')?.value || "").toLowerCase();
-          const password = form.mot_de_passe.value || "";
-          if ((action === "add" || password.length > 0) && password.length < 6) {
-            setFieldError("mot_de_passe", "Le mot de passe doit contenir au moins 6 caracteres.");
-          } else {
-            setFieldError("mot_de_passe", "");
+
+          function clearFieldErrors() {
+            Object.values(fieldErrors).forEach(function (node) {
+              if (node) node.textContent = "";
+            });
           }
-        });
-      })();
-    </script>
+
+          function setFieldError(fieldName, message) {
+            const node = fieldErrors[fieldName];
+            if (node) node.textContent = message;
+          }
+
+          function validateFields() {
+            clearFieldErrors();
+            const action = (form.querySelector('input[name="action"]')?.value || "").toLowerCase();
+            const nom = (form.nom.value || "").trim();
+            const prenom = (form.prenom.value || "").trim();
+            const email = (form.email.value || "").trim();
+            const telephone = (form.telephone.value || "").trim().replace(/\s+/g, "");
+            const role = (form.role.value || "").trim().toLowerCase();
+            const status = (form.statut_compte.value || "").trim().toLowerCase();
+            const password = form.mot_de_passe.value || "";
+
+            const namePattern = /^[A-Za-zÀ-ÖØ-öø-ÿ\s'-]{2,60}$/;
+            const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+            const phonePattern = /^\+?[0-9]{8,15}$/;
+            let hasError = false;
+
+            if (!namePattern.test(nom)) {
+              setFieldError("nom", "Le nom doit contenir 2 a 60 caracteres alphabetiques.");
+              hasError = true;
+            }
+
+            if (!namePattern.test(prenom)) {
+              setFieldError("prenom", "Le prenom doit contenir 2 a 60 caracteres alphabetiques.");
+              hasError = true;
+            }
+
+            if (!emailPattern.test(email)) {
+              setFieldError("email", "Adresse e-mail invalide.");
+              hasError = true;
+            } else if (email.length > 100) {
+              setFieldError("email", "Adresse e-mail trop longue (max 100 caracteres).");
+              hasError = true;
+            }
+
+            if (!phonePattern.test(telephone)) {
+              setFieldError("telephone", "Le telephone doit contenir entre 8 et 15 chiffres.");
+              hasError = true;
+            }
+
+            const validRoles = action === "add" ? ["admin", "agent"] : ["admin", "agent", "client"];
+            if (!validRoles.includes(role)) {
+              setFieldError(
+                "role",
+                action === "add"
+                  ? "En creation, le role doit etre admin ou agent."
+                  : "Le role doit etre admin, agent ou client."
+              );
+              hasError = true;
+            }
+
+            if ((action === "add" || password.length > 0) && password.length < 6) {
+              setFieldError("mot_de_passe", "Le mot de passe doit contenir au moins 6 caracteres.");
+              hasError = true;
+            }
+
+            if (!["actif", "bloque", "en_pause"].includes(status)) {
+              setFieldError("statut_compte", "Le statut du compte doit etre Actif, Bloque ou En pause.");
+              hasError = true;
+            }
+
+            return !hasError;
+          }
+
+          form.addEventListener("submit", function (event) {
+            clearFeedback();
+            if (!validateFields()) {
+              event.preventDefault();
+              if (feedback) {
+                feedback.textContent = "Veuillez corriger les erreurs sous les champs.";
+                feedback.classList.add("error");
+                feedback.classList.remove("success");
+              }
+            }
+          });
+
+          form.nom.addEventListener("input", function () {
+            const namePattern = /^[A-Za-zÀ-ÖØ-öø-ÿ\s'-]{2,60}$/;
+            setFieldError("nom", namePattern.test((form.nom.value || "").trim()) ? "" : "Le nom doit contenir 2 a 60 caracteres alphabetiques.");
+          });
+          form.prenom.addEventListener("input", function () {
+            const namePattern = /^[A-Za-zÀ-ÖØ-öø-ÿ\s'-]{2,60}$/;
+            setFieldError("prenom", namePattern.test((form.prenom.value || "").trim()) ? "" : "Le prenom doit contenir 2 a 60 caracteres alphabetiques.");
+          });
+          form.email.addEventListener("input", function () {
+            const email = (form.email.value || "").trim();
+            const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+            if (!emailPattern.test(email)) {
+              setFieldError("email", "Adresse e-mail invalide.");
+            } else if (email.length > 100) {
+              setFieldError("email", "Adresse e-mail trop longue (max 100 caracteres).");
+            } else {
+              setFieldError("email", "");
+            }
+          });
+          form.telephone.addEventListener("input", function () {
+            const phonePattern = /^\+?[0-9]{8,15}$/;
+            const phone = (form.telephone.value || "").trim().replace(/\s+/g, "");
+            setFieldError("telephone", phonePattern.test(phone) ? "" : "Le telephone doit contenir entre 8 et 15 chiffres.");
+          });
+          form.role.addEventListener("change", function () {
+            setFieldError("role", "");
+          });
+          form.statut_compte.addEventListener("change", function () {
+            setFieldError("statut_compte", "");
+          });
+          form.mot_de_passe.addEventListener("input", function () {
+            const action = (form.querySelector('input[name="action"]')?.value || "").toLowerCase();
+            const password = form.mot_de_passe.value || "";
+            if ((action === "add" || password.length > 0) && password.length < 6) {
+              setFieldError("mot_de_passe", "Le mot de passe doit contenir au moins 6 caracteres.");
+            } else {
+              setFieldError("mot_de_passe", "");
+            }
+          });
+        })();
+      </script>
+    <?php endif; ?>
     <script src="assets/app.js"></script>
   </body>
 </html>

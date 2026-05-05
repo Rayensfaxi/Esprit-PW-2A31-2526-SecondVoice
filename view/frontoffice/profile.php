@@ -41,6 +41,26 @@ function deleteUserPhotoFiles(int $userId, string $photoDir): void
     }
 }
 
+function getAdminFaceTemplatePaths(int $userId): array
+{
+    $safeId = max(1, $userId);
+    return [
+        __DIR__ . '/../../storage/security/admin_face_' . $safeId . '.json',
+        __DIR__ . '/assets/media/security/admin_face_' . $safeId . '.json'
+    ];
+}
+
+function resetAdminFaceTemplates(int $userId): int
+{
+    $deleted = 0;
+    foreach (getAdminFaceTemplatePaths($userId) as $path) {
+        if (is_file($path) && @unlink($path)) {
+            $deleted++;
+        }
+    }
+    return $deleted;
+}
+
 function formatEventDate(string $isoDate): string
 {
     try {
@@ -87,6 +107,26 @@ function formatTimeAgo(string $isoDate): string
     }
 }
 
+function frontofficeBaseUrl(): string
+{
+    $forcedPublicBase = '';
+    if (class_exists('Config') && method_exists('Config', 'getPublicBaseUrl')) {
+        $forcedPublicBase = trim((string) Config::getPublicBaseUrl());
+    } else {
+        $forcedPublicBase = trim((string) (getenv('SECONDVOICE_PUBLIC_BASE_URL') ?: ''));
+    }
+    if ($forcedPublicBase !== '') {
+        return rtrim($forcedPublicBase, '/');
+    }
+
+    $https = isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off';
+    $scheme = $https ? 'https' : 'http';
+    $host = (string) ($_SERVER['HTTP_HOST'] ?? 'localhost');
+    $script = str_replace('\\', '/', (string) ($_SERVER['SCRIPT_NAME'] ?? '/'));
+    $dir = rtrim(dirname($script), '/');
+    return $scheme . '://' . $host . $dir;
+}
+
 $controller = new UtilisateurController();
 $userId = (int) $_SESSION['user_id'];
 $user = $controller->getUserById($userId);
@@ -119,9 +159,18 @@ if (isset($_GET['status']) && $_GET['status'] === 'forbidden') {
     $feedback = 'Acces refuse: seuls un administrateur ou un agent peuvent acceder au dashboard.';
     $feedbackType = 'error';
 }
+if (isset($_GET['status']) && $_GET['status'] === 'face_reset_done') {
+    $feedback = "Empreinte faciale admin reinitialisee. Un nouvel enrolement sera demande a la prochaine connexion.";
+    $feedbackType = 'success';
+}
+if (isset($_GET['status']) && $_GET['status'] === 'face_reset_forbidden') {
+    $feedback = "Action reservee a l'administrateur.";
+    $feedbackType = 'error';
+}
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $action = strtolower(trim((string) ($_POST['action'] ?? 'update')));
+    $currentRole = strtolower((string) ($user['role'] ?? 'client'));
 
     if ($action === 'logout') {
         session_unset();
@@ -130,108 +179,140 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         exit;
     }
 
-    $nom = trim((string) ($_POST['nom'] ?? ''));
-    $prenom = trim((string) ($_POST['prenom'] ?? ''));
-    $email = trim((string) ($_POST['email'] ?? ''));
-    $telephone = trim((string) ($_POST['telephone'] ?? ''));
-    $password = trim((string) ($_POST['mot_de_passe'] ?? ''));
-    $removePhoto = ((string) ($_POST['remove_photo'] ?? '0')) === '1';
-
-    try {
-        $oldUser = $user;
-        $newPhotoTmp = null;
-        $newPhotoExtension = null;
-
-        if (isset($_FILES['photo']) && $_FILES['photo']['error'] !== UPLOAD_ERR_NO_FILE) {
-            if ($_FILES['photo']['error'] !== UPLOAD_ERR_OK) {
-                throw new RuntimeException('Erreur pendant l\'upload de la photo.');
+    if ($action === 'reset_face_template') {
+        try {
+            if ($currentRole !== 'admin') {
+                header('Location: profile.php?status=face_reset_forbidden');
+                exit;
             }
 
-            $maxSize = 4 * 1024 * 1024;
-            if ((int) $_FILES['photo']['size'] > $maxSize) {
-                throw new RuntimeException('Image trop volumineuse (max 4 Mo).');
-            }
+            resetAdminFaceTemplates($userId);
+            unset($_SESSION['admin_face_verified_at']);
 
-            $tmpPath = (string) ($_FILES['photo']['tmp_name'] ?? '');
-            if ($tmpPath === '' || !is_uploaded_file($tmpPath)) {
-                throw new RuntimeException('Fichier upload invalide.');
-            }
-
-            $mime = (string) (finfo_file(finfo_open(FILEINFO_MIME_TYPE), $tmpPath) ?: '');
-            $allowed = [
-                'image/jpeg' => 'jpg',
-                'image/png' => 'png',
-                'image/webp' => 'webp'
+            // Force immediate re-enrollment flow by converting active admin session
+            // into a pending admin verification session.
+            $pendingAdmin = [
+                'id' => $userId,
+                'role' => (string) ($user['role'] ?? 'admin'),
+                'nom' => (string) ($user['nom'] ?? ''),
+                'prenom' => (string) ($user['prenom'] ?? ''),
+                'email' => (string) ($user['email'] ?? '')
             ];
 
-            if (!isset($allowed[$mime])) {
-                throw new RuntimeException('Format image non supporte. Utilisez JPG, PNG ou WEBP.');
+            unset($_SESSION['user_id'], $_SESSION['user_role'], $_SESSION['user_nom'], $_SESSION['user_prenom'], $_SESSION['user_email']);
+            $_SESSION['pending_admin_user'] = $pendingAdmin;
+
+            ActivityLogger::log($userId, 'Securite', "Reinitialisation de l'empreinte faciale admin.");
+            header('Location: admin-face-verify.php');
+            exit;
+        } catch (Throwable $exception) {
+            $feedback = $exception->getMessage();
+            $feedbackType = 'error';
+        }
+    } else {
+        $nom = trim((string) ($_POST['nom'] ?? ''));
+        $prenom = trim((string) ($_POST['prenom'] ?? ''));
+        $email = trim((string) ($_POST['email'] ?? ''));
+        $telephone = trim((string) ($_POST['telephone'] ?? ''));
+        $password = trim((string) ($_POST['mot_de_passe'] ?? ''));
+        $removePhoto = ((string) ($_POST['remove_photo'] ?? '0')) === '1';
+
+        try {
+            $oldUser = $user;
+            $newPhotoTmp = null;
+            $newPhotoExtension = null;
+
+            if (isset($_FILES['photo']) && $_FILES['photo']['error'] !== UPLOAD_ERR_NO_FILE) {
+                if ($_FILES['photo']['error'] !== UPLOAD_ERR_OK) {
+                    throw new RuntimeException('Erreur pendant l\'upload de la photo.');
+                }
+
+                $maxSize = 4 * 1024 * 1024;
+                if ((int) $_FILES['photo']['size'] > $maxSize) {
+                    throw new RuntimeException('Image trop volumineuse (max 4 Mo).');
+                }
+
+                $tmpPath = (string) ($_FILES['photo']['tmp_name'] ?? '');
+                if ($tmpPath === '' || !is_uploaded_file($tmpPath)) {
+                    throw new RuntimeException('Fichier upload invalide.');
+                }
+
+                $mime = (string) (finfo_file(finfo_open(FILEINFO_MIME_TYPE), $tmpPath) ?: '');
+                $allowed = [
+                    'image/jpeg' => 'jpg',
+                    'image/png' => 'png',
+                    'image/webp' => 'webp'
+                ];
+
+                if (!isset($allowed[$mime])) {
+                    throw new RuntimeException('Format image non supporte. Utilisez JPG, PNG ou WEBP.');
+                }
+
+                $newPhotoTmp = $tmpPath;
+                $newPhotoExtension = $allowed[$mime];
             }
 
-            $newPhotoTmp = $tmpPath;
-            $newPhotoExtension = $allowed[$mime];
-        }
+            $controller->updateUser(
+                $userId,
+                $nom,
+                $prenom,
+                $email,
+                $telephone,
+                (string) ($user['role'] ?? 'client'),
+                $password !== '' ? $password : null
+            );
 
-        $controller->updateUser(
-            $userId,
-            $nom,
-            $prenom,
-            $email,
-            $telephone,
-            (string) ($user['role'] ?? 'client'),
-            $password !== '' ? $password : null
-        );
-
-        if ($removePhoto) {
-            deleteUserPhotoFiles($userId, $photoDir);
-        }
-
-        if ($newPhotoTmp !== null && $newPhotoExtension !== null) {
-            deleteUserPhotoFiles($userId, $photoDir);
-            $targetPath = $photoDir . DIRECTORY_SEPARATOR . 'user_' . $userId . '.' . $newPhotoExtension;
-            if (!move_uploaded_file($newPhotoTmp, $targetPath)) {
-                throw new RuntimeException('Impossible d\'enregistrer la photo de profil.');
+            if ($removePhoto) {
+                deleteUserPhotoFiles($userId, $photoDir);
             }
+
+            if ($newPhotoTmp !== null && $newPhotoExtension !== null) {
+                deleteUserPhotoFiles($userId, $photoDir);
+                $targetPath = $photoDir . DIRECTORY_SEPARATOR . 'user_' . $userId . '.' . $newPhotoExtension;
+                if (!move_uploaded_file($newPhotoTmp, $targetPath)) {
+                    throw new RuntimeException('Impossible d\'enregistrer la photo de profil.');
+                }
+            }
+
+            $user = $controller->getUserById($userId);
+            if (!$user) {
+                throw new RuntimeException('Utilisateur introuvable apres mise a jour.');
+            }
+
+            $_SESSION['user_role'] = (string) ($user['role'] ?? 'client');
+            $_SESSION['user_nom'] = (string) ($user['nom'] ?? '');
+            $_SESSION['user_prenom'] = (string) ($user['prenom'] ?? '');
+            $_SESSION['user_email'] = (string) ($user['email'] ?? '');
+
+            $profileChanged = (
+                (string) ($oldUser['nom'] ?? '') !== (string) ($user['nom'] ?? '') ||
+                (string) ($oldUser['prenom'] ?? '') !== (string) ($user['prenom'] ?? '') ||
+                (string) ($oldUser['email'] ?? '') !== (string) ($user['email'] ?? '') ||
+                (string) ($oldUser['telephone'] ?? '') !== (string) ($user['telephone'] ?? '') ||
+                $password !== ''
+            );
+
+            if ($profileChanged) {
+                ActivityLogger::log($userId, 'Profil', 'Mise a jour du profil utilisateur.');
+            }
+
+            if ($newPhotoTmp !== null && $newPhotoExtension !== null) {
+                ActivityLogger::log($userId, 'Photo', "Ajout d'une photo de profil.");
+            } elseif ($removePhoto) {
+                ActivityLogger::log($userId, 'Photo', "Suppression de la photo de profil.");
+            }
+
+            $feedback = 'Profil mis a jour avec succes.';
+            $feedbackType = 'success';
+        } catch (Throwable $exception) {
+            $feedback = $exception->getMessage();
+            $feedbackType = 'error';
+
+            $user['nom'] = $nom;
+            $user['prenom'] = $prenom;
+            $user['email'] = $email;
+            $user['telephone'] = $telephone;
         }
-
-        $user = $controller->getUserById($userId);
-        if (!$user) {
-            throw new RuntimeException('Utilisateur introuvable apres mise a jour.');
-        }
-
-        $_SESSION['user_role'] = (string) ($user['role'] ?? 'client');
-        $_SESSION['user_nom'] = (string) ($user['nom'] ?? '');
-        $_SESSION['user_prenom'] = (string) ($user['prenom'] ?? '');
-        $_SESSION['user_email'] = (string) ($user['email'] ?? '');
-
-        $profileChanged = (
-            (string) ($oldUser['nom'] ?? '') !== (string) ($user['nom'] ?? '') ||
-            (string) ($oldUser['prenom'] ?? '') !== (string) ($user['prenom'] ?? '') ||
-            (string) ($oldUser['email'] ?? '') !== (string) ($user['email'] ?? '') ||
-            (string) ($oldUser['telephone'] ?? '') !== (string) ($user['telephone'] ?? '') ||
-            $password !== ''
-        );
-
-        if ($profileChanged) {
-            ActivityLogger::log($userId, 'Profil', 'Mise a jour du profil utilisateur.');
-        }
-
-        if ($newPhotoTmp !== null && $newPhotoExtension !== null) {
-            ActivityLogger::log($userId, 'Photo', "Ajout d'une photo de profil.");
-        } elseif ($removePhoto) {
-            ActivityLogger::log($userId, 'Photo', "Suppression de la photo de profil.");
-        }
-
-        $feedback = 'Profil mis a jour avec succes.';
-        $feedbackType = 'success';
-    } catch (Throwable $exception) {
-        $feedback = $exception->getMessage();
-        $feedbackType = 'error';
-
-        $user['nom'] = $nom;
-        $user['prenom'] = $prenom;
-        $user['email'] = $email;
-        $user['telephone'] = $telephone;
     }
 }
 
@@ -244,6 +325,10 @@ if ($currentPhotoPath) {
     $currentPhotoUrl = $photoWebDir . '/' . basename($currentPhotoPath) . '?v=' . (string) @filemtime($currentPhotoPath);
 }
 $initials = getInitials($user);
+$mobileOpenUrl = frontofficeBaseUrl() . '/index.php';
+$qrCodeUrl = 'https://api.qrserver.com/v1/create-qr-code/?size=220x220&data=' . rawurlencode($mobileOpenUrl);
+$mobileHost = strtolower((string) (parse_url($mobileOpenUrl, PHP_URL_HOST) ?? ''));
+$mobileUrlIsLocal = in_array($mobileHost, ['localhost', '127.0.0.1', '::1'], true);
 ?>
 <!DOCTYPE html>
 <html lang="fr">
@@ -367,6 +452,19 @@ $initials = getInitials($user);
                 <p><?= h($user['email'] ?? '') ?></p>
                 <p class="profile-help">Role: <?= h(ucfirst((string) ($user['role'] ?? 'client'))) ?></p>
                 <p class="profile-help">Statut: <?= h(ucfirst((string) ($user['statut_compte'] ?? 'actif'))) ?></p>
+                <?php if (strtolower((string) ($user['role'] ?? 'client')) === 'admin'): ?>
+                  <form method="post" action="profile.php" style="margin-top: 12px;">
+                    <input type="hidden" name="action" value="reset_face_template" />
+                    <button
+                      class="btn btn-secondary"
+                      type="submit"
+                      onclick="return confirm('Reinitialiser l empreinte faciale admin ? Un nouvel enrolement sera demande a la prochaine connexion.');"
+                    >
+                      Reinitialiser empreinte faciale
+                    </button>
+                    <p class="profile-help" style="margin-top:8px;">Cette action force un nouvel enrôlement facial a la prochaine connexion admin.</p>
+                  </form>
+                <?php endif; ?>
               </div>
 
               <div class="sidebar-card fade-up">
@@ -412,6 +510,22 @@ $initials = getInitials($user);
                   <li><a href="../backoffice/gestion-accompagnements.php">Dashboard</a></li>
                   <?php endif; ?>
                 </ul>
+              </div>
+
+              <div class="sidebar-card fade-up">
+                <h3>Acces mobile</h3>
+                <p class="profile-help">Scannez ce QR code pour ouvrir le site sur votre telephone.</p>
+                <?php if ($mobileUrlIsLocal): ?>
+                  <p class="profile-help" style="color:#d64b6a;">
+                    URL locale detectee (<?= h($mobileHost) ?>). Configurez `SECONDVOICE_PUBLIC_BASE_URL` avec l'IP LAN de votre PC pour ouvrir depuis telephone.
+                  </p>
+                <?php endif; ?>
+                <img
+                  src="<?= h($qrCodeUrl) ?>"
+                  alt="QR code vers le site SecondVoice"
+                  style="width: 100%; max-width: 220px; border-radius: 12px; border: 1px solid rgba(255,255,255,0.15); margin: 10px 0;"
+                />
+                <p class="profile-help" style="word-break: break-all;"><?= h($mobileOpenUrl) ?></p>
               </div>
             </aside>
           </div>

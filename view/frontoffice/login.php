@@ -29,6 +29,11 @@ if (isset($_GET['action']) && $_GET['action'] === 'session-role') {
 require_once __DIR__ . '/../../controller/UtilisateurController.php';
 require_once __DIR__ . '/../../controller/ActivityLogger.php';
 
+if (isset($_SESSION['pending_admin_user']) && is_array($_SESSION['pending_admin_user'])) {
+    header('Location: admin-face-verify.php');
+    exit;
+}
+
 if (isset($_SESSION['user_id'])) {
     header('Location: profile.php');
     exit;
@@ -54,6 +59,93 @@ function ensureImageCaptchaCode(): void
     }
 
     $_SESSION['client_login_image_captcha_code'] = $code;
+}
+
+function normalizeAgentKeyValue(string $raw): string
+{
+    $value = preg_replace('/^\xEF\xBB\xBF/', '', $raw);
+    if ($value === null) {
+        $value = $raw;
+    }
+
+    $value = str_replace(["\r\n", "\r"], "\n", $value);
+    $lines = explode("\n", $value);
+    foreach ($lines as $line) {
+        $line = trim($line);
+        if ($line !== '') {
+            return $line;
+        }
+    }
+
+    return '';
+}
+
+function readAgentServerKey(): string
+{
+    $pathFromEnv = trim((string) (getenv('SECONDVOICE_AGENT_KEY_FILE') ?: ''));
+    $candidatePaths = [];
+
+    if ($pathFromEnv !== '') {
+        $candidatePaths[] = $pathFromEnv;
+    }
+    $candidatePaths[] = __DIR__ . '/../../Agent-key.txt';
+
+    foreach ($candidatePaths as $path) {
+        if (!is_file($path) || !is_readable($path)) {
+            continue;
+        }
+
+        $raw = file_get_contents($path);
+        if ($raw === false) {
+            continue;
+        }
+
+        $key = normalizeAgentKeyValue($raw);
+        if ($key !== '') {
+            return $key;
+        }
+    }
+
+    throw new RuntimeException("Fichier de cle agent introuvable ou vide.");
+}
+
+function readUploadedAgentKey(): string
+{
+    if (!isset($_FILES['auth_key_file']) || !is_array($_FILES['auth_key_file'])) {
+        throw new InvalidArgumentException("Le fichier de cle agent est obligatoire.");
+    }
+
+    $upload = $_FILES['auth_key_file'];
+    $error = (int) ($upload['error'] ?? UPLOAD_ERR_NO_FILE);
+    if ($error === UPLOAD_ERR_NO_FILE) {
+        throw new InvalidArgumentException("Le fichier de cle agent est obligatoire.");
+    }
+    if ($error !== UPLOAD_ERR_OK) {
+        throw new RuntimeException("Echec de lecture du fichier de cle agent.");
+    }
+
+    $tmpName = (string) ($upload['tmp_name'] ?? '');
+    if ($tmpName === '' || !is_uploaded_file($tmpName)) {
+        throw new RuntimeException("Fichier de cle agent invalide.");
+    }
+
+    $maxBytes = 8192;
+    $size = (int) ($upload['size'] ?? 0);
+    if ($size <= 0 || $size > $maxBytes) {
+        throw new InvalidArgumentException("Le fichier de cle agent est invalide.");
+    }
+
+    $content = file_get_contents($tmpName);
+    if ($content === false) {
+        throw new RuntimeException("Impossible de lire le fichier de cle agent.");
+    }
+
+    $key = normalizeAgentKeyValue($content);
+    if ($key === '') {
+        throw new InvalidArgumentException("Le fichier de cle agent est vide.");
+    }
+
+    return $key;
 }
 
 $feedback = '';
@@ -89,8 +181,7 @@ if (isset($_GET['status']) && $_GET['status'] === 'reset_link_sent') {
     $feedback = 'Si cet e-mail existe, un lien de reinitialisation a ete envoye.';
 }
 if (isset($_GET['status']) && $_GET['status'] === 'reset_link_sent_log') {
-    $feedback = "Lien genere mais e-mail non envoye. Verifiez la config e-mail ou consultez storage/mail/outbox.log.";
-    $feedbackType = 'error';
+    $feedback = "Si ce compte est eligible, un lien de reinitialisation est envoye. Sinon, verifiez la config e-mail.";
 }
 if (isset($_GET['status']) && $_GET['status'] === 'password_reset_done') {
     $feedback = 'Mot de passe mis a jour. Connectez-vous avec le nouveau mot de passe.';
@@ -106,7 +197,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $emailValue = trim((string) ($_POST['email'] ?? ''));
     $password = (string) ($_POST['password'] ?? '');
     $loginMode = (string) ($_POST['login_mode'] ?? 'client');
-    $authKey = trim((string) ($_POST['auth_key'] ?? ''));
     $captchaInput = strtoupper(trim((string) ($_POST['captcha_code'] ?? '')));
 
     try {
@@ -146,20 +236,30 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
 
         if ($loginMode === 'agent') {
-            $agentKey = getenv('SECONDVOICE_AGENT_KEY') ?: 'SV-AGENT-2026';
+            $agentKey = readAgentServerKey();
+            $uploadedAgentKey = readUploadedAgentKey();
             $role = strtolower((string) ($user['role'] ?? ''));
 
-            if ($authKey === '') {
-                throw new InvalidArgumentException("La cle d'authentification est obligatoire pour un agent.");
-            }
-
-            if (!hash_equals($agentKey, $authKey)) {
-                throw new RuntimeException("Cle d'authentification invalide.");
+            if (!hash_equals($agentKey, $uploadedAgentKey)) {
+                throw new RuntimeException("Fichier de cle agent invalide.");
             }
 
             if ($role !== 'agent' && $role !== 'admin') {
                 throw new RuntimeException("Ce compte n'a pas les droits agent.");
             }
+        }
+
+        $role = strtolower((string) ($user['role'] ?? 'client'));
+        if ($role === 'admin') {
+            $_SESSION['pending_admin_user'] = [
+                'id' => (int) ($user['id'] ?? 0),
+                'role' => (string) ($user['role'] ?? 'admin'),
+                'nom' => (string) ($user['nom'] ?? ''),
+                'prenom' => (string) ($user['prenom'] ?? ''),
+                'email' => (string) ($user['email'] ?? '')
+            ];
+            header('Location: admin-face-verify.php');
+            exit;
         }
 
         $_SESSION['user_id'] = (int) $user['id'];
@@ -242,10 +342,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         <section class="auth-panel is-active">
           <h3 id="login-title" class="auth-title"><?= $loginMode === 'agent' ? 'Connexion agent' : 'Connexion utilisateur' ?></h3>
           <p id="login-helper" class="auth-helper">
-            <?= $loginMode === 'agent' ? "Saisissez vos identifiants agent et la cle d'authentification." : 'Saisissez vos identifiants.' ?>
+            <?= $loginMode === 'agent' ? "Saisissez vos identifiants agent et importez le fichier de cle." : 'Saisissez vos identifiants.' ?>
           </p>
 
-          <form class="auth-form" id="login-form" action="login.php" method="post" novalidate>
+          <form class="auth-form" id="login-form" action="login.php" method="post" enctype="multipart/form-data" novalidate>
             <input type="hidden" name="login_mode" id="login-mode" value="<?= h($loginMode) ?>" />
             <input class="field" type="text" name="email" value="<?= h($emailValue) ?>" placeholder="Adresse e-mail" />
             <p class="field-error" data-error-for="email"></p>
@@ -274,13 +374,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             <p class="field-error" id="captcha-error" data-error-for="captcha" style="<?= $loginMode === 'agent' ? 'display:none;' : '' ?>"></p>
             <input
               class="field"
-              type="text"
-              name="auth_key"
-              id="auth-key-field"
-              placeholder="Cle d'authentification"
+              type="file"
+              name="auth_key_file"
+              id="auth-key-file-field"
+              accept=".txt,.key,text/plain"
               style="<?= $loginMode === 'agent' ? '' : 'display:none;' ?>"
             />
-            <p class="field-error" id="auth-key-error" data-error-for="auth_key" style="<?= $loginMode === 'agent' ? '' : 'display:none;' ?>"></p>
+            <p class="field-error" id="auth-key-error" data-error-for="auth_key_file" style="<?= $loginMode === 'agent' ? '' : 'display:none;' ?>"></p>
 
             <p id="login-feedback" class="auth-feedback <?= $feedbackType === 'error' ? 'error' : '' ?>"><?= h($feedback) ?></p>
             <div style="display:flex; gap:12px; flex-wrap:wrap;">
@@ -331,7 +431,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         const clientBtn = document.getElementById("login-client-btn");
         const agentBtn = document.getElementById("login-agent-btn");
         const loginModeInput = document.getElementById("login-mode");
-        const authKeyField = document.getElementById("auth-key-field");
+        const authKeyFileField = document.getElementById("auth-key-file-field");
         const authKeyError = document.getElementById("auth-key-error");
         const captchaContainer = document.getElementById("captcha-container");
         const captchaError = document.getElementById("captcha-error");
@@ -343,7 +443,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         const fieldErrors = {
           email: form.querySelector('[data-error-for="email"]'),
           password: form.querySelector('[data-error-for="password"]'),
-          auth_key: form.querySelector('[data-error-for="auth_key"]'),
+          auth_key_file: form.querySelector('[data-error-for="auth_key_file"]'),
           captcha: form.querySelector('[data-error-for="captcha"]')
         };
 
@@ -360,20 +460,30 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
         function setAgentMode(active) {
           if (loginModeInput) loginModeInput.value = active ? "agent" : "client";
-          if (authKeyField) authKeyField.style.display = active ? "" : "none";
+          if (authKeyFileField) authKeyFileField.style.display = active ? "" : "none";
           if (authKeyError) authKeyError.style.display = active ? "" : "none";
           if (captchaContainer) captchaContainer.style.display = active ? "none" : "";
           if (captchaError) captchaError.style.display = active ? "none" : "";
           if (!active) {
-            setFieldError("auth_key", "");
+            setFieldError("auth_key_file", "");
           } else {
             setFieldError("captcha", "");
           }
           if (title) title.textContent = active ? "Connexion agent" : "Connexion utilisateur";
           if (helper) {
             helper.textContent = active
-              ? "Saisissez vos identifiants agent et la cle d'authentification."
+              ? "Saisissez vos identifiants agent et importez le fichier de cle."
               : "Saisissez vos identifiants.";
+          }
+          if (clientBtn) {
+            clientBtn.textContent = active ? "Passer au mode client" : "Se connecter en tant que client";
+            clientBtn.classList.toggle("btn-primary", !active);
+            clientBtn.classList.toggle("btn-secondary", active);
+          }
+          if (agentBtn) {
+            agentBtn.textContent = active ? "Se connecter en tant qu'agent" : "Passer au mode agent";
+            agentBtn.classList.toggle("btn-primary", active);
+            agentBtn.classList.toggle("btn-secondary", !active);
           }
         }
 
@@ -381,7 +491,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
           clearFieldErrors();
           const email = (form.email.value || "").trim();
           const password = form.password.value || "";
-          const authKey = authKeyField ? (authKeyField.value || "").trim() : "";
+          const hasAuthKeyFile = authKeyFileField && authKeyFileField.files && authKeyFileField.files.length > 0;
           const captchaCode = captchaCodeField ? (captchaCodeField.value || "").trim() : "";
           const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
@@ -397,8 +507,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             hasError = true;
           }
 
-          if (agentMode && !authKey) {
-            setFieldError("auth_key", "La cle d'authentification est obligatoire.");
+          if (agentMode && !hasAuthKeyFile) {
+            setFieldError("auth_key_file", "Le fichier de cle agent est obligatoire.");
             hasError = true;
           }
 
@@ -420,7 +530,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
         if (clientBtn) {
           clientBtn.addEventListener("click", function () {
-            setAgentMode(false);
+            const isAgent = loginModeInput && loginModeInput.value === "agent";
+            if (isAgent) {
+              setAgentMode(false);
+              return;
+            }
+
             if (validateForm(false)) {
               form.submit();
             }
@@ -429,7 +544,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
         if (agentBtn) {
           agentBtn.addEventListener("click", function () {
-            setAgentMode(true);
+            const isAgent = loginModeInput && loginModeInput.value === "agent";
+            if (!isAgent) {
+              setAgentMode(true);
+              return;
+            }
+
             if (validateForm(true)) {
               form.submit();
             }
@@ -451,11 +571,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
           });
         }
 
-        if (authKeyField) {
-          authKeyField.addEventListener("input", function () {
+        if (authKeyFileField) {
+          authKeyFileField.addEventListener("change", function () {
             const isAgent = loginModeInput && loginModeInput.value === "agent";
-            const authKey = (authKeyField.value || "").trim();
-            setFieldError("auth_key", isAgent && !authKey ? "La cle d'authentification est obligatoire." : "");
+            const hasFile = authKeyFileField.files && authKeyFileField.files.length > 0;
+            setFieldError("auth_key_file", isAgent && !hasFile ? "Le fichier de cle agent est obligatoire." : "");
           });
         }
 

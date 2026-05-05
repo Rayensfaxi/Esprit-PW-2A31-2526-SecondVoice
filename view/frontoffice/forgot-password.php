@@ -33,8 +33,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     } else {
         try {
             $controller = new UtilisateurController();
-            $sent = $controller->requestPasswordReset($email, frontofficeBaseUrl() . '/reset-password.php');
-            header('Location: login.php?status=' . ($sent ? 'reset_link_sent' : 'reset_link_sent_log'));
+            $controller->requestPasswordReset($email, frontofficeBaseUrl() . '/reset-password.php');
+            // Message volontairement générique pour ne pas divulguer l'état du compte.
+            header('Location: login.php?status=reset_link_sent');
             exit;
         } catch (Throwable $exception) {
             $feedback = 'Une erreur est survenue. Reessayez plus tard.';
