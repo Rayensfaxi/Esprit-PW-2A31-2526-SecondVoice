@@ -1,0 +1,31 @@
+<svg width="640" height="420" viewBox="0 0 640 420" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <rect width="640" height="420" rx="28" fill="url(#bg)"/>
+  <rect x="28" y="32" width="236" height="356" rx="24" fill="#111A2E" stroke="#26304E"/>
+  <rect x="284" y="32" width="328" height="160" rx="24" fill="url(#art1)"/>
+  <rect x="284" y="212" width="152" height="176" rx="24" fill="url(#art2)"/>
+  <rect x="456" y="212" width="156" height="176" rx="24" fill="url(#art3)"/>
+  <rect x="52" y="66" width="188" height="16" rx="8" fill="#6D74A1"/>
+  <rect x="52" y="102" width="188" height="82" rx="18" fill="#1A2240"/>
+  <rect x="52" y="204" width="88" height="14" rx="7" fill="#8C95B9" fill-opacity="0.52"/>
+  <rect x="52" y="228" width="162" height="14" rx="7" fill="#586387" fill-opacity="0.52"/>
+  <rect x="52" y="266" width="188" height="50" rx="16" fill="#635BFF"/>
+  <defs>
+    <linearGradient id="bg" x1="54" y1="28" x2="572" y2="392" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#181F3B"/>
+      <stop offset="1" stop-color="#09101E"/>
+    </linearGradient>
+    <linearGradient id="art1" x1="284" y1="32" x2="612" y2="192" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#FF9D66"/>
+      <stop offset="0.52" stop-color="#FF5AB3"/>
+      <stop offset="1" stop-color="#6B61FF"/>
+    </linearGradient>
+    <linearGradient id="art2" x1="284" y1="212" x2="436" y2="388" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#37E2BA"/>
+      <stop offset="1" stop-color="#2557F3"/>
+    </linearGradient>
+    <linearGradient id="art3" x1="456" y1="212" x2="612" y2="388" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#5FD7FF"/>
+      <stop offset="1" stop-color="#13274D"/>
+    </linearGradient>
+  </defs>
+</svg>

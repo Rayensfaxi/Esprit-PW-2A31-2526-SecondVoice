@@ -1,0 +1,24 @@
+# Local-only files (don't push)
+qr_tunnel.txt
+cloudflared.exe
+*.log
+
+# OS junk
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# PHP local
+.env
+vendor/
+composer.lock
+
+# Temp
+*.tmp
+*~
