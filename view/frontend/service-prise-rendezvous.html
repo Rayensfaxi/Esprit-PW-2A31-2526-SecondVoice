@@ -1,0 +1,265 @@
+﻿<!DOCTYPE html>
+<html lang="fr">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Prise de rendez-vous | SecondVoice</title>
+    <link rel="icon" type="image/png" sizes="32x32" href="assets/media/favicon-32.png" />
+    <link rel="icon" type="image/png" sizes="16x16" href="assets/media/favicon-16.png" />
+    <link rel="apple-touch-icon" href="assets/media/apple-touch-icon.png" />
+    <link rel="shortcut icon" href="assets/media/favicon.png" />
+    <script>
+      const savedTheme = localStorage.getItem("theme");
+      const initialTheme =
+        savedTheme || (window.matchMedia("(prefers-color-scheme: light)").matches ? "light" : "dark");
+      document.documentElement.dataset.theme = initialTheme;
+    </script>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=Space+Grotesk:wght@500;700&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="assets/css/style.css" />
+  </head>
+  <body>
+    <div class="page-shell">
+      <header class="site-header">
+        <div class="container nav-inner">
+          <a class="brand" href="index.html"><img class="brand-logo" src="assets/media/secondvoice-logo.png" alt="SecondVoice logo" /></a>
+          <button class="menu-toggle" type="button" data-menu-toggle aria-label="Ouvrir le menu">
+            <span class="icon-lines"></span>
+          </button>
+          <div class="nav" data-nav>
+            <nav>
+              <ul class="nav-links">
+                <li><a href="index.html">Accueil</a></li>
+                <li><a href="about.html">A propos</a></li>
+                <li><a class="is-active" href="services.html">Services</a></li>
+                <li><a href="blog.html">Blog</a></li>
+                <li><a href="contact.html">Contact</a></li>
+              </ul>
+            </nav>
+            <div class="header-actions">
+              <button class="icon-btn theme-toggle" type="button" data-theme-toggle aria-label="Changer le theme">
+                <span class="theme-toggle-label" data-theme-label>Clair</span>
+              </button>
+              <div class="user-shell" data-user-shell>
+                <a class="icon-btn user-trigger" href="login.html" aria-label="Ouvrir la page de connexion"><span>Profil</span></a>
+                <div class="user-backdrop"></div>
+                <div class="user-panel">
+                  <div class="user-panel-head">
+                    <div class="user-panel-intro">
+                      <div class="user-avatar">JT</div>
+                      <div>
+                        <p class="user-panel-title">Bon retour</p>
+                        <p class="user-modal-copy">Connectez-vous pour acceder a vos projets, factures et demandes de support.</p>
+                      </div>
+                    </div>
+                    <button class="icon-btn user-close" type="button" data-user-close aria-label="Fermer la fenetre utilisateur">X</button>
+                  </div>
+                  <div class="auth-tabs">
+                    <a class="auth-tab is-active" href="login.html">Connexion</a>
+                    <a class="auth-tab" href="register.html">Inscription</a>
+                  </div>
+                  <section class="auth-panel is-active" data-auth-panel="login">
+                    <h3 class="auth-title">Connexion Client</h3>
+                    <p class="auth-helper">Utilisez votre e-mail et mot de passe pour continuer.</p>
+                    <form class="auth-form">
+                      <input class="field" type="email" placeholder="Adresse e-mail" />
+                      <input class="field" type="password" placeholder="Mot de passe" />
+                      <div class="auth-options">
+                        <label class="check-row"><input type="checkbox" /> Se souvenir de moi</label>
+                        <a href="contact.html">Mot de passe oublie ?</a>
+                      </div>
+                      <button class="btn btn-primary" type="button">Se connecter</button>
+                    </form>
+                    <div class="user-panel-footer">
+                      <a class="btn btn-secondary" href="contact.html">Support client</a>
+                    </div>
+                  </section>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </header>
+
+      <main>
+        <section class="page-hero">
+          <div class="container">
+            <div class="page-hero-card fade-up">
+              <div class="breadcrumbs"><span>Accueil</span><span>/</span><span>Services</span><span>/</span><span>Prise de rendez-vous</span></div>
+              <h1>Planifiez votre rendez-vous en quelques clics.</h1>
+              <p>
+                Choisissez votre service, votre assistant et l'horaire qui vous convient le mieux.
+              </p>
+            </div>
+          </div>
+        </section>
+
+        <section class="section">
+          <div class="container service-layout">
+            <div class="post-content fade-up">
+              <div class="post-hero">
+                <div class="post-hero-content">
+                  <div class="tag">Formulaire de réservation</div>
+                  <h2>Détails du rendez-vous</h2>
+                  <p>
+                    Merci de remplir les informations ci-dessous pour confirmer votre demande.
+                  </p>
+                </div>
+              </div>
+              
+              <form class="auth-form" style="max-width: 100%; margin-top: 2.5rem;">
+                <div class="input-row" style="display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; margin-bottom: 2rem;">
+                  <div>
+                    <label style="display: block; margin-bottom: 0.75rem; font-weight: 600; color: var(--text); opacity: 0.9;">Service souhaité</label>
+                    <select class="field" style="width: 100%;" required>
+                      <option value="" disabled selected>Choisir un service...</option>
+                      <option value="accompagnement">Accompagnement administratif</option>
+                      <option value="suivi">Suivi de dossier</option>
+                      <option value="reclamation">Gestion de réclamation</option>
+                      <option value="support">Support technique</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label style="display: block; margin-bottom: 0.75rem; font-weight: 600; color: var(--text); opacity: 0.9;">Assistant préféré</label>
+                    <select class="field" style="width: 100%;" required>
+                      <option value="" disabled selected>Choisir un assistant...</option>
+                      <option value="amira">Amira Selmi (Administration)</option>
+                      <option value="nour">Nour Kammoun (Social)</option>
+                      <option value="hichem">Hichem Ben Ali (Technique)</option>
+                    </select>
+                  </div>
+                </div>
+
+                <div class="input-row" style="display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; margin-bottom: 2rem;">
+                  <div>
+                    <label style="display: block; margin-bottom: 0.75rem; font-weight: 600; color: var(--text); opacity: 0.9;">Date du rendez-vous</label>
+                    <input class="field" type="date" style="width: 100%;" required />
+                  </div>
+                  <div>
+                    <label style="display: block; margin-bottom: 0.75rem; font-weight: 600; color: var(--text); opacity: 0.9;">Heure du rendez-vous</label>
+                    <input class="field" type="time" style="width: 100%;" required />
+                  </div>
+                </div>
+
+                <div style="margin-bottom: 2rem;">
+                  <label style="display: block; margin-bottom: 0.75rem; font-weight: 600; color: var(--text); opacity: 0.9;">Mode du rendez-vous</label>
+                  <div style="display: flex; gap: 3rem; flex-wrap: wrap;">
+                    <label class="check-row"><input type="radio" name="mode" value="presentiel" checked /> Présentiel</label>
+                    <label class="check-row"><input type="radio" name="mode" value="ligne" /> En ligne (Visioconférence)</label>
+                  </div>
+                </div>
+
+                <div style="margin-bottom: 2.5rem;">
+                  <label style="display: block; margin-bottom: 0.75rem; font-weight: 600; color: var(--text); opacity: 0.9;">Remarques ou précisions</label>
+                  <textarea class="field" placeholder="Expliquez brièvement l'objet de votre rendez-vous..." style="width: 100%; min-height: 140px; resize: vertical;"></textarea>
+                </div>
+
+                <div style="display: flex; justify-content: flex-end; gap: 1rem;">
+                  <button class="btn btn-primary" type="submit">Confirmer le rendez-vous</button>
+                </div>
+              </form>
+
+              <!-- Section Mes rendez-vous -->
+              <div style="margin-top: 5rem;">
+                <div class="post-hero">
+                  <div class="post-hero-content">
+                    <div class="tag">Mon Suivi</div>
+                    <h2>Mes rendez-vous</h2>
+                    <p>
+                      Consultez, modifiez ou annulez vos rendez-vous en cours. Seuls les rendez-vous non confirmés sont modifiables.
+                    </p>
+                  </div>
+                </div>
+
+                <div style="display: flex; flex-direction: column; gap: 1.5rem; margin-top: 3rem;">
+                  <!-- RDV 1: Confirmé (Non modifiable) -->
+                  <div class="appointment-card">
+                    <div class="appointment-header">
+                      <div class="appointment-info">
+                        <span class="status-badge confirmed">Confirmé</span>
+                        <h4>Accompagnement administratif</h4>
+                        <p style="margin: 0; color: var(--muted); font-size: 0.95rem;">Assistant : <strong>Nour Kammoun</strong></p>
+                      </div>
+                      <div class="appointment-meta">
+                        <p style="margin: 0; font-weight: 700; font-size: 1.1rem; color: var(--primary);">15 Avril 2026</p>
+                        <p style="margin: 0; font-weight: 600;">14:30</p>
+                        <p style="margin: 0.25rem 0 0; color: var(--muted); font-size: 0.85rem;">Mode : Présentiel</p>
+                      </div>
+                    </div>
+                    <div class="appointment-footer">
+                      <p style="font-size: 0.85rem; color: var(--muted); font-style: italic; margin: 0;">Ce rendez-vous est déjà confirmé.</p>
+                      <div class="appointment-actions">
+                         <button class="btn btn-secondary" type="button" style="padding: 0.5rem 1rem; font-size: 0.85rem; opacity: 0.5; cursor: not-allowed;" disabled>Modifier</button>
+                         <button class="btn btn-secondary" type="button" style="padding: 0.5rem 1rem; font-size: 0.85rem;">Détails</button>
+                      </div>
+                    </div>
+                  </div>
+
+                  <!-- RDV 2: En attente (Modifiable) -->
+                  <div class="appointment-card">
+                    <div class="appointment-header">
+                      <div class="appointment-info">
+                        <span class="status-badge pending">En attente</span>
+                        <h4>Suivi de dossier</h4>
+                        <p style="margin: 0; color: var(--muted); font-size: 0.95rem;">Assistant : <strong>Hichem Ben Ali</strong></p>
+                      </div>
+                      <div class="appointment-meta">
+                        <p style="margin: 0; font-weight: 700; font-size: 1.1rem; color: var(--primary);">18 Avril 2026</p>
+                        <p style="margin: 0; font-weight: 600;">10:00</p>
+                        <p style="margin: 0.25rem 0 0; color: var(--muted); font-size: 0.85rem;">Mode : En ligne</p>
+                      </div>
+                    </div>
+                    <div class="appointment-footer">
+                      <p style="font-size: 0.85rem; color: var(--muted); margin: 0;">Vous pouvez encore modifier ce rendez-vous.</p>
+                      <div class="appointment-actions">
+                        <button class="btn btn-secondary" type="button" style="padding: 0.5rem 1rem; font-size: 0.85rem;">Modifier</button>
+                        <button class="btn btn-primary" type="button" style="padding: 0.5rem 1rem; font-size: 0.85rem; background: #ff6b6b; border-color: #ff6b6b;">Annuler</button>
+                        <button class="btn btn-secondary" type="button" style="padding: 0.5rem 1rem; font-size: 0.85rem;">Détails</button>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <aside class="sidebar">
+              <div class="sidebar-card fade-up">
+                <h3>Récapitulatif</h3>
+                <ul class="footer-list">
+                  <li><strong>Lieu :</strong> Siège Social ou Meet</li>
+                  <li><strong>Durée :</strong> 30 à 45 minutes</li>
+                  <li><strong>Confirmation :</strong> Immédiate par e-mail</li>
+                  <li><strong>Rappel :</strong> 24h avant par SMS</li>
+                </ul>
+              </div>
+              <div class="sidebar-card fade-up">
+                <h3>Besoin d'aide ?</h3>
+                <p>Si vous ne trouvez pas de créneau disponible, contactez notre support direct.</p>
+                <a class="btn btn-primary" href="contact.html">Contacter le support</a>
+              </div>
+            </aside>
+          </div>
+        </section>
+      </main>
+
+      <footer class="footer">
+        <div class="container">
+          <div class="footer-bottom">
+            <span>&copy; 2026 SecondVoice. Tous droits reserves.</span>
+            <div class="footer-links"><a href="services.html">Services</a><a href="contact.html">Contact</a></div>
+          </div>
+        </div>
+      </footer>
+    </div>
+    <script src="assets/js/main.js"></script>
+  </body>
+</html>
+
+
+
+
+
