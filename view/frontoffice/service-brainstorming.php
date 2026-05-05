@@ -134,6 +134,7 @@ function statusClass(string $status): string
       rel="stylesheet"
     />
     <link rel="stylesheet" href="assets/css/style.css" />
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <style>
       .brainstorming-container {
         display: grid;
@@ -628,6 +629,34 @@ function statusClass(string $status): string
             }
           });
         });
+
+        // Show SweetAlert on success
+        <?php if ($submitted): ?>
+        Swal.fire({
+          title: "Succès!",
+          text: "Votre brainstorming a ete ajoute avec succes.",
+          icon: "success",
+          draggable: true
+        });
+        <?php endif; ?>
+
+        <?php if ($updated): ?>
+        Swal.fire({
+          title: "Succès!",
+          text: "Votre brainstorming a ete modifie avec succes.",
+          icon: "success",
+          draggable: true
+        });
+        <?php endif; ?>
+
+        <?php if ($deleted): ?>
+        Swal.fire({
+          title: "Succès!",
+          text: "Le brainstorming a ete supprime avec succes.",
+          icon: "success",
+          draggable: true
+        });
+        <?php endif; ?>
       })();
     </script>
   </body>

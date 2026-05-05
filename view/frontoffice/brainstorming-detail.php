@@ -6,9 +6,11 @@ session_start();
 require_once __DIR__ . '/../../config.php';
 require_once __DIR__ . '/../../controller/BrainstormingController.php';
 require_once __DIR__ . '/../../controller/IdeaController.php';
+require_once __DIR__ . '/../../controller/VoteController.php';
 
 $brainstormingController = new BrainstormingController();
 $ideaController = new IdeaController();
+$voteController = new VoteController();
 
 $currentUserId = (int) ($_SESSION['user_id'] ?? 0);
 $currentRole = strtolower((string) ($_SESSION['user_role'] ?? 'client'));
@@ -36,8 +38,10 @@ $generalError = '';
 $flashErrors = $_SESSION['idea_form_errors'] ?? null;
 $flashOldValues = $_SESSION['idea_form_old'] ?? null;
 $flashGeneralError = $_SESSION['idea_form_general_error'] ?? null;
+$voteError = $_SESSION['vote_error'] ?? null;
+$voteSuccess = $_SESSION['vote_success'] ?? null;
 
-unset($_SESSION['idea_form_errors'], $_SESSION['idea_form_old'], $_SESSION['idea_form_general_error']);
+unset($_SESSION['idea_form_errors'], $_SESSION['idea_form_old'], $_SESSION['idea_form_general_error'], $_SESSION['vote_error'], $_SESSION['vote_success']);
 
 $fieldErrors = [
     'contenu' => ''
@@ -54,6 +58,23 @@ if (is_string($flashGeneralError) && $flashGeneralError !== '') {
 }
 
 $ideas = $ideaController->getIdeasByBrainstormingId($brainstormingId);
+
+// Get vote status
+$isVoteOpen = $voteController->isVotePeriodOpen($brainstormingId);
+
+// Sort ideas: winners first, then by likes count
+usort($ideas, function($a, $b) {
+    $aIsWinner = (bool) ($a['is_winner'] ?? false);
+    $bIsWinner = (bool) ($b['is_winner'] ?? false);
+
+    if ($aIsWinner && !$bIsWinner) return -1;
+    if (!$aIsWinner && $bIsWinner) return 1;
+
+    $aLikes = (int) ($a['likes'] ?? 0);
+    $bLikes = (int) ($b['likes'] ?? 0);
+
+    return $bLikes <=> $aLikes;
+});
 
 function h(?string $value): string
 {
@@ -108,6 +129,7 @@ function getAuthorName(array $idea): string
       rel="stylesheet"
     />
     <link rel="stylesheet" href="assets/css/style.css" />
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <style>
       .detail-container {
         max-width: 900px;
@@ -301,6 +323,89 @@ function getAuthorName(array $idea): string
       .back-link:hover {
         text-decoration: underline;
       }
+
+      .idea-winner {
+        border-left-color: #fbbf24;
+        background: linear-gradient(135deg, rgba(251, 191, 36, 0.1), rgba(251, 191, 36, 0.05));
+      }
+
+      .winner-badge {
+        position: absolute;
+        top: 1rem;
+        right: 1rem;
+        font-size: 2rem;
+        filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.2));
+      }
+
+      .idea-votes {
+        margin-top: 1rem;
+        padding-top: 1rem;
+        border-top: 1px solid var(--color-border);
+      }
+
+      .vote-buttons {
+        display: flex;
+        gap: 0.5rem;
+      }
+
+      .vote-form {
+        display: inline;
+      }
+
+      .vote-btn {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.5rem;
+        padding: 0.5rem 1rem;
+        border: 1px solid var(--color-border);
+        border-radius: 6px;
+        background: var(--color-surface);
+        color: var(--color-text);
+        cursor: pointer;
+        font-size: 0.875rem;
+        transition: all 0.2s;
+      }
+
+      .vote-btn:hover {
+        background: var(--color-primary);
+        color: white;
+        border-color: var(--color-primary);
+      }
+
+      .vote-btn.active {
+        background: var(--color-primary);
+        color: white;
+        border-color: var(--color-primary);
+      }
+
+      .vote-display {
+        display: flex;
+        gap: 1rem;
+        font-size: 0.875rem;
+        color: var(--color-text-secondary);
+      }
+
+      .vote-closed {
+        padding: 0.5rem 1rem;
+        background: #f3f4f6;
+        border-radius: 6px;
+        color: #6b7280;
+        font-size: 0.875rem;
+        font-weight: 500;
+      }
+
+      .vote-own-idea {
+        padding: 0.5rem 1rem;
+        background: #fef3c7;
+        border-radius: 6px;
+        color: #92400e;
+        font-size: 0.875rem;
+        font-weight: 500;
+      }
+
+      .idea-card {
+        position: relative;
+      }
     </style>
   </head>
   <body>
@@ -422,6 +527,18 @@ function getAuthorName(array $idea): string
                 </div>
                 <?php endif; ?>
 
+                <?php if ($voteSuccess !== ''): ?>
+                <div class="success-message">
+                  <?= h($voteSuccess) ?>
+                </div>
+                <?php endif; ?>
+
+                <?php if ($voteError !== ''): ?>
+                <div class="error-message">
+                  <?= h($voteError) ?>
+                </div>
+                <?php endif; ?>
+
                 <?php if (count($ideas) === 0): ?>
                   <div class="no-ideas">
                     <p>Soyez le premier a partager une idee !</p>
@@ -429,12 +546,50 @@ function getAuthorName(array $idea): string
                 <?php else: ?>
                   <?php foreach ($ideas as $idea): ?>
                     <?php $canManageIdea = $currentUserId > 0 && (int) ($idea['user_id'] ?? 0) === $currentUserId; ?>
-                    <div class="idea-card">
+                    <?php $isIdeaAuthor = $canManageIdea; ?>
+                    <?php $canVoteOnIdea = $isConnected && !$isIdeaAuthor; ?>
+                    <?php $userVote = $canVoteOnIdea ? $voteController->getUserVote($currentUserId, (int) ($idea['id'] ?? 0)) : null; ?>
+                    <?php $isWinner = (bool) ($idea['is_winner'] ?? false); ?>
+                    <div class="idea-card <?php if ($isWinner) echo 'idea-winner'; ?>">
+                      <?php if ($isWinner): ?>
+                        <div class="winner-badge">🏆</div>
+                      <?php endif; ?>
                       <div class="idea-header">
                         <div class="idea-author"><?= h(getAuthorName($idea)) ?></div>
                         <div class="idea-date"><?= h(formatDateTime($idea['date_creation'])) ?></div>
                       </div>
                       <p class="idea-content"><?= h($idea['contenu']) ?></p>
+
+                      <!-- Vote Section -->
+                      <div class="idea-votes">
+                        <?php if (!$isVoteOpen): ?>
+                          <div class="vote-closed">Vote terminé</div>
+                        <?php elseif ($isIdeaAuthor): ?>
+                          <div class="vote-own-idea">Vous ne pouvez pas voter pour votre propre idée</div>
+                        <?php elseif ($canVoteOnIdea): ?>
+                          <div class="vote-buttons">
+                            <form method="POST" action="vote-submit.php" class="vote-form">
+                              <input type="hidden" name="idee_id" value="<?= (int) ($idea['id'] ?? 0) ?>" />
+                              <input type="hidden" name="brainstorming_id" value="<?= $brainstormingId ?>" />
+                              <input type="hidden" name="type" value="like" />
+                              <button type="submit" class="vote-btn vote-like <?php if ($userVote && $userVote['type'] === 'like') echo 'active'; ?>">👍 <?= (int) ($idea['likes'] ?? 0) ?></button>
+                            </form>
+                            <form method="POST" action="vote-submit.php" class="vote-form">
+                              <input type="hidden" name="idee_id" value="<?= (int) ($idea['id'] ?? 0) ?>" />
+                              <input type="hidden" name="brainstorming_id" value="<?= $brainstormingId ?>" />
+                              <input type="hidden" name="type" value="dislike" />
+                              <button type="submit" class="vote-btn vote-dislike <?php if ($userVote && $userVote['type'] === 'dislike') echo 'active'; ?>">👎 <?= (int) ($idea['dislikes'] ?? 0) ?></button>
+                            </form>
+                          </div>
+                        <?php else: ?>
+                          <!-- User is not connected -->
+                          <div class="vote-display">
+                            <span class="vote-count">👍 <?= (int) ($idea['likes'] ?? 0) ?></span>
+                            <span class="vote-count">👎 <?= (int) ($idea['dislikes'] ?? 0) ?></span>
+                          </div>
+                        <?php endif; ?>
+                      </div>
+
                       <?php if ($canManageIdea): ?>
                         <div class="idea-actions">
                           <a class="btn btn-secondary" href="brainstorming-detail.php?id=<?= $brainstormingId ?>&edit=<?= (int) ($idea['id'] ?? 0) ?>">Modifier</a>
@@ -513,6 +668,43 @@ function getAuthorName(array $idea): string
             }
           });
         });
+
+        // Show SweetAlert on success
+        <?php if ($submitted): ?>
+        Swal.fire({
+          title: "Succès!",
+          text: "Votre idee a ete soumise avec succes. Merci de votre contribution.",
+          icon: "success",
+          draggable: true
+        });
+        <?php endif; ?>
+
+        <?php if ($updated): ?>
+        Swal.fire({
+          title: "Succès!",
+          text: "Votre idee a ete modifiee avec succes.",
+          icon: "success",
+          draggable: true
+        });
+        <?php endif; ?>
+
+        <?php if ($deleted): ?>
+        Swal.fire({
+          title: "Succès!",
+          text: "L'idee a ete supprimee avec succes.",
+          icon: "success",
+          draggable: true
+        });
+        <?php endif; ?>
+
+        <?php if ($voteSuccess !== ''): ?>
+        Swal.fire({
+          title: "Succès!",
+          text: "<?= h($voteSuccess) ?>",
+          icon: "success",
+          draggable: true
+        });
+        <?php endif; ?>
       })();
     </script>
   </body>

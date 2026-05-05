@@ -278,4 +278,133 @@ class BrainstormingController
             }
         }
     }
+
+    public function getBrainstormingStatistics() {
+        $stats = [];
+
+        // Total brainstormings
+        $stmt = $this->conn->query("SELECT COUNT(*) as cnt FROM brainstorming");
+        $count = ($stmt) ? $stmt->fetchColumn(0) : 0;
+        $stats['total_brainstormings'] = (int) $count;
+
+        // Total ideas
+        $stmt = $this->conn->query("SELECT COUNT(*) as cnt FROM ideas");
+        $count = ($stmt) ? $stmt->fetchColumn(0) : 0;
+        $stats['total_ideas'] = (int) $count;
+
+        // Approved brainstormings
+        $stmt = $this->conn->query("SELECT COUNT(*) as cnt FROM brainstorming WHERE statut = 'approuve'");
+        $count = ($stmt) ? $stmt->fetchColumn(0) : 0;
+        $stats['approved_brainstormings'] = (int) $count;
+
+        // Pending brainstormings
+        $stmt = $this->conn->query("SELECT COUNT(*) as cnt FROM brainstorming WHERE statut = 'en attente'");
+        $count = ($stmt) ? $stmt->fetchColumn(0) : 0;
+        $stats['pending_brainstormings'] = (int) $count;
+
+        // Line chart data - Brainstormings per month
+        $stmt = $this->conn->query("SELECT DATE_FORMAT(dateCreation, '%Y-%m') AS month, COUNT(*) AS count FROM brainstorming GROUP BY DATE_FORMAT(dateCreation, '%Y-%m') ORDER BY month DESC LIMIT 6");
+        $brainstormings = ($stmt) ? $stmt->fetchAll(PDO::FETCH_KEY_PAIR) : [];
+
+        // Line chart data - Ideas per month
+        $stmt = $this->conn->query("SELECT DATE_FORMAT(date_creation, '%Y-%m') AS month, COUNT(*) AS count FROM ideas GROUP BY DATE_FORMAT(date_creation, '%Y-%m') ORDER BY month DESC LIMIT 6");
+        $ideas = ($stmt) ? $stmt->fetchAll(PDO::FETCH_KEY_PAIR) : [];
+
+        $stats['line_chart_data'] = [
+            'labels' => array_keys($brainstormings),
+            'brainstormings' => array_values($brainstormings),
+            'ideas' => array_values($ideas)
+        ];
+
+        // Bar chart data
+        $stmt = $this->conn->query("SELECT categorie, COUNT(*) AS count FROM brainstorming GROUP BY categorie ORDER BY count DESC");
+        $categories = ($stmt) ? $stmt->fetchAll(PDO::FETCH_KEY_PAIR) : [];
+
+        $stats['bar_chart_data'] = [
+            'labels' => array_keys($categories),
+            'data' => array_values($categories)
+        ];
+
+        // Top brainstormings
+        $stmt = $this->conn->query("SELECT b.titre, COUNT(i.id) AS idea_count FROM brainstorming b LEFT JOIN ideas i ON b.id = i.brainstorming_id GROUP BY b.id ORDER BY idea_count DESC LIMIT 3");
+        $stats['top_brainstormings'] = ($stmt) ? $stmt->fetchAll(PDO::FETCH_ASSOC) : [];
+
+        return $stats;
+    }
+
+    public function exportToExcel(): void
+    {
+        try {
+            require_once __DIR__ . '/../vendor/autoload.php';
+            
+            if (!class_exists('\PhpOffice\PhpSpreadsheet\Spreadsheet')) {
+                throw new RuntimeException('PhpSpreadsheet library not found.');
+            }
+
+            $stmt = $this->conn->query("SELECT b.id, b.titre, b.description, b.categorie, b.dateCreation, b.statut, COUNT(i.id) AS idea_count FROM brainstorming b LEFT JOIN ideas i ON b.id = i.brainstorming_id GROUP BY b.id ORDER BY b.id DESC");
+            $brainstormings = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+            $spreadsheet = new \PhpOffice\PhpSpreadsheet\Spreadsheet();
+            $sheet = $spreadsheet->getActiveSheet();
+
+            // Set header row
+            $sheet->setCellValue('A1', 'Titre');
+            $sheet->setCellValue('B1', 'Description');
+            $sheet->setCellValue('C1', 'Categorie');
+            $sheet->setCellValue('D1', 'Date Creation');
+            $sheet->setCellValue('E1', 'Statut');
+            $sheet->setCellValue('F1', 'Nombre d\'ideass');
+
+            // Style header row
+            $headerStyle = [
+                'fill' => [
+                    'fillType' => \PhpOffice\PhpSpreadsheet\Style\Fill::FILL_SOLID,
+                    'startColor' => ['rgb' => '635BFF'],
+                ],
+                'font' => [
+                    'bold' => true,
+                    'color' => ['rgb' => 'FFFFFF'],
+                ],
+                'alignment' => [
+                    'horizontal' => \PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_CENTER,
+                ],
+            ];
+
+            foreach (range('A', 'F') as $columnID) {
+                $sheet->getStyle($columnID . '1')->applyFromArray($headerStyle);
+            }
+
+            // Populate data rows
+            $row = 2;
+            foreach ($brainstormings as $brainstorming) {
+                $sheet->setCellValue("A$row", $brainstorming['titre']);
+                $sheet->setCellValue("B$row", substr($brainstorming['description'], 0, 100));
+                $sheet->setCellValue("C$row", $brainstorming['categorie']);
+                $sheet->setCellValue("D$row", $brainstorming['dateCreation']);
+                $sheet->setCellValue("E$row", $brainstorming['statut']);
+                $sheet->setCellValue("F$row", $brainstorming['idea_count']);
+                $row++;
+            }
+
+            // Auto-adjust column widths
+            foreach (range('A', 'F') as $columnID) {
+                $sheet->getColumnDimension($columnID)->setAutoSize(true);
+            }
+
+            // Write to file
+            $writer = new \PhpOffice\PhpSpreadsheet\Writer\Xlsx($spreadsheet);
+            $fileName = 'brainstormings_export_' . date('Y_m_d_H_i_s') . '.xlsx';
+
+            header('Content-Type: application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+            header('Content-Disposition: attachment; filename="' . $fileName . '"');
+            header('Cache-Control: no-cache, no-store, must-revalidate');
+            header('Pragma: no-cache');
+            header('Expires: 0');
+
+            $writer->save('php://output');
+            exit;
+        } catch (Throwable $exception) {
+            throw new RuntimeException('Erreur lors de l\'export Excel: ' . $exception->getMessage());
+        }
+    }
 }

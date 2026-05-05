@@ -37,7 +37,7 @@ class IdeaController
     public function addIdea(int $brainstormingId, int $userId, string $contenu, bool $isAdmin = false): int
     {
         if (empty(trim($contenu))) {
-            throw new InvalidArgumentException('Le contenu de l\'idee est obligatoire.');
+            throw new InvalidArgumentException('Le contenu de l\'ideas est obligatoire.');
         }
 
         $statut = $isAdmin ? 'approuve' : 'en attente';
@@ -58,8 +58,7 @@ class IdeaController
 
     public function getIdeasByBrainstormingId(int $brainstormingId): array
     {
-        $sql = 'SELECT i.id, i.brainstorming_id, i.user_id, i.contenu, i.date_creation, i.statut,
-                       u.nom, u.prenom
+        $sql = 'SELECT i.*, u.nom as auteur_nom, u.prenom as auteur_prenom
                 FROM ideas i
                 LEFT JOIN utilisateur u ON i.user_id = u.id
                 WHERE i.brainstorming_id = :brainstorming_id
@@ -116,7 +115,7 @@ class IdeaController
     public function updateIdea(int $id, string $contenu, int $userId, bool $isAdmin = false): bool
     {
         if (empty(trim($contenu))) {
-            throw new InvalidArgumentException('Le contenu de l\'idee est obligatoire.');
+            throw new InvalidArgumentException('Le contenu de l\'ideas est obligatoire.');
         }
 
         $sql = 'UPDATE ideas SET contenu = :contenu WHERE id = :id';
@@ -175,7 +174,10 @@ class IdeaController
             'statut' => (string) ($row['statut'] ?? 'en attente'),
             'auteur_nom' => (string) ($row['nom'] ?? ''),
             'auteur_prenom' => (string) ($row['prenom'] ?? ''),
-            'brainstorming_titre' => (string) ($row['brainstorming_titre'] ?? '')
+            'brainstorming_titre' => (string) ($row['brainstorming_titre'] ?? ''),
+            'likes' => (int) ($row['likes'] ?? 0),
+            'dislikes' => (int) ($row['dislikes'] ?? 0),
+            'is_winner' => (bool) ($row['is_winner'] ?? false)
         ];
     }
 }

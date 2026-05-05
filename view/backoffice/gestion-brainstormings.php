@@ -18,7 +18,9 @@ if ($roleSession === 'agent') {
     exit;
 }
 
+require_once __DIR__ . '/../../config.php';
 require_once __DIR__ . '/../../controller/BrainstormingController.php';
+require_once __DIR__ . '/../../controller/VoteController.php';
 
 function h($value): string
 {
@@ -80,11 +82,21 @@ $statusMessages = [
     'updated' => 'Brainstorming modifie avec succes.',
     'deleted' => 'Brainstorming supprime avec succes.',
     'approved' => 'Brainstorming approuve avec succes.',
-    'disapproved' => 'Brainstorming desapprouve avec succes.'
+    'disapproved' => 'Brainstorming desapprouve avec succes.',
+    'vote_opened' => 'Periode de vote ouverte avec succes.',
+    'vote_closed' => 'Periode de vote fermee avec succes.',
+    'winner_calculated' => 'Gagnant calcule avec succes.'
 ];
 if (isset($statusMessages[$status])) {
     $feedbackType = 'success';
     $feedbackMessage = $statusMessages[$status];
+    // Override with custom message if provided
+    if ($status === 'winner_calculated' && isset($_GET['message'])) {
+        $feedbackMessage = urldecode($_GET['message']);
+    }
+    $showSweetAlert = true;
+} else {
+    $showSweetAlert = false;
 }
 
 $editBrainstorming = null;
@@ -103,6 +115,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $action = strtolower(trim((string) ($_POST['action'] ?? '')));
 
     try {
+        if ($action === 'export_excel') {
+            $controller->exportToExcel();
+        }
+
         if ($action === 'add') {
             $titre = trim((string) ($_POST['titre'] ?? ''));
             $description = trim((string) ($_POST['description'] ?? ''));
@@ -131,6 +147,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $titre = trim((string) ($_POST['titre'] ?? ''));
             $description = trim((string) ($_POST['description'] ?? ''));
             $categorie = trim((string) ($_POST['categorie'] ?? ''));
+            $voteStart = trim((string) ($_POST['vote_start'] ?? ''));
+            $voteEnd = trim((string) ($_POST['vote_end'] ?? ''));
 
             if ($titre === '') {
                 throw new InvalidArgumentException('Le titre est obligatoire.');
@@ -146,6 +164,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             }
 
             $controller->updateBrainstorming($id, $titre, $description, $categorie);
+
+            if ($voteStart !== '' || $voteEnd !== '') {
+                $conn = Config::getConnexion();
+                $stmt = $conn->prepare('UPDATE brainstorming SET vote_start = :vote_start, vote_end = :vote_end WHERE id = :id');
+                $stmt->execute([
+                    ':vote_start' => $voteStart !== '' ? $voteStart : null,
+                    ':vote_end' => $voteEnd !== '' ? $voteEnd : null,
+                    ':id' => $id
+                ]);
+            }
+
             header('Location: gestion-brainstormings.php?status=updated');
             exit;
         }
@@ -171,6 +200,49 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             exit;
         }
 
+        if ($action === 'open_vote') {
+            $voteController = new VoteController();
+            $id = (int) ($_POST['id'] ?? 0);
+            $startDate = trim((string) ($_POST['vote_start'] ?? ''));
+            $endDate = trim((string) ($_POST['vote_end'] ?? ''));
+
+            if ($startDate === '' || $endDate === '') {
+                throw new InvalidArgumentException('Les dates de debut et de fin sont obligatoires.');
+            }
+
+            $result = $voteController->openVotePeriod($id, $startDate, $endDate);
+            if ($result['success']) {
+                header('Location: gestion-brainstormings.php?status=vote_opened');
+            } else {
+                throw new InvalidArgumentException($result['message']);
+            }
+            exit;
+        }
+
+        if ($action === 'close_vote') {
+            $voteController = new VoteController();
+            $id = (int) ($_POST['id'] ?? 0);
+            $result = $voteController->closeVotePeriod($id);
+            if ($result['success']) {
+                header('Location: gestion-brainstormings.php?status=vote_closed');
+            } else {
+                throw new InvalidArgumentException($result['message']);
+            }
+            exit;
+        }
+
+        if ($action === 'calculate_winner') {
+            $voteController = new VoteController();
+            $id = (int) ($_POST['id'] ?? 0);
+            $result = $voteController->calculateWinner($id);
+            if ($result['success']) {
+                header('Location: gestion-brainstormings.php?status=winner_calculated&message=' . urlencode($result['message']));
+            } else {
+                throw new InvalidArgumentException($result['message']);
+            }
+            exit;
+        }
+
         throw new InvalidArgumentException('Action invalide.');
     } catch (Throwable $exception) {
         $feedbackType = 'error';
@@ -186,11 +258,19 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 }
 
+$voteController = new VoteController();
 $brainstormings = $controller->getBrainstormings([
     'q' => $search,
     'categorie' => $selectedCategorie,
     'statut' => $selectedStatus
 ]);
+
+// Get vote status for each brainstorming
+$brainstormingVoteStatus = [];
+foreach ($brainstormings as $brainstorming) {
+    $voteStatus = $voteController->getBrainstormingVoteStatus((int) $brainstorming['id']);
+    $brainstormingVoteStatus[$brainstorming['id']] = $voteStatus;
+}
 ?>
 <!DOCTYPE html>
 <html lang="fr">
@@ -202,6 +282,22 @@ $brainstormings = $controller->getBrainstormings([
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
     <link rel="stylesheet" href="assets/style.css" />
+  <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+  <style>
+    .table-actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.5rem;
+      max-width: 300px;
+    }
+    .table-actions form {
+      display: inline;
+    }
+    .users-table th:last-child,
+    .users-table td:last-child {
+      min-width: 280px;
+    }
+  </style>
   </head>
   <body data-page="community">
     <div class="overlay" data-overlay></div>
@@ -218,7 +314,8 @@ $brainstormings = $controller->getBrainstormings([
               <a class="nav-link" href="index.php" data-nav="home"><span class="nav-icon icon-home"></span><span>Tableau de bord</span></a>
               <a class="nav-link" href="gestion-utilisateurs.php" data-nav="profile"><span class="nav-icon icon-profile"></span><span>Gestion des utilisateurs</span></a>
               <a class="nav-link" href="gestion-brainstormings.php" data-nav="community"><span class="nav-icon icon-community"></span><span>Gestion des brainstormings</span></a>
-              <a class="nav-link" href="gestion-idees.php" data-nav="community"><span class="nav-icon icon-community"></span><span>Gestion des idees</span></a>
+              <a class="nav-link" href="gestion-brainstorming-stats.php" data-nav="stats"><span class="nav-icon icon-activity"></span><span>Statistiques</span></a>
+              <a class="nav-link" href="gestion-idees.php" data-nav="ideas"><span class="nav-icon icon-community"></span><span>Gestion des idees</span></a>
               <a class="nav-link" href="gestion-rendezvous.php" data-nav="subscription"><span class="nav-icon icon-card"></span><span>Gestion des rendez-vous</span></a>
               <a class="nav-link" href="gestion-accompagnements.php" data-nav="chatbot"><span class="nav-icon icon-chat"></span><span>Gestion des accompagnements</span></a>
               <a class="nav-link" href="gestion-evenements.php" data-nav="images"><span class="nav-icon icon-image"></span><span>Gestion des evenements</span></a>
@@ -252,6 +349,10 @@ $brainstormings = $controller->getBrainstormings([
               </div>
               <div class="users-actions">
                 <a class="ghost-button" href="gestion-brainstormings.php">Reinitialiser</a>
+                <form method="post" action="gestion-brainstormings.php" style="display: inline;">
+                  <input type="hidden" name="action" value="export_excel" />
+                  <button class="action-button" type="submit" style="background: linear-gradient(135deg, #9c51ff, #7b2ff7);">Exporter Excel</button>
+                </form>
                 <a class="action-button" href="#brainstorming-form"><?= $editBrainstorming ? 'Modifier brainstorming' : 'Ajouter' ?></a>
               </div>
             </div>
@@ -317,12 +418,55 @@ $brainstormings = $controller->getBrainstormings([
                   <label for="description">Description</label>
                   <textarea id="description" name="description" placeholder="Description du brainstorming"><?= h($formValues['description']) ?></textarea>
                 </div>
+                <?php if ($editBrainstorming): ?>
+                <div class="filter-field">
+                  <label for="vote_start">Date debut vote (YYYY-MM-DD HH:MM)</label>
+                  <input id="vote_start" name="vote_start" type="text" value="<?= h($editBrainstorming['vote_start'] ?? '') ?>" placeholder="YYYY-MM-DD HH:MM" />
+                </div>
+                <div class="filter-field">
+                  <label for="vote_end">Date fin vote (YYYY-MM-DD HH:MM)</label>
+                  <input id="vote_end" name="vote_end" type="text" value="<?= h($editBrainstorming['vote_end'] ?? '') ?>" placeholder="YYYY-MM-DD HH:MM" />
+                </div>
+                <div class="filter-field">
+                  <label>Statut vote</label>
+                  <?php
+                  $voteStatus = $voteController->getBrainstormingVoteStatus((int) $editBrainstorming['id']);
+                  if ($voteStatus && $voteStatus['isOpen']): ?>
+                    <span class="status-pill active">Ouvert</span>
+                  <?php elseif ($voteStatus && $voteStatus['status'] === 'open'): ?>
+                    <span class="status-pill pending">Fermé (temps)</span>
+                  <?php else: ?>
+                    <span class="status-pill risk">Fermé</span>
+                  <?php endif; ?>
+                </div>
+                <div class="filter-field">
+                  <label>Actions vote</label>
+                  <?php if ($voteStatus && $voteStatus['status'] === 'open' && !$voteStatus['isOpen']): ?>
+                    <form method="post" action="gestion-brainstormings.php" style="display: inline;">
+                      <input type="hidden" name="action" value="close_vote" />
+                      <input type="hidden" name="id" value="<?= (int) $editBrainstorming['id'] ?>" />
+                      <button class="ghost-button danger" type="submit">Fermer vote</button>
+                    </form>
+                  <?php elseif ($voteStatus && $voteStatus['status'] !== 'open'): ?>
+                    <form method="post" action="gestion-brainstormings.php" style="display: inline;">
+                      <input type="hidden" name="action" value="open_vote" />
+                      <input type="hidden" name="id" value="<?= (int) $editBrainstorming['id'] ?>" />
+                      <input type="hidden" name="vote_start" value="<?= h($editBrainstorming['vote_start'] ?? date('Y-m-d H:i')) ?>" />
+                      <input type="hidden" name="vote_end" value="<?= h($editBrainstorming['vote_end'] ?? date('Y-m-d H:i', strtotime('+7 days'))) ?>" />
+                      <button class="ghost-button" type="submit">Ouvrir vote</button>
+                    </form>
+                  <?php endif; ?>
+                </div>
+                <?php endif; ?>
               </div>
 
               <p id="crud-feedback" class="form-feedback"></p>
 
               <div class="users-actions">
-                <button class="action-button" type="submit">Ajouter</button>
+                <button class="action-button" type="submit"><?= $editBrainstorming ? 'Modifier' : 'Ajouter' ?></button>
+                <?php if ($editBrainstorming): ?>
+                <a class="ghost-button" href="gestion-brainstormings.php">Annuler</a>
+                <?php endif; ?>
               </div>
             </form>
           </section>
@@ -333,8 +477,8 @@ $brainstormings = $controller->getBrainstormings([
                 <tr>
                   <th>Titre</th>
                   <th>Categorie</th>
-                  <th>Description</th>
                   <th>Statut</th>
+                  <th>Vote</th>
                   <th>Date creation</th>
                   <th>Actions</th>
                 </tr>
@@ -357,8 +501,18 @@ $brainstormings = $controller->getBrainstormings([
                         </div>
                       </td>
                       <td><?= h($brainstorming['categorie']) ?></td>
-                      <td><?= h(substr($brainstorming['description'], 0, 50)) ?><?= strlen($brainstorming['description']) > 50 ? '...' : '' ?></td>
                       <td><span class="status-pill <?= h(getStatusClass((string) $brainstorming['statut'])) ?>"><?= ucfirst(h((string) $brainstorming['statut'])) ?></span></td>
+                      <td>
+                        <?php
+                        $voteStatus = $brainstormingVoteStatus[$brainstorming['id']] ?? null;
+                        if ($voteStatus && $voteStatus['isOpen']): ?>
+                          <span class="status-pill active">Ouvert</span>
+                        <?php elseif ($voteStatus && $voteStatus['status'] === 'open'): ?>
+                          <span class="status-pill pending">Fermé (temps)</span>
+                        <?php else: ?>
+                          <span class="status-pill risk">Fermé</span>
+                        <?php endif; ?>
+                      </td>
                       <td><?= h(formatCreationDate((string) $brainstorming['dateCreation'])) ?></td>
                       <td>
                         <div class="table-actions">
@@ -374,6 +528,28 @@ $brainstormings = $controller->getBrainstormings([
                             <button class="ghost-button danger" type="submit">Desapprouver</button>
                           </form>
                           <?php endif; ?>
+                          <?php
+                          $voteStatus = $brainstormingVoteStatus[$brainstorming['id']] ?? null;
+                          if ($voteStatus && $voteStatus['status'] === 'open'): ?>
+                          <form class="inline-delete-form" method="post" action="gestion-brainstormings.php">
+                            <input type="hidden" name="action" value="close_vote" />
+                            <input type="hidden" name="id" value="<?= (int) $brainstorming['id'] ?>" />
+                            <button class="ghost-button danger" type="submit">Fermer vote</button>
+                          </form>
+                          <?php elseif ($voteStatus && $voteStatus['status'] !== 'open'): ?>
+                          <form class="inline-delete-form" method="post" action="gestion-brainstormings.php">
+                            <input type="hidden" name="action" value="open_vote" />
+                            <input type="hidden" name="id" value="<?= (int) $brainstorming['id'] ?>" />
+                            <input type="hidden" name="vote_start" value="<?= date('Y-m-d H:i') ?>" />
+                            <input type="hidden" name="vote_end" value="<?= date('Y-m-d H:i', strtotime('+7 days')) ?>" />
+                            <button class="ghost-button" type="submit">Ouvrir vote</button>
+                          </form>
+                          <?php endif; ?>
+                          <form class="inline-delete-form" method="post" action="gestion-brainstormings.php">
+                            <input type="hidden" name="action" value="calculate_winner" />
+                            <input type="hidden" name="id" value="<?= (int) $brainstorming['id'] ?>" />
+                            <button class="ghost-button" type="submit">Calculer le gagnant</button>
+                          </form>
                           <form class="inline-delete-form" method="post" action="gestion-brainstormings.php" data-delete-form>
                             <input type="hidden" name="action" value="delete" />
                             <input type="hidden" name="id" value="<?= (int) $brainstorming['id'] ?>" />
@@ -440,6 +616,16 @@ $brainstormings = $controller->getBrainstormings([
             }
           });
         });
+
+        // Show SweetAlert on success
+        <?php if ($showSweetAlert): ?>
+        Swal.fire({
+          title: "Succès!",
+          text: "<?= h($feedbackMessage) ?>",
+          icon: "success",
+          draggable: true
+        });
+        <?php endif; ?>
       })();
     </script>
       <script src="assets/app.js"></script>
