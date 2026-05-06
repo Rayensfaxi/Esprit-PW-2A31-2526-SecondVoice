@@ -2,12 +2,11 @@
 declare(strict_types=1);
 
 require_once __DIR__ . '/../config.php';
-require_once __DIR__ . '/../model/event.php';
+require_once __DIR__ . '/../mailer.php';
 
 class EventController
 {
     private PDO $conn;
-    private EventModel $eventModel;
 
     private const ALLOWED_STATUSES = ['en cours', 'validé', 'refusé', 'annulé'];
     private const ALLOWED_RESOURCE_TYPES = ['materiel', 'regle'];
@@ -16,18 +15,15 @@ class EventController
     {
         if ($connection instanceof PDO) {
             $this->conn = $connection;
-            $this->eventModel = new EventModel($this->conn);
             return;
         }
 
         if (isset($GLOBALS['conn']) && $GLOBALS['conn'] instanceof PDO) {
             $this->conn = $GLOBALS['conn'];
-            $this->eventModel = new EventModel($this->conn);
             return;
         }
 
         $this->conn = Config::getConnexion();
-        $this->eventModel = new EventModel($this->conn);
     }
 
     public function showEvents(): void
@@ -83,6 +79,71 @@ class EventController
         return $stmt->fetchAll(PDO::FETCH_ASSOC) ?: [];
     }
 
+    public function getImportableResourceEventsForUser(int $userId, int $excludeEventId = 0): array
+    {
+        if ($userId <= 0 || !$this->userExists($userId)) {
+            return [];
+        }
+
+        $sql = "
+            SELECT e.id, e.name, e.start_date, e.location
+            FROM events e
+            WHERE e.created_by = ?
+        ";
+        $params = [$userId];
+
+        if ($excludeEventId > 0) {
+            $sql .= ' AND e.id <> ?';
+            $params[] = $excludeEventId;
+        }
+
+        $sql .= ' ORDER BY e.created_at DESC, e.id DESC';
+
+        $stmt = $this->conn->prepare($sql);
+        $stmt->execute($params);
+        return $stmt->fetchAll(PDO::FETCH_ASSOC) ?: [];
+    }
+
+    public function getImportableResourcesFromEvent(int $sourceEventId, int $userId): array
+    {
+        if ($sourceEventId <= 0 || $userId <= 0) {
+            return ['success' => false, 'message' => 'Paramètres invalides.'];
+        }
+
+        if (!$this->userExists($userId)) {
+            return ['success' => false, 'message' => 'Utilisateur introuvable.'];
+        }
+
+        $event = $this->getEventById($sourceEventId);
+        if (!$event) {
+            return ['success' => false, 'message' => 'Événement source introuvable.'];
+        }
+
+        if ((int) ($event['created_by'] ?? 0) !== $userId) {
+            return ['success' => false, 'message' => 'Vous ne pouvez importer que les ressources de vos propres événements.'];
+        }
+
+        $resources = $this->getResourcesByEvent($sourceEventId);
+        if ($resources === []) {
+            return ['success' => false, 'message' => 'Aucune ressource à importer pour cet événement'];
+        }
+
+        $meta = $resources[0] ?? [];
+        return [
+            'success' => true,
+            'resources_title' => (string) ($meta['resources_title'] ?? ''),
+            'resources_description' => (string) ($meta['resources_description'] ?? ''),
+            'resources' => array_map(static function (array $resource): array {
+                return [
+                    'name' => (string) ($resource['name'] ?? ''),
+                    'quantity' => isset($resource['quantity']) ? (string) $resource['quantity'] : '',
+                    'description' => (string) ($resource['description'] ?? ''),
+                    'type' => (string) ($resource['type'] ?? 'materiel'),
+                ];
+            }, $resources),
+        ];
+    }
+
     private function userExists(int $userId): bool
     {
         if ($userId <= 0) {
@@ -92,6 +153,93 @@ class EventController
         $stmt = $this->conn->prepare('SELECT id FROM utilisateur WHERE id = ? LIMIT 1');
         $stmt->execute([$userId]);
         return (bool) $stmt->fetch(PDO::FETCH_ASSOC);
+    }
+
+    private function getUserById(int $userId): ?array
+    {
+        if ($userId <= 0) {
+            return null;
+        }
+
+        $stmt = $this->conn->prepare('SELECT id, nom, prenom, email, role FROM utilisateur WHERE id = ? LIMIT 1');
+        $stmt->execute([$userId]);
+        $user = $stmt->fetch(PDO::FETCH_ASSOC);
+        return $user ?: null;
+    }
+
+    private function getAdminEmails(): array
+    {
+        $stmt = $this->conn->prepare("SELECT email FROM utilisateur WHERE LOWER(role) = 'admin' AND email IS NOT NULL AND email <> ''");
+        $stmt->execute();
+
+        return array_values(array_filter(array_map(static function (array $row): string {
+            return trim((string) ($row['email'] ?? ''));
+        }, $stmt->fetchAll(PDO::FETCH_ASSOC) ?: []), static function (string $email): bool {
+            return filter_var($email, FILTER_VALIDATE_EMAIL) !== false;
+        }));
+    }
+
+    private function formatUserName(?array $user): string
+    {
+        if (!$user) {
+            return 'Utilisateur inconnu';
+        }
+
+        $name = trim((string) ($user['prenom'] ?? '') . ' ' . (string) ($user['nom'] ?? ''));
+        return $name !== '' ? $name : 'Utilisateur #' . (string) ($user['id'] ?? '');
+    }
+
+    private function sendAdminRequestEmails(string $type, int $userId, string $eventName): void
+    {
+        try {
+            $user = $this->getUserById($userId);
+            $adminEmails = $this->getAdminEmails();
+            error_log('Email admin demande: type="' . $type . '", user_id=' . $userId . ', event="' . $eventName . '", admins=' . json_encode($adminEmails));
+            if ($adminEmails === []) {
+                error_log('Email admin non envoye: aucun admin avec email.');
+            }
+
+            $message = "Un utilisateur a envoye une nouvelle demande.\n\n"
+                . 'Type : ' . $type . "\n"
+                . 'Utilisateur : ' . $this->formatUserName($user) . "\n"
+                . 'E-mail : ' . (string) ($user['email'] ?? '') . "\n"
+                . 'Evenement : ' . $eventName . "\n"
+                . 'Date de la demande : ' . date('Y-m-d H:i:s') . "\n"
+                . "Statut : en cours\n";
+
+            foreach ($adminEmails as $email) {
+                error_log('Email admin: appel sendMail vers ' . $email);
+                $sent = sendMail($email, 'Nouvelle demande d evenement', $message);
+                error_log('Email admin: resultat sendMail vers ' . $email . ' = ' . ($sent ? 'OK' : 'ECHEC'));
+            }
+        } catch (Throwable $e) {
+            error_log('Erreur email admin: ' . $e->getMessage());
+        }
+    }
+
+    private function sendUserRequestProcessedEmail(int $userId, string $eventName, string $type, string $decision): void
+    {
+        try {
+            $user = $this->getUserById($userId);
+            $email = trim((string) ($user['email'] ?? ''));
+            $decisionLabel = $decision === 'approved' ? 'validee' : 'refusee';
+            $message = 'Bonjour ' . $this->formatUserName($user) . ",\n\n"
+                . 'Votre demande concernant l evenement "' . $eventName . '" a ete ' . $decisionLabel . ".\n\n"
+                . 'Type de demande : ' . $type . "\n"
+                . 'Decision admin : ' . ($decision === 'approved' ? 'valide' : 'refuse') . "\n"
+                . 'Date de traitement : ' . date('Y-m-d H:i:s') . "\n";
+
+            if ($email === '') {
+                error_log('Email utilisateur non envoye: email introuvable pour user_id=' . $userId);
+                return;
+            }
+
+            error_log('Email utilisateur: appel sendMail vers ' . $email . ', user_id=' . $userId . ', decision=' . $decision);
+            $sent = sendMail($email, 'Votre demande d evenement a ete traitee', $message);
+            error_log('Email utilisateur: resultat sendMail vers ' . $email . ' = ' . ($sent ? 'OK' : 'ECHEC'));
+        } catch (Throwable $e) {
+            error_log('Erreur email utilisateur: ' . $e->getMessage());
+        }
     }
 
     private function textLength(string $value): int
@@ -220,6 +368,24 @@ class EventController
         }
 
         return implode(' || ', $parts);
+    }
+
+    private function resourceRequestTypeColumnExists(): bool
+    {
+        static $exists = null;
+        if ($exists !== null) {
+            return $exists;
+        }
+
+        try {
+            $stmt = $this->conn->prepare("SHOW COLUMNS FROM resource_modification_requests LIKE 'request_type'");
+            $stmt->execute();
+            $exists = (bool) $stmt->fetch(PDO::FETCH_ASSOC);
+        } catch (Throwable) {
+            $exists = false;
+        }
+
+        return $exists;
     }
 
     private function mapRequestStatusToDisplay(?string $status): string
@@ -580,14 +746,45 @@ class EventController
         }
     }
 
+    private function autoRegisterEventCreator(int $userId, int $eventId): bool
+    {
+        if ($userId <= 0 || $eventId <= 0) {
+            return false;
+        }
+
+        if (!$this->userExists($userId)) {
+            return false;
+        }
+
+        $eventStmt = $this->conn->prepare('SELECT id FROM events WHERE id = ? LIMIT 1');
+        $eventStmt->execute([$eventId]);
+        if (!$eventStmt->fetch(PDO::FETCH_ASSOC)) {
+            return false;
+        }
+
+        $duplicate = $this->conn->prepare('SELECT 1 FROM registrations WHERE user_id = ? AND event_id = ? LIMIT 1');
+        $duplicate->execute([$userId, $eventId]);
+        if ($duplicate->fetch(PDO::FETCH_ASSOC)) {
+            return false;
+        }
+
+        $insert = $this->conn->prepare('INSERT INTO registrations (user_id, event_id, created_at) VALUES (?, ?, CURRENT_TIMESTAMP)');
+        $insert->execute([$userId, $eventId]);
+
+        $update = $this->conn->prepare('UPDATE events SET `current` = `current` + 1 WHERE id = ?');
+        $update->execute([$eventId]);
+
+        return true;
+    }
+
     public function createEvent(array $data): array
     {
         try {
             error_log('CONTROLLER: Début création événement avec données: ' . json_encode($data));
             
-            // Événement créé avec statut 'en cours' (en attente de ressources)
-            // Le statut final sera défini après enregistrement des ressources
-            $data['status'] = 'en cours';
+            // Admin/agent: validation directe. Utilisateur front: demande en cours.
+            $isAdminCreation = in_array(strtolower((string) ($_SESSION['user_role'] ?? 'client')), ['admin', 'agent'], true);
+            $data['status'] = $isAdminCreation ? 'validé' : 'en cours';
             
             $payload = $this->normalizeEventPayload($data, false);
             error_log('CONTROLLER: Payload normalisé: ' . json_encode($payload));
@@ -615,9 +812,17 @@ class EventController
             $eventId = (int) $this->conn->lastInsertId();
             error_log('CONTROLLER: ID événement créé: ' . $eventId);
 
+            if ($isAdminCreation && $eventId > 0) {
+                $this->autoRegisterEventCreator((int) $createdBy, $eventId);
+            }
+
             $this->conn->commit();
             error_log('CONTROLLER: Transaction validée');
             
+            if (!$isAdminCreation && $eventId > 0) {
+                $this->sendAdminRequestEmails('Ajout', (int) $createdBy, (string) $payload['name']);
+            }
+
             return ['success' => true, 'id' => $eventId, 'message' => 'Événement créé avec succès.'];
         } catch (Throwable $e) {
             error_log('CONTROLLER: ERREUR création: ' . get_class($e) . ' - ' . $e->getMessage());
@@ -770,7 +975,7 @@ class EventController
 
     public function canModifyEvent(int $eventId, int $userId, bool $isAdmin): bool
     {
-        $event = $this->eventModel->getEventById($eventId);
+        $event = $this->getEventById($eventId);
         if (!$event) {
             return false;
         }
@@ -780,7 +985,7 @@ class EventController
 
     public function canDeleteEvent(int $eventId, int $userId, bool $isAdmin): bool
     {
-        $event = $this->eventModel->getEventById($eventId);
+        $event = $this->getEventById($eventId);
         if (!$event) {
             return false;
         }
@@ -790,7 +995,7 @@ class EventController
 
     public function isEventOwner(int $eventId, int $userId): bool
     {
-        $event = $this->eventModel->getEventById($eventId);
+        $event = $this->getEventById($eventId);
         if (!$event) {
             return false;
         }
@@ -808,19 +1013,45 @@ class EventController
         }
 
         try {
+            $event = $this->getEventById($id);
+            if (!$event) {
+                return ['success' => false, 'message' => 'Événement introuvable.'];
+            }
+
+            $this->conn->beginTransaction();
+
             $stmt = $this->conn->prepare("UPDATE events SET status = ? WHERE id = ?");
             $stmt->execute([$status, $id]);
 
             if ($stmt->rowCount() === 0) {
+                $this->conn->rollBack();
                 return ['success' => false, 'message' => 'Événement introuvable ou statut inchangé.'];
             }
+
+            if ($status === 'validé') {
+                $this->autoRegisterEventCreator((int) ($event['created_by'] ?? 0), $id);
+            }
+
+            $this->conn->commit();
 
             $message = $status === 'validé'
                 ? 'Événement validé avec succès.'
                 : ($status === 'refusé' ? 'Événement refusé avec succès.' : 'Statut mis à jour.');
 
+            if (in_array($status, ['validé', 'refusé'], true)) {
+                $this->sendUserRequestProcessedEmail(
+                    (int) ($event['created_by'] ?? 0),
+                    (string) ($event['name'] ?? 'Événement'),
+                    'Ajout',
+                    $status === 'validé' ? 'approved' : 'rejected'
+                );
+            }
+
             return ['success' => true, 'message' => $message];
         } catch (Throwable $e) {
+            if ($this->conn->inTransaction()) {
+                $this->conn->rollBack();
+            }
             return ['success' => false, 'message' => 'Erreur lors de la mise à jour du statut.'];
         }
     }
@@ -985,6 +1216,101 @@ class EventController
         }
     }
 
+    public function deleteResources(int $eventId, int $userId): array
+    {
+        if ($eventId <= 0 || $userId <= 0) {
+            return ['success' => false, 'message' => 'Paramètres invalides.'];
+        }
+
+        if (!$this->userExists($userId)) {
+            return ['success' => false, 'message' => 'Utilisateur introuvable.'];
+        }
+
+        $event = $this->getEventById($eventId);
+        if (!$event) {
+            return ['success' => false, 'message' => 'Événement introuvable.'];
+        }
+
+        $isAdmin = in_array(strtolower((string) ($_SESSION['user_role'] ?? 'client')), ['admin', 'agent'], true);
+        $isOwner = (int) ($event['created_by'] ?? 0) === $userId;
+
+        if (!$isAdmin && !$isOwner) {
+            return ['success' => false, 'message' => 'Vous ne pouvez supprimer que les ressources de vos propres événements.'];
+        }
+
+        if ($isAdmin) {
+            try {
+                $stmt = $this->conn->prepare('DELETE FROM event_resources WHERE event_id = ?');
+                $stmt->execute([$eventId]);
+                return ['success' => true, 'message' => 'Ressources supprimées avec succès'];
+            } catch (Throwable $e) {
+                $errorMessage = $this->buildSqlErrorMessage($e, $stmt ?? null);
+                error_log('ERREUR deleteResources: ' . $errorMessage);
+                return ['success' => false, 'message' => 'Erreur lors de la suppression des ressources: ' . $errorMessage];
+            }
+        }
+
+        return $this->createResourceDeletionRequest($eventId, $userId);
+    }
+
+    public function createResourceDeletionRequest(int $eventId, int $userId): array
+    {
+        if ($eventId <= 0 || $userId <= 0) {
+            return ['success' => false, 'message' => 'Paramètres invalides.'];
+        }
+
+        if (!$this->userExists($userId)) {
+            return ['success' => false, 'message' => 'Utilisateur introuvable.'];
+        }
+
+        $event = $this->getEventById($eventId);
+        if (!$event) {
+            return ['success' => false, 'message' => 'Événement introuvable.'];
+        }
+
+        if ((int) ($event['created_by'] ?? 0) !== $userId) {
+            return ['success' => false, 'message' => 'Vous ne pouvez supprimer que les ressources de vos propres événements.'];
+        }
+
+        if ($this->hasPendingResourceModificationRequest($eventId)) {
+            return ['success' => false, 'message' => 'Une demande concernant les ressources est déjà en cours pour cet événement.'];
+        }
+
+        try {
+            if ($this->resourceRequestTypeColumnExists()) {
+                $stmt = $this->conn->prepare('INSERT INTO resource_modification_requests (event_id, requested_by, request_type, resources_title, resources_description, resources_data, status, created_at) VALUES (?, ?, ?, NULL, NULL, ?, ?, NOW())');
+                $stmt->execute([$eventId, $userId, 'suppression ressources', '[]', 'pending']);
+            } else {
+                $stmt = $this->conn->prepare('INSERT INTO resource_modification_requests (event_id, requested_by, resources_title, resources_description, resources_data, status, created_at) VALUES (?, ?, NULL, NULL, ?, ?, NOW())');
+                $stmt->execute([$eventId, $userId, '[]', 'pending']);
+            }
+
+            $this->sendAdminRequestEmails('Suppression ressources', $userId, (string) ($event['name'] ?? 'Événement'));
+
+            return ['success' => true, 'message' => 'Votre demande de suppression des ressources a été envoyée'];
+        } catch (Throwable $e) {
+            $errorMessage = $this->buildSqlErrorMessage($e, $stmt ?? null);
+            error_log('ERREUR createResourceDeletionRequest: ' . $errorMessage);
+            return ['success' => false, 'message' => 'Erreur lors de la création de la demande de suppression des ressources: ' . $errorMessage];
+        }
+    }
+
+    private function isResourceDeletionRequest(array $request): bool
+    {
+        if (trim((string) ($request['request_type'] ?? '')) === 'suppression ressources') {
+            return true;
+        }
+
+        $decodedResources = $this->decodeRequestedResources($request);
+        if (!($decodedResources['success'] ?? false)) {
+            return false;
+        }
+
+        return $decodedResources['resources'] === []
+            && trim((string) ($request['resources_title'] ?? '')) === ''
+            && trim((string) ($request['resources_description'] ?? '')) === '';
+    }
+
     /**
      * Créer une demande de modification des ressources (pour les utilisateurs non-admin)
      */
@@ -1058,6 +1384,7 @@ class EventController
             }
 
             $this->conn->commit();
+            $this->sendAdminRequestEmails('Modification ressources', $userId, (string) ($event['name'] ?? 'Événement'));
             return ['success' => true, 'message' => $message];
         } catch (Throwable $e) {
             if ($this->conn->inTransaction()) {
@@ -1117,6 +1444,8 @@ class EventController
                 'pending'
             ]);
 
+            $this->sendAdminRequestEmails('Modification ressources', $userId, (string) ($event['name'] ?? 'Événement'));
+
             return ['success' => true, 'message' => 'Demande de modification des ressources créée avec succès. L\'administrateur va examiner votre demande.'];
         } catch (Throwable $e) {
             $errorMessage = $this->buildSqlErrorMessage($e, $stmt);
@@ -1164,7 +1493,9 @@ class EventController
                 return ['success' => false, 'message' => 'Demande introuvable ou déjà traitée.'];
             }
 
+            $isDeletionRequest = $this->isResourceDeletionRequest($request);
             $eventId = (int) $request['event_id'];
+            $event = $this->getEventById($eventId);
             $decodedResources = $this->decodeRequestedResources($request);
             if (!($decodedResources['success'] ?? false)) {
                 $this->conn->rollBack();
@@ -1211,7 +1542,18 @@ class EventController
             $updStmt->execute(['approved', $adminId, $requestId]);
 
             $this->conn->commit();
-            return ['success' => true, 'message' => 'Demande approuvée. Les ressources ont été mises à jour.'];
+            $message = $isDeletionRequest
+                ? 'Demande approuvée. Les ressources ont été supprimées.'
+                : 'Demande approuvée. Les ressources ont été mises à jour.';
+
+            $this->sendUserRequestProcessedEmail(
+                (int) ($request['requested_by'] ?? 0),
+                (string) ($event['name'] ?? 'Événement'),
+                $isDeletionRequest ? 'Suppression ressources' : 'Modification ressources',
+                'approved'
+            );
+
+            return ['success' => true, 'message' => $message];
         } catch (Throwable $e) {
             if ($this->conn->inTransaction()) {
                 $this->conn->rollBack();
@@ -1232,6 +1574,16 @@ class EventController
         }
 
         try {
+            $requestStmt = $this->conn->prepare('SELECT * FROM resource_modification_requests WHERE id = ? AND status = ? LIMIT 1');
+            $requestStmt->execute([$requestId, 'pending']);
+            $request = $requestStmt->fetch(PDO::FETCH_ASSOC);
+            if (!$request) {
+                return ['success' => false, 'message' => 'Demande introuvable ou déjà traitée.'];
+            }
+
+            $isDeletionRequest = $this->isResourceDeletionRequest($request);
+            $event = $this->getEventById((int) ($request['event_id'] ?? 0));
+
             $stmt = $this->conn->prepare('UPDATE resource_modification_requests SET status = ?, processed_by = ?, processed_at = NOW() WHERE id = ? AND status = ?');
             $stmt->execute(['rejected', $adminId, $requestId, 'pending']);
 
@@ -1239,7 +1591,18 @@ class EventController
                 return ['success' => false, 'message' => 'Demande introuvable ou déjà traitée.'];
             }
 
-            return ['success' => true, 'message' => 'Demande de modification des ressources refusée.'];
+            $message = $isDeletionRequest
+                ? 'Demande de suppression des ressources refusée.'
+                : 'Demande de modification des ressources refusée.';
+
+            $this->sendUserRequestProcessedEmail(
+                (int) ($request['requested_by'] ?? 0),
+                (string) ($event['name'] ?? 'Événement'),
+                $isDeletionRequest ? 'Suppression ressources' : 'Modification ressources',
+                'rejected'
+            );
+
+            return ['success' => true, 'message' => $message];
         } catch (Throwable $e) {
             $errorMessage = $this->buildSqlErrorMessage($e, $stmt ?? null);
             error_log('ERREUR rejectResourceModificationRequest: ' . $errorMessage);
@@ -1268,7 +1631,7 @@ class EventController
         }
 
         // Vérifier que l'événement existe et que l'utilisateur est le créateur
-        $event = $this->eventModel->getEventById($eventId);
+        $event = $this->getEventById($eventId);
         if (!$event) {
             return ['success' => false, 'message' => 'Événement non trouvé.'];
         }
@@ -1298,6 +1661,8 @@ class EventController
             $event['location'] ?? null,
             $event['status'] ?? null,
         ]);
+
+        $this->sendAdminRequestEmails('Suppression', $userId, (string) ($event['name'] ?? 'Événement'));
 
         return ['success' => true, 'message' => 'Demande de suppression créée avec succès. L\'administrateur va examiner votre demande.'];
     }
@@ -1340,7 +1705,12 @@ class EventController
         }
 
         // Récupérer la demande
-        $stmt = $this->conn->prepare("SELECT event_id FROM event_deletion_requests WHERE id = ? AND status = 'pending'");
+        $stmt = $this->conn->prepare("
+            SELECT edr.event_id, edr.user_id, COALESCE(e.name, edr.event_name_snapshot, 'Événement') AS event_name
+            FROM event_deletion_requests edr
+            LEFT JOIN events e ON e.id = edr.event_id
+            WHERE edr.id = ? AND edr.status = 'pending'
+        ");
         $stmt->execute([$requestId]);
         $request = $stmt->fetch(PDO::FETCH_ASSOC);
 
@@ -1362,6 +1732,12 @@ class EventController
             $stmt->execute([$adminId, $requestId]);
 
             $this->conn->commit();
+            $this->sendUserRequestProcessedEmail(
+                (int) ($request['user_id'] ?? 0),
+                (string) ($request['event_name'] ?? 'Événement'),
+                'Suppression',
+                'approved'
+            );
             return ['success' => true, 'message' => 'Demande approuvée et événement supprimé.'];
         } catch (Throwable $e) {
             $this->conn->rollBack();
@@ -1379,12 +1755,32 @@ class EventController
             return ['success' => false, 'message' => 'Paramètres invalides.'];
         }
 
+        $requestStmt = $this->conn->prepare("
+            SELECT edr.user_id, COALESCE(e.name, edr.event_name_snapshot, 'Événement') AS event_name
+            FROM event_deletion_requests edr
+            LEFT JOIN events e ON e.id = edr.event_id
+            WHERE edr.id = ? AND edr.status = 'pending'
+            LIMIT 1
+        ");
+        $requestStmt->execute([$requestId]);
+        $request = $requestStmt->fetch(PDO::FETCH_ASSOC);
+        if (!$request) {
+            return ['success' => false, 'message' => 'Demande de suppression non trouvée ou déjà traitée.'];
+        }
+
         $stmt = $this->conn->prepare("UPDATE event_deletion_requests SET status = 'rejected', processed_at = NOW(), processed_by = ? WHERE id = ? AND status = 'pending'");
         $stmt->execute([$adminId, $requestId]);
 
         if ($stmt->rowCount() === 0) {
             return ['success' => false, 'message' => 'Demande de suppression non trouvée ou déjà traitée.'];
         }
+
+        $this->sendUserRequestProcessedEmail(
+            (int) ($request['user_id'] ?? 0),
+            (string) ($request['event_name'] ?? 'Événement'),
+            'Suppression',
+            'rejected'
+        );
 
         return ['success' => true, 'message' => 'Demande de suppression refusée. L\'événement est conservé.'];
     }
@@ -1399,7 +1795,7 @@ class EventController
         }
 
         // Vérifier que l'événement existe et que l'utilisateur est le créateur
-        $event = $this->eventModel->getEventById($eventId);
+        $event = $this->getEventById($eventId);
         if (!$event) {
             return ['success' => false, 'message' => 'Événement non trouvé.'];
         }
@@ -1435,6 +1831,8 @@ class EventController
             $newData['location'] ?? null,
             $newData['max'] ?? null
         ]);
+
+        $this->sendAdminRequestEmails('Modification', $userId, (string) ($event['name'] ?? 'Événement'));
 
         return ['success' => true, 'message' => 'Demande de modification créée avec succès. L\'administrateur va examiner votre demande.'];
     }
@@ -1485,7 +1883,7 @@ class EventController
             return ['success' => false, 'message' => 'Paramètres invalides.'];
         }
 
-        $event = $this->eventModel->getEventById($eventId);
+        $event = $this->getEventById($eventId);
         if (!$event) {
             return ['success' => false, 'message' => 'Événement non trouvé.'];
         }
@@ -1531,6 +1929,8 @@ class EventController
                 (int) $pendingRequest['id'],
             ]);
 
+            $this->sendAdminRequestEmails('Modification', $userId, (string) ($event['name'] ?? 'Événement'));
+
             return ['success' => true, 'message' => 'La demande de modification en cours a été remplacée par la plus récente.'];
         }
 
@@ -1552,6 +1952,8 @@ class EventController
             $normalizedPayload['max'],
         ]);
 
+        $this->sendAdminRequestEmails('Modification', $userId, (string) ($event['name'] ?? 'Événement'));
+
         return ['success' => true, 'message' => 'Demande de modification créée avec succès. L\'administrateur va examiner votre demande.'];
     }
 
@@ -1566,9 +1968,10 @@ class EventController
 
         // Récupérer la demande
         $stmt = $this->conn->prepare("
-            SELECT event_id, new_name, new_description, new_start_date, new_end_date, new_deadline, new_location, new_max 
-            FROM event_modification_requests 
-            WHERE id = ? AND status = 'pending'
+            SELECT emr.event_id, emr.requested_by, emr.new_name, emr.new_description, emr.new_start_date, emr.new_end_date, emr.new_deadline, emr.new_location, emr.new_max, e.name AS event_name
+            FROM event_modification_requests emr
+            JOIN events e ON e.id = emr.event_id
+            WHERE emr.id = ? AND emr.status = 'pending'
         ");
         $stmt->execute([$requestId]);
         $request = $stmt->fetch(PDO::FETCH_ASSOC);
@@ -1608,6 +2011,12 @@ class EventController
             $stmt->execute([$adminId, $requestId]);
 
             $this->conn->commit();
+            $this->sendUserRequestProcessedEmail(
+                (int) ($request['requested_by'] ?? 0),
+                (string) ($request['event_name'] ?? $request['new_name'] ?? 'Événement'),
+                'Modification',
+                'approved'
+            );
             return ['success' => true, 'message' => 'Demande approuvée et modifications appliquées.'];
         } catch (Throwable $e) {
             $this->conn->rollBack();
@@ -1625,6 +2034,19 @@ class EventController
             return ['success' => false, 'message' => 'Paramètres invalides.'];
         }
 
+        $requestStmt = $this->conn->prepare("
+            SELECT emr.requested_by, e.name AS event_name
+            FROM event_modification_requests emr
+            JOIN events e ON e.id = emr.event_id
+            WHERE emr.id = ? AND emr.status = 'pending'
+            LIMIT 1
+        ");
+        $requestStmt->execute([$requestId]);
+        $request = $requestStmt->fetch(PDO::FETCH_ASSOC);
+        if (!$request) {
+            return ['success' => false, 'message' => 'Demande de modification non trouvée ou déjà traitée.'];
+        }
+
         $stmt = $this->conn->prepare("
             UPDATE event_modification_requests 
             SET status = 'rejected', processed_at = NOW(), processed_by = ? 
@@ -1635,6 +2057,13 @@ class EventController
         if ($stmt->rowCount() === 0) {
             return ['success' => false, 'message' => 'Demande de modification non trouvée ou déjà traitée.'];
         }
+
+        $this->sendUserRequestProcessedEmail(
+            (int) ($request['requested_by'] ?? 0),
+            (string) ($request['event_name'] ?? 'Événement'),
+            'Modification',
+            'rejected'
+        );
 
         return ['success' => true, 'message' => 'Demande de modification refusée. L\'événement reste inchangé.'];
     }
@@ -1738,5 +2167,288 @@ class EventController
 
         return date('Y-m-d H:i:s', $timestamp);
     }
-}
 
+    /**
+     * Statistiques pour l'utilisateur connecté (front office)
+     * Retourne les stats personnelles de l'utilisateur
+     */
+    public function getUserStatistics(int $userId): array
+    {
+        if ($userId <= 0) {
+            return ['success' => false, 'message' => 'Utilisateur invalide.'];
+        }
+
+        try {
+            // Événements créés par l'utilisateur
+            $stmt = $this->conn->prepare('SELECT COUNT(*) FROM events WHERE created_by = ?');
+            $stmt->execute([$userId]);
+            $totalEvents = (int) $stmt->fetchColumn();
+
+            $stmt = $this->conn->prepare('
+                SELECT TRIM(status) AS status, COUNT(*) AS total
+                FROM events
+                WHERE created_by = ?
+                GROUP BY TRIM(status)
+            ');
+            $stmt->execute([$userId]);
+
+            $statusCounts = [
+                'valides' => 0,
+                'en_cours' => 0,
+                'refuses' => 0,
+            ];
+
+            foreach ($stmt->fetchAll(PDO::FETCH_ASSOC) ?: [] as $row) {
+                $status = strtolower(trim((string) ($row['status'] ?? '')));
+                $count = (int) ($row['total'] ?? 0);
+
+                if ($status === 'validé') {
+                    $statusCounts['valides'] += $count;
+                } elseif ($status === 'en cours') {
+                    $statusCounts['en_cours'] += $count;
+                } elseif ($status === 'refusé') {
+                    $statusCounts['refuses'] += $count;
+                }
+            }
+
+            // Nombre d'inscriptions effectuées par l'utilisateur
+            $stmt = $this->conn->prepare('SELECT COUNT(*) FROM registrations WHERE user_id = ?');
+            $stmt->execute([$userId]);
+            $inscriptions = (int) $stmt->fetchColumn();
+
+            // Nombre de demandes envoyées (suppression + modification événements + modification ressources)
+            $stmt = $this->conn->prepare("SELECT 
+                (SELECT COUNT(*) FROM event_deletion_requests WHERE user_id = ?) +
+                (SELECT COUNT(*) FROM event_modification_requests WHERE requested_by = ?) +
+                (SELECT COUNT(*) FROM resource_modification_requests WHERE requested_by = ?) as total_demandes");
+            $stmt->execute([$userId, $userId, $userId]);
+            $demandes = $stmt->fetch(PDO::FETCH_ASSOC)['total_demandes'] ?? 0;
+
+            return [
+                'success' => true,
+                'user_id' => $userId,
+                'events_crees' => $totalEvents,
+                'events_valides' => $statusCounts['valides'],
+                'events_en_cours' => $statusCounts['en_cours'],
+                'events_refuses' => $statusCounts['refuses'],
+                'inscriptions' => $inscriptions,
+                'demandes_envoyees' => (int) $demandes,
+            ];
+        } catch (PDOException $e) {
+            error_log('Erreur getUserStatistics user_id=' . $userId . ': ' . $e->getMessage());
+            return ['success' => false, 'message' => 'Erreur lors de la récupération des statistiques.'];
+        }
+    }
+
+    /**
+     * Statistiques temporelles pour l'admin (back office)
+     * Retourne l'évolution des événements par mois sur les 12 derniers mois
+     */
+    public function getAdminMonthlyStatistics(): array
+    {
+        try {
+            $stats = [];
+            
+            // Générer les 12 derniers mois
+            for ($i = 11; $i >= 0; $i--) {
+                $month = date('Y-m', strtotime("-$i months"));
+                $monthLabel = date('M Y', strtotime("-$i months"));
+                $startDate = $month . '-01';
+                $endDate = date('Y-m-t', strtotime($startDate));
+                
+                // Événements créés ce mois
+                $stmt = $this->conn->prepare("SELECT 
+                    COUNT(*) as total,
+                    SUM(CASE WHEN status = 'valide' THEN 1 ELSE 0 END) as valides,
+                    SUM(CASE WHEN status = 'en cours' THEN 1 ELSE 0 END) as en_cours,
+                    SUM(CASE WHEN status = 'refusé' THEN 1 ELSE 0 END) as refuses
+                    FROM events 
+                    WHERE DATE(created_at) BETWEEN ? AND ?");
+                $stmt->execute([$startDate, $endDate]);
+                $eventStats = $stmt->fetch(PDO::FETCH_ASSOC);
+
+                // Inscriptions ce mois
+                $stmt = $this->conn->prepare("SELECT COUNT(*) as total FROM registrations WHERE DATE(created_at) BETWEEN ? AND ?");
+                $stmt->execute([$startDate, $endDate]);
+                $inscriptions = $stmt->fetch(PDO::FETCH_ASSOC)['total'] ?? 0;
+
+                $stats[] = [
+                    'month' => $monthLabel,
+                    'mois_complet' => $month,
+                    'events_crees' => (int) ($eventStats['total'] ?? 0),
+                    'events_valides' => (int) ($eventStats['valides'] ?? 0),
+                    'events_en_cours' => (int) ($eventStats['en_cours'] ?? 0),
+                    'events_refuses' => (int) ($eventStats['refuses'] ?? 0),
+                    'inscriptions' => (int) $inscriptions,
+                ];
+            }
+
+            // Totaux généraux
+            $stmt = $this->conn->query("SELECT 
+                COUNT(*) as total_events,
+                SUM(CASE WHEN status = 'valide' THEN 1 ELSE 0 END) as total_valides,
+                SUM(CASE WHEN status = 'en cours' THEN 1 ELSE 0 END) as total_en_cours,
+                SUM(CASE WHEN status = 'refusé' THEN 1 ELSE 0 END) as total_refuses
+                FROM events");
+            $totaux = $stmt->fetch(PDO::FETCH_ASSOC);
+
+            $stmt = $this->conn->query("SELECT COUNT(*) as total_inscriptions FROM registrations");
+            $totalInscriptions = $stmt->fetch(PDO::FETCH_ASSOC)['total_inscriptions'] ?? 0;
+
+            return [
+                'success' => true,
+                'monthly' => $stats,
+                'totaux' => [
+                    'total_events' => (int) ($totaux['total_events'] ?? 0),
+                    'total_valides' => (int) ($totaux['total_valides'] ?? 0),
+                    'total_en_cours' => (int) ($totaux['total_en_cours'] ?? 0),
+                    'total_refuses' => (int) ($totaux['total_refuses'] ?? 0),
+                    'total_inscriptions' => (int) $totalInscriptions,
+                ]
+            ];
+        } catch (PDOException $e) {
+            return ['success' => false, 'message' => 'Erreur lors de la récupération des statistiques.'];
+        }
+    }
+
+    /**
+     * Statistiques temporelles avec filtres (jour, semaine, mois, année)
+     * Pour le back office avec mise à jour AJAX
+     */
+    public function getTemporalStatistics(string $period = 'month'): array
+    {
+        $validPeriods = ['day', 'week', 'month', 'year'];
+        if (!in_array($period, $validPeriods, true)) {
+            $period = 'month';
+        }
+
+        try {
+            $stats = [];
+            $totaux = [];
+
+            switch ($period) {
+                case 'day':
+                    // 30 derniers jours
+                    for ($i = 29; $i >= 0; $i--) {
+                        $date = date('Y-m-d', strtotime("-$i days"));
+                        $label = date('d/m', strtotime("-$i days"));
+                        
+                        $stmt = $this->conn->prepare("SELECT 
+                            COUNT(*) as total,
+                            SUM(CASE WHEN status = 'valide' THEN 1 ELSE 0 END) as valides,
+                            SUM(CASE WHEN status = 'en cours' THEN 1 ELSE 0 END) as en_cours,
+                            SUM(CASE WHEN status = 'refusé' THEN 1 ELSE 0 END) as refuses
+                            FROM events WHERE DATE(created_at) = ?");
+                        $stmt->execute([$date]);
+                        $eventStats = $stmt->fetch(PDO::FETCH_ASSOC);
+
+                        $stmt = $this->conn->prepare("SELECT COUNT(*) as total FROM registrations WHERE DATE(created_at) = ?");
+                        $stmt->execute([$date]);
+                        $inscriptions = $stmt->fetch(PDO::FETCH_ASSOC)['total'] ?? 0;
+
+                        $stats[] = [
+                            'label' => $label,
+                            'events_crees' => (int) ($eventStats['total'] ?? 0),
+                            'events_valides' => (int) ($eventStats['valides'] ?? 0),
+                            'events_en_cours' => (int) ($eventStats['en_cours'] ?? 0),
+                            'events_refuses' => (int) ($eventStats['refuses'] ?? 0),
+                            'inscriptions' => (int) $inscriptions,
+                        ];
+                    }
+                    break;
+
+                case 'week':
+                    // 12 dernières semaines
+                    for ($i = 11; $i >= 0; $i--) {
+                        $yearWeek = date('Y-W', strtotime("-$i weeks"));
+                        $startDate = date('Y-m-d', strtotime($yearWeek . ' monday'));
+                        $endDate = date('Y-m-d', strtotime($yearWeek . ' sunday'));
+                        $label = 'S' . date('W', strtotime("-$i weeks"));
+                        
+                        $stmt = $this->conn->prepare("SELECT 
+                            COUNT(*) as total,
+                            SUM(CASE WHEN status = 'valide' THEN 1 ELSE 0 END) as valides,
+                            SUM(CASE WHEN status = 'en cours' THEN 1 ELSE 0 END) as en_cours,
+                            SUM(CASE WHEN status = 'refusé' THEN 1 ELSE 0 END) as refuses
+                            FROM events WHERE DATE(created_at) BETWEEN ? AND ?");
+                        $stmt->execute([$startDate, $endDate]);
+                        $eventStats = $stmt->fetch(PDO::FETCH_ASSOC);
+
+                        $stmt = $this->conn->prepare("SELECT COUNT(*) as total FROM registrations WHERE DATE(created_at) BETWEEN ? AND ?");
+                        $stmt->execute([$startDate, $endDate]);
+                        $inscriptions = $stmt->fetch(PDO::FETCH_ASSOC)['total'] ?? 0;
+
+                        $stats[] = [
+                            'label' => $label,
+                            'events_crees' => (int) ($eventStats['total'] ?? 0),
+                            'events_valides' => (int) ($eventStats['valides'] ?? 0),
+                            'events_en_cours' => (int) ($eventStats['en_cours'] ?? 0),
+                            'events_refuses' => (int) ($eventStats['refuses'] ?? 0),
+                            'inscriptions' => (int) $inscriptions,
+                        ];
+                    }
+                    break;
+
+                case 'month':
+                    // 12 derniers mois (déjà implémenté dans getAdminMonthlyStatistics)
+                    return $this->getAdminMonthlyStatistics();
+
+                case 'year':
+                    // 5 dernières années
+                    $currentYear = date('Y');
+                    for ($i = 4; $i >= 0; $i--) {
+                        $year = $currentYear - $i;
+                        $startDate = $year . '-01-01';
+                        $endDate = $year . '-12-31';
+                        
+                        $stmt = $this->conn->prepare("SELECT 
+                            COUNT(*) as total,
+                            SUM(CASE WHEN status = 'valide' THEN 1 ELSE 0 END) as valides,
+                            SUM(CASE WHEN status = 'en cours' THEN 1 ELSE 0 END) as en_cours,
+                            SUM(CASE WHEN status = 'refusé' THEN 1 ELSE 0 END) as refuses
+                            FROM events WHERE DATE(created_at) BETWEEN ? AND ?");
+                        $stmt->execute([$startDate, $endDate]);
+                        $eventStats = $stmt->fetch(PDO::FETCH_ASSOC);
+
+                        $stmt = $this->conn->prepare("SELECT COUNT(*) as total FROM registrations WHERE DATE(created_at) BETWEEN ? AND ?");
+                        $stmt->execute([$startDate, $endDate]);
+                        $inscriptions = $stmt->fetch(PDO::FETCH_ASSOC)['total'] ?? 0;
+
+                        $stats[] = [
+                            'label' => (string) $year,
+                            'events_crees' => (int) ($eventStats['total'] ?? 0),
+                            'events_valides' => (int) ($eventStats['valides'] ?? 0),
+                            'events_en_cours' => (int) ($eventStats['en_cours'] ?? 0),
+                            'events_refuses' => (int) ($eventStats['refuses'] ?? 0),
+                            'inscriptions' => (int) $inscriptions,
+                        ];
+                    }
+                    break;
+            }
+
+            // Calculer les totaux pour la période sélectionnée
+            $totaux = [
+                'total_events' => array_sum(array_column($stats, 'events_crees')),
+                'total_valides' => array_sum(array_column($stats, 'events_valides')),
+                'total_en_cours' => array_sum(array_column($stats, 'events_en_cours')),
+                'total_refuses' => array_sum(array_column($stats, 'events_refuses')),
+                'total_inscriptions' => array_sum(array_column($stats, 'inscriptions')),
+            ];
+
+            // Calculer le taux de validation
+            $totaux['taux_validation'] = $totaux['total_events'] > 0 
+                ? round(($totaux['total_valides'] / $totaux['total_events']) * 100, 1) 
+                : 0;
+
+            return [
+                'success' => true,
+                'period' => $period,
+                'data' => $stats,
+                'totaux' => $totaux,
+            ];
+
+        } catch (PDOException $e) {
+            return ['success' => false, 'message' => 'Erreur lors de la récupération des statistiques temporelles.'];
+        }
+    }
+}

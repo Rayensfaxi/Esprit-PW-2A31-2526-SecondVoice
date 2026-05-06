@@ -14,6 +14,24 @@ define('DB_PASS', getenv('DB_PASS') !== false ? (string) getenv('DB_PASS') : '')
 define('DB_CHARSET', getenv('DB_CHARSET') ?: 'utf8mb4');
 define('DB_SQLITE_PATH', getenv('DB_SQLITE_PATH') ?: ':memory:');
 
+// Configuration SMTP (surchargeable via variables d'environnement ou smtp_config.php)
+$smtpLocalConfig = [];
+if (is_file(__DIR__ . '/smtp_config.php')) {
+    $smtpLocalConfig = require __DIR__ . '/smtp_config.php';
+    if (!is_array($smtpLocalConfig)) {
+        $smtpLocalConfig = [];
+    }
+}
+
+define('SMTP_HOST', getenv('SMTP_HOST') ?: (string) ($smtpLocalConfig['host'] ?? ''));
+define('SMTP_USERNAME', getenv('SMTP_USERNAME') ?: (string) ($smtpLocalConfig['username'] ?? ''));
+define('SMTP_PASSWORD', getenv('SMTP_PASSWORD') ?: (string) ($smtpLocalConfig['password'] ?? ''));
+define('SMTP_PORT', (int) (getenv('SMTP_PORT') ?: ($smtpLocalConfig['port'] ?? 587)));
+define('SMTP_ENCRYPTION', getenv('SMTP_ENCRYPTION') ?: (string) ($smtpLocalConfig['encryption'] ?? 'tls'));
+define('SMTP_FROM_EMAIL', getenv('SMTP_FROM_EMAIL') ?: (string) ($smtpLocalConfig['from_email'] ?? (SMTP_USERNAME ?: 'no-reply@secondvoice.local')));
+define('SMTP_FROM_NAME', getenv('SMTP_FROM_NAME') ?: (string) ($smtpLocalConfig['from_name'] ?? 'SecondVoice'));
+define('SMTP_DEBUG', (int) (getenv('SMTP_DEBUG') ?: ($smtpLocalConfig['debug'] ?? 0)));
+
 class Config
 {
     private static ?PDO $pdo = null;

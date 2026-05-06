@@ -6,6 +6,8 @@ document.addEventListener('DOMContentLoaded', function () {
   const feedback = $('#admin-feedback');
   const modal = $('#registrants-modal');
   const registrantsList = $('#registrants-list');
+  const exportRegistrantsPdf = $('#export-registrants-pdf');
+  const exportPdfButtons = $all('.export-pdf-btn');
 
   // Popup system for confirmation and success messages
   function showPopup(message, type = 'success', onConfirm = null, onCancel = null) {
@@ -287,6 +289,25 @@ document.addEventListener('DOMContentLoaded', function () {
   adminSearchInput?.addEventListener('input', applyAdminSearch);
   applyAdminSearch();
 
+  exportPdfButtons.forEach(function (button) {
+    button.addEventListener('click', function (event) {
+      event.preventDefault();
+
+      const eventId = this.dataset.eventId || '';
+      console.log('Export PDF cliqué', eventId);
+
+      if (!eventId || Number(eventId) <= 0) {
+        showFeedback('Aucun evenement selectionne pour exporter le PDF.', true);
+        return;
+      }
+
+      const url = 'export_inscrits_pdf.php?event_id=' + encodeURIComponent(String(eventId));
+      console.log('URL export PDF', url);
+      showSuccess('PDF exporté avec succès');
+      window.location.href = url;
+    });
+  });
+
   $all('.view-registrants').forEach(function (button) {
     button.addEventListener('click', function () {
       const card = this.closest('.event-card');
@@ -298,6 +319,12 @@ document.addEventListener('DOMContentLoaded', function () {
       }
 
       registrantsList.innerHTML = '';
+      const eventId = Number(card?.getAttribute('data-id') || this.getAttribute('data-id') || 0);
+      if (exportRegistrantsPdf) {
+        exportRegistrantsPdf.dataset.eventId = eventId > 0 ? String(eventId) : '';
+        exportRegistrantsPdf.style.display = eventId > 0 ? '' : 'none';
+      }
+
       if (!registrants.length) {
         registrantsList.innerHTML = '<div class="small">Aucun inscrit.</div>';
       } else {
@@ -350,8 +377,18 @@ document.addEventListener('DOMContentLoaded', function () {
     });
   });
 
+  let isSavingAdminEvent = false;
+
   // Validation and save handler
-  $('#admin-save')?.addEventListener('click', async function () {
+  async function handleAdminEventSave(event) {
+    event?.preventDefault();
+    console.log('clic enregistrer événement admin');
+
+    if (isSavingAdminEvent) return;
+    isSavingAdminEvent = true;
+    const saveButton = $('#admin-save');
+    if (saveButton) saveButton.disabled = true;
+
     clearAllFieldErrors();
 
     // Define required fields
@@ -392,6 +429,8 @@ document.addEventListener('DOMContentLoaded', function () {
       if (firstInvalidField) {
         firstInvalidField.focus();
       }
+      isSavingAdminEvent = false;
+      if (saveButton) saveButton.disabled = false;
       return;
     }
 
@@ -410,19 +449,44 @@ document.addEventListener('DOMContentLoaded', function () {
     };
 
     const url = payload.id ? apiBase + '?action=update' : apiBase + '?action=create';
-    const result = await postJson(url, payload);
+    let result;
+    try {
+      result = await postJson(url, payload);
+    } catch (error) {
+      showFeedback("Erreur lors de l'enregistrement: " + error.message, true);
+      isSavingAdminEvent = false;
+      if (saveButton) saveButton.disabled = false;
+      return;
+    }
+
     if (result?.success) {
-      const message = isUpdate ? 'Événement modifié avec succès' : 'Événement ajouté avec succès';
-      showSuccess(message);
+      if (!isUpdate) {
+        const eventId = Number(result.id || 0);
+        if (eventId > 0) {
+          showSuccess('Événement ajouté. Redirection vers la gestion des ressources...');
+          setTimeout(() => {
+            window.location.href = '../frontoffice/resources.php?event_id=' + encodeURIComponent(String(eventId));
+          }, 1200);
+          return;
+        }
+
+        showFeedback('Événement ajouté, mais identifiant introuvable pour ajouter les ressources.', true);
+        isSavingAdminEvent = false;
+        if (saveButton) saveButton.disabled = false;
+        return;
+      }
+
+      showSuccess('Événement modifié avec succès');
       setTimeout(() => window.location.reload(), 1500);
     } else {
       showFeedback(result?.message || "Erreur lors de l'enregistrement.", true);
+      isSavingAdminEvent = false;
+      if (saveButton) saveButton.disabled = false;
     }
-  });
+  }
 
   $('#admin-event-form')?.addEventListener('submit', function (event) {
-    event.preventDefault();
-    $('#admin-save')?.click();
+    handleAdminEventSave(event);
   });
 
   // Clear error messages on input
@@ -553,11 +617,16 @@ document.addEventListener('DOMContentLoaded', function () {
     button.addEventListener('click', async function () {
       const requestId = Number(this.getAttribute('data-request-id'));
       if (!requestId) return;
+      const requestType = this.getAttribute('data-request-type') || 'modify';
+      const isDeleteRequest = requestType === 'delete';
+      const confirmMessage = isDeleteRequest
+        ? 'Êtes-vous sûr de vouloir approuver cette suppression des ressources ? Toutes les ressources de cet événement seront supprimées.'
+        : 'Êtes-vous sûr de vouloir approuver cette modification des ressources ? Les nouvelles ressources remplaceront les anciennes.';
 
-      showConfirm('Êtes-vous sûr de vouloir approuver cette modification des ressources ? Les nouvelles ressources remplaceront les anciennes.', async function() {
+      showConfirm(confirmMessage, async function() {
         const result = await postJson(apiBase + '?action=approve_resource_modification', { request_id: requestId });
         if (result?.success) {
-          showSuccess('Modification des ressources approuvée');
+          showSuccess(isDeleteRequest ? 'Suppression des ressources approuvée' : 'Modification des ressources approuvée');
           setTimeout(() => window.location.reload(), 1500);
         } else {
           showFeedback(result?.message || 'Erreur lors de l\'approbation.', true);
@@ -570,11 +639,16 @@ document.addEventListener('DOMContentLoaded', function () {
     button.addEventListener('click', async function () {
       const requestId = Number(this.getAttribute('data-request-id'));
       if (!requestId) return;
+      const requestType = this.getAttribute('data-request-type') || 'modify';
+      const isDeleteRequest = requestType === 'delete';
+      const confirmMessage = isDeleteRequest
+        ? 'Êtes-vous sûr de vouloir refuser cette suppression des ressources ? Les ressources actuelles seront conservées.'
+        : 'Êtes-vous sûr de vouloir refuser cette modification des ressources ? Les ressources actuelles seront conservées.';
 
-      showConfirm('Êtes-vous sûr de vouloir refuser cette modification des ressources ? Les ressources actuelles seront conservées.', async function() {
+      showConfirm(confirmMessage, async function() {
         const result = await postJson(apiBase + '?action=reject_resource_modification', { request_id: requestId });
         if (result?.success) {
-          showSuccess('Modification des ressources refusée');
+          showSuccess(isDeleteRequest ? 'Suppression des ressources refusée' : 'Modification des ressources refusée');
           setTimeout(() => window.location.reload(), 1500);
         } else {
           showFeedback(result?.message || 'Erreur lors du refus.', true);

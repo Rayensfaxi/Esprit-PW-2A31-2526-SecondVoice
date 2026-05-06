@@ -1,8 +1,6 @@
 <?php
 declare(strict_types=1);
 
-require_once __DIR__ . '/../config.php';
-
 class Event
 {
     private ?int $id;
@@ -71,53 +69,4 @@ class Event
     public function getCurrent(): int { return $this->current; }
     public function getStatus(): string { return $this->status; }
     public function getCreatedBy(): ?int { return $this->createdBy; }
-}
-
-class EventModel
-{
-    private PDO $pdo;
-
-    public function __construct(?PDO $connection = null)
-    {
-        $this->pdo = $connection instanceof PDO ? $connection : Config::getConnexion();
-    }
-
-    public function getValidatedEvents(): array
-    {
-        $sql = "SELECT id, name, description, start_date, end_date, deadline, location, `max`, `current`, status, created_by
-                FROM events
-                WHERE status = 'validé'
-                ORDER BY start_date ASC, id ASC";
-        $stmt = $this->pdo->prepare($sql);
-        $stmt->execute();
-        return $stmt->fetchAll(PDO::FETCH_ASSOC) ?: [];
-    }
-
-    public function getPendingEvents(): array
-    {
-        $sql = "SELECT id, name, description, start_date, end_date, deadline, location, `max`, `current`, status, created_by
-                FROM events
-                WHERE status = 'en cours'
-                ORDER BY start_date ASC, id ASC";
-        $stmt = $this->pdo->prepare($sql);
-        $stmt->execute();
-        return $stmt->fetchAll(PDO::FETCH_ASSOC) ?: [];
-    }
-
-    public function getEventById(int $id): ?array
-    {
-        $sql = "SELECT id, name, description, start_date, end_date, deadline, location, `max`, `current`, status, created_by
-                FROM events WHERE id = ?";
-        $stmt = $this->pdo->prepare($sql);
-        $stmt->execute([$id]);
-        $row = $stmt->fetch(PDO::FETCH_ASSOC);
-        return $row ?: null;
-    }
-
-    public function getUserEvents(int $userId): array
-    {
-        $stmt = $this->pdo->prepare('SELECT event_id FROM registrations WHERE user_id = ? ORDER BY event_id ASC');
-        $stmt->execute([$userId]);
-        return $stmt->fetchAll(PDO::FETCH_ASSOC) ?: [];
-    }
 }

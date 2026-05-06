@@ -43,6 +43,39 @@ if ($action !== '') {
             echo json_encode($controller->saveResources($eventId, $userId, $resources, $resourcesTitle, $resourcesDescription));
             exit;
 
+        case 'delete_resources':
+            $userId = (int) ($_SESSION['user_id'] ?? 0);
+            if ($userId <= 0) {
+                echo json_encode(['success' => false, 'message' => 'Authentification requise.']);
+                exit;
+            }
+            $eventId = (int) ($input['event_id'] ?? $_REQUEST['event_id'] ?? 0);
+            echo json_encode($controller->deleteResources($eventId, $userId));
+            exit;
+
+        case 'list_importable_events':
+            $userId = (int) ($_SESSION['user_id'] ?? 0);
+            if ($userId <= 0) {
+                echo json_encode(['success' => false, 'message' => 'Authentification requise.']);
+                exit;
+            }
+            $currentEventId = (int) ($_GET['event_id'] ?? $input['event_id'] ?? 0);
+            echo json_encode([
+                'success' => true,
+                'events' => $controller->getImportableResourceEventsForUser($userId, $currentEventId),
+            ]);
+            exit;
+
+        case 'import_resources':
+            $userId = (int) ($_SESSION['user_id'] ?? 0);
+            if ($userId <= 0) {
+                echo json_encode(['success' => false, 'message' => 'Authentification requise.']);
+                exit;
+            }
+            $sourceEventId = (int) ($input['source_event_id'] ?? $_REQUEST['source_event_id'] ?? 0);
+            echo json_encode($controller->getImportableResourcesFromEvent($sourceEventId, $userId));
+            exit;
+
         case 'get_resources':
             $eventId = (int) ($_GET['event_id'] ?? 0);
             $resources = $controller->getResourcesByEvent($eventId);
@@ -78,7 +111,9 @@ $resourceMeta = $resources[0] ?? [];
 $resourcesTitle = (string) ($resourceMeta['resources_title'] ?? '');
 $resourcesDescription = (string) ($resourceMeta['resources_description'] ?? '');
 $isOwner = ($userId > 0 && (int) ($event['created_by'] ?? 0) === $userId);
-$hasPendingRequest = $isOwner ? $controller->hasPendingResourceModificationRequest($eventId) : false;
+$isAdmin = currentUserIsAdmin();
+$canManageResources = $isOwner || $isAdmin;
+$hasPendingRequest = $canManageResources ? $controller->hasPendingResourceModificationRequest($eventId) : false;
 ?>
 <!DOCTYPE html>
 <html lang="fr" data-theme="dark">
@@ -147,20 +182,20 @@ $hasPendingRequest = $isOwner ? $controller->hasPendingResourceModificationReque
             <h3 style="color: var(--primary); margin-bottom: 8px;"><?= h($event['name'] ?? '') ?></h3>
             <p class="meta small" style="margin-bottom: 24px;"><?= h($event['start_date'] ?? '') ?> — <?= h($event['location'] ?? '') ?></p>
 
-            <?php if (!$isOwner): ?>
-              <p class="muted">Vous n'êtes pas le propriétaire de cet événement.</p>
+            <?php if (!$canManageResources): ?>
+              <p class="muted">Vous n'êtes pas autorisé à gérer les ressources de cet événement.</p>
             <?php else: ?>
 
             <?php if ($hasPendingRequest): ?>
               <div style="background: #fff3cd; border: 1px solid #ffc107; border-radius: 8px; padding: 16px; margin-bottom: 20px; color: #856404;">
                 <strong>Demande en attente</strong><br>
-                Une demande de modification des ressources est actuellement en cours d'examen par un administrateur.
-                Les modifications ne seront visibles qu'après approbation.
+                Une demande concernant les ressources est actuellement en cours d'examen par un administrateur.
+                Les changements ne seront visibles qu'après approbation.
               </div>
             <?php endif; ?>
 
             <form id="resources-form" novalidate>
-              <input type="hidden" id="event-id" value="<?= $eventId ?>" />
+              <input type="hidden" id="event-id" name="event_id" value="<?= $eventId ?>" />
 
               <div class="resource-section">
                 <div class="section-header">
@@ -248,7 +283,9 @@ $hasPendingRequest = $isOwner ? $controller->hasPendingResourceModificationReque
 
               <!-- Actions -->
               <div class="actions" style="margin-top: 24px;">
-                <button type="button" class="btn" id="btn-save-resources">Enregistrer</button>
+                <button type="submit" class="btn" id="btn-save-resources" name="save_resources">Enregistrer</button>
+                <button type="button" class="btn outline" id="import-resources-btn" data-event-id="<?= $eventId ?>">Importer ressources</button>
+                <button type="button" class="btn outline" id="delete-resources-btn" data-event-id="<?= $eventId ?>">Supprimer ressources</button>
                 <a href="events.php" class="btn outline">Annuler</a>
               </div>
             </form>
@@ -274,6 +311,6 @@ $hasPendingRequest = $isOwner ? $controller->hasPendingResourceModificationReque
   </div>
 
   <script src="assets/js/main.js"></script>
-  <script src="assets/js/resources-front.js?v=20260424-title6"></script>
+  <script src="assets/js/resources-front.js?v=20260505-import-resources"></script>
 </body>
 </html>

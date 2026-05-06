@@ -2,6 +2,7 @@ CREATE TABLE IF NOT EXISTS resource_modification_requests (
     id INT AUTO_INCREMENT PRIMARY KEY,
     event_id INT NOT NULL,
     requested_by INT NOT NULL,
+    request_type VARCHAR(50) NOT NULL DEFAULT 'modification ressources',
     resources_title VARCHAR(255) DEFAULT NULL,
     resources_description TEXT DEFAULT NULL,
     resources_data LONGTEXT NOT NULL,

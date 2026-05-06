@@ -545,6 +545,7 @@ if ($action !== '') {
               <button class="btn tab tab-toggle active" type="button" data-target="#tab-consult">Consulter</button>
               <button class="btn tab tab-toggle" type="button" data-target="#tab-my">Mes inscriptions</button>
               <button class="btn tab tab-toggle" type="button" data-target="#tab-requests">Mes demandes</button>
+              <button class="btn tab tab-toggle" type="button" data-target="#tab-stats">Mes statistiques</button>
               
               <?php if ($userId > 0): ?>
                 <button id="btn-show-add-form" class="btn tab tab-toggle" type="button" data-target="#tab-add-form" <?= $userId <= 0 ? 'disabled' : '' ?>>Ajouter un événement</button>
@@ -694,6 +695,108 @@ if ($action !== '') {
                 <?php endif; ?>
               </div>
             </section>
+
+            <!-- Tab: User Statistics -->
+            <section id="tab-stats" class="tab-panel front-panel section-mes-statistiques" style="display: none;">
+              <div id="my-event-statistics">
+                <h2>Mes statistiques</h2>
+                <?php if ($userId <= 0): ?>
+                  <p class="muted fade-up">Connectez-vous pour voir vos statistiques.</p>
+                <?php else: ?>
+                  <?php
+                    // Récupérer les statistiques de l'utilisateur
+                    $userStats = $controller->getUserStatistics($userId);
+                    $totalEvents = $userStats['events_crees'] ?? 0;
+                    $valides = $userStats['events_valides'] ?? 0;
+                    $enCours = $userStats['events_en_cours'] ?? 0;
+                    $refuses = $userStats['events_refuses'] ?? 0;
+                    $inscriptions = $userStats['inscriptions'] ?? 0;
+                  ?>
+                  <div class="stats-container fade-up" style="margin-top: 24px;">
+                    
+                    <!-- Graphique et chiffres clés -->
+                    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 24px; margin-bottom: 30px;">
+                      
+                      <!-- Graphique circulaire -->
+                      <div style="background: rgba(255, 255, 255, 0.7); backdrop-filter: blur(10px); border-radius: 20px; padding: 30px; box-shadow: 0 8px 32px rgba(99, 102, 241, 0.15); border: 1px solid rgba(255, 255, 255, 0.5);">
+                        <h3 style="margin-bottom: 20px; color: #1f2937; font-size: 18px; text-align: center;">Répartition de mes événements</h3>
+                        <div style="position: relative; height: 250px; max-width: 250px; margin: 0 auto;">
+                          <canvas id="userStatsChart"></canvas>
+                          <!-- Total au centre -->
+                          <div style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); text-align: center;">
+                            <div style="font-size: 32px; font-weight: 700; color: #6366f1;"><?= $totalEvents ?></div>
+                            <div style="font-size: 12px; color: #6b7280;">Total</div>
+                          </div>
+                        </div>
+                        <!-- Données JSON pour Chart.js -->
+                        <script id="user-stats-data" type="application/json">
+                          <?= json_encode([
+                            'user_id' => $userId,
+                            'total_events' => $totalEvents,
+                            'valides' => $valides,
+                            'en_cours' => $enCours,
+                            'refuses' => $refuses,
+                            'inscriptions' => $inscriptions,
+                          ], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) ?>
+                        </script>
+                      </div>
+
+                      <!-- Chiffres clés -->
+                      <div style="display: flex; flex-direction: column; gap: 16px;">
+                        
+                        <!-- Événements créés -->
+                        <div style="background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%); border-radius: 16px; padding: 24px; color: white; box-shadow: 0 4px 15px rgba(99, 102, 241, 0.3); display: flex; align-items: center; gap: 16px;">
+                          <div style="font-size: 40px; background: rgba(255,255,255,0.2); border-radius: 12px; padding: 10px;">📊</div>
+                          <div>
+                            <div style="font-size: 13px; opacity: 0.9;">Événements créés</div>
+                            <div style="font-size: 32px; font-weight: 700;"><?= $totalEvents ?></div>
+                          </div>
+                        </div>
+
+                        <!-- Inscriptions -->
+                        <div style="background: linear-gradient(135deg, #f59e0b 0%, #fbbf24 100%); border-radius: 16px; padding: 24px; color: white; box-shadow: 0 4px 15px rgba(245, 158, 11, 0.3); display: flex; align-items: center; gap: 16px;">
+                          <div style="font-size: 40px; background: rgba(255,255,255,0.2); border-radius: 12px; padding: 10px;">🎫</div>
+                          <div>
+                            <div style="font-size: 13px; opacity: 0.9;">Mes inscriptions</div>
+                            <div style="font-size: 32px; font-weight: 700;"><?= $inscriptions ?></div>
+                          </div>
+                        </div>
+
+                        <!-- Taux de validation -->
+                        <div style="background: rgba(16, 185, 129, 0.1); border: 2px solid rgba(16, 185, 129, 0.3); border-radius: 16px; padding: 24px; display: flex; align-items: center; gap: 16px;">
+                          <div style="font-size: 40px; background: rgba(16, 185, 129, 0.2); border-radius: 12px; padding: 10px;">📈</div>
+                          <div>
+                            <div style="font-size: 13px; color: #6b7280;">Taux de validation</div>
+                            <div style="font-size: 32px; font-weight: 700; color: #10b981;">
+                              <?= $totalEvents > 0 ? round(($valides / $totalEvents) * 100) : 0 ?>%
+                            </div>
+                          </div>
+                        </div>
+
+                      </div>
+                    </div>
+
+                    <!-- Légende des statuts -->
+                    <div style="display: flex; justify-content: center; gap: 24px; flex-wrap: wrap; margin-top: 20px;">
+                      <div style="display: flex; align-items: center; gap: 8px;">
+                        <div style="width: 16px; height: 16px; background: #10b981; border-radius: 4px;"></div>
+                        <span style="color: #374151; font-size: 14px;">Validés (<?= $valides ?>)</span>
+                      </div>
+                      <div style="display: flex; align-items: center; gap: 8px;">
+                        <div style="width: 16px; height: 16px; background: #3b82f6; border-radius: 4px;"></div>
+                        <span style="color: #374151; font-size: 14px;">En cours (<?= $enCours ?>)</span>
+                      </div>
+                      <div style="display: flex; align-items: center; gap: 8px;">
+                        <div style="width: 16px; height: 16px; background: #ef4444; border-radius: 4px;"></div>
+                        <span style="color: #374151; font-size: 14px;">Refusés (<?= $refuses ?>)</span>
+                      </div>
+                    </div>
+
+                  </div>
+                <?php endif; ?>
+              </div>
+            </section>
+
 <!-- Tab: Add Event Form (Hidden by default) -->
             <?php if (currentUserIsConnected()): ?>
             <section id="tab-add-form" class="tab-panel front-panel" style="display: none;">
@@ -896,6 +999,14 @@ if ($action !== '') {
           });
         }
 
+        const btnMyStats = document.querySelector('.tab-toggle[data-target="#tab-stats"]');
+        if (btnMyStats) {
+          btnMyStats.addEventListener('click', function(e) {
+            e.preventDefault();
+            showTab('tab-stats', this);
+          });
+        }
+
         const requestFilters = document.querySelectorAll('.request-filter');
         const requestPanels = document.querySelectorAll('.request-subpanel');
         requestFilters.forEach(function(button) {
@@ -939,7 +1050,162 @@ if ($action !== '') {
         }
 
         console.log('[TAB] Tab navigation initialized');
+
       });
+    </script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+    <script>
+    document.addEventListener('DOMContentLoaded', function() {
+      // Graphique doughnut pour les statistiques utilisateur
+      const userStatsCanvas = document.getElementById('userStatsChart');
+      const userStatsDataElement = document.getElementById('user-stats-data');
+      
+      if (userStatsCanvas && userStatsDataElement && typeof Chart !== 'undefined') {
+        try {
+          const statsData = JSON.parse(userStatsDataElement.textContent);
+          console.log('[Mes statistiques] Utilisateur connecté:', statsData.user_id);
+          console.log('[Mes statistiques] Données PHP reçues:', statsData);
+          
+          new Chart(userStatsCanvas, {
+            type: 'doughnut',
+            data: {
+              labels: ['Validés', 'En cours', 'Refusés'],
+              datasets: [{
+                data: [statsData.valides, statsData.en_cours, statsData.refuses],
+                backgroundColor: [
+                  'rgba(16, 185, 129, 0.8)',   // Vert - Validés
+                  'rgba(59, 130, 246, 0.8)',   // Bleu - En cours
+                  'rgba(239, 68, 68, 0.8)'     // Rouge - Refusés
+                ],
+                borderColor: [
+                  'rgba(16, 185, 129, 1)',
+                  'rgba(59, 130, 246, 1)',
+                  'rgba(239, 68, 68, 1)'
+                ],
+                borderWidth: 2,
+                hoverOffset: 4
+              }]
+            },
+            options: {
+              responsive: true,
+              maintainAspectRatio: false,
+              cutout: '65%',
+              plugins: {
+                legend: {
+                  display: false // On utilise notre propre légende
+                },
+                tooltip: {
+                  backgroundColor: 'rgba(31, 41, 55, 0.9)',
+                  padding: 12,
+                  cornerRadius: 8,
+                  callbacks: {
+                    label: function(context) {
+                      const label = context.label || '';
+                      const value = context.parsed || 0;
+                      const total = context.dataset.data.reduce((a, b) => a + b, 0);
+                      const percentage = total > 0 ? Math.round((value / total) * 100) : 0;
+                      return label + ': ' + value + ' (' + percentage + '%)';
+                    }
+                  }
+                }
+              },
+              animation: {
+                animateScale: true,
+                animateRotate: true
+              }
+            }
+          });
+        } catch (e) {
+          console.error('Erreur lors du rendu du graphique utilisateur:', e);
+        }
+      }
+    });
+    </script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+    <script>
+    document.addEventListener('DOMContentLoaded', function() {
+      // Graphique doughnut pour les statistiques utilisateur
+      const userStatsCanvas = document.getElementById('userStatsChart');
+      const userStatsDataElement = document.getElementById('user-stats-data');
+
+      if (userStatsCanvas && userStatsDataElement && typeof Chart !== 'undefined') {
+        try {
+          const statsData = JSON.parse(userStatsDataElement.textContent);
+          console.log('[Mes statistiques] Utilisateur connecté:', statsData.user_id);
+          console.log('[Mes statistiques] Données PHP reçues:', statsData);
+
+          const previousChart = Chart.getChart(userStatsCanvas);
+          if (previousChart) {
+            previousChart.destroy();
+          }
+
+          // Vérifier si des données existent
+          const total = statsData.valides + statsData.en_cours + statsData.refuses;
+
+          if (total === 0) {
+            // Afficher message si aucune donnée
+            const container = userStatsCanvas.parentElement;
+            if (container) {
+              container.innerHTML = '<div style="text-align: center; padding: 40px; color: #6b7280;"><div style="font-size: 48px; margin-bottom: 16px;">📊</div><p>Aucune statistique disponible</p><p style="font-size: 14px; margin-top: 8px;">Créez des événements pour voir vos statistiques</p></div>';
+            }
+          } else {
+            new Chart(userStatsCanvas, {
+              type: 'doughnut',
+              data: {
+                labels: ['Validés', 'En cours', 'Refusés'],
+                datasets: [{
+                  data: [statsData.valides, statsData.en_cours, statsData.refuses],
+                  backgroundColor: [
+                    'rgba(16, 185, 129, 0.8)',   // Vert - Validés
+                    'rgba(59, 130, 246, 0.8)',   // Bleu - En cours
+                    'rgba(239, 68, 68, 0.8)'     // Rouge - Refusés
+                  ],
+                  borderColor: [
+                    'rgba(16, 185, 129, 1)',
+                    'rgba(59, 130, 246, 1)',
+                    'rgba(239, 68, 68, 1)'
+                  ],
+                  borderWidth: 2,
+                  hoverOffset: 4
+                }]
+              },
+              options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                cutout: '65%',
+                plugins: {
+                  legend: {
+                    display: false // On utilise notre propre légende
+                  },
+                  tooltip: {
+                    backgroundColor: 'rgba(31, 41, 55, 0.9)',
+                    padding: 12,
+                    cornerRadius: 8,
+                    callbacks: {
+                      label: function(context) {
+                        const label = context.label || '';
+                        const value = context.parsed || 0;
+                        const total = context.dataset.data.reduce((a, b) => a + b, 0);
+                        const percentage = total > 0 ? Math.round((value / total) * 100) : 0;
+                        return label + ': ' + value + ' (' + percentage + '%)';
+                      }
+                    }
+                  }
+                },
+                animation: {
+                  animateScale: true,
+                  animateRotate: true
+                }
+              }
+            });
+          }
+        } catch (e) {
+          console.error('Erreur lors du rendu du graphique utilisateur:', e);
+        }
+      } else {
+        console.warn('Chart.js non disponible ou éléments manquants');
+      }
+    });
     </script>
     <script src="assets/js/events-front.js?v=20260425-search"></script>
   </body>

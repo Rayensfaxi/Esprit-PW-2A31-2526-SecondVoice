@@ -336,6 +336,12 @@
   color: var(--muted);
 }
 
+.registrants-modal-actions {
+  display: flex;
+  justify-content: flex-end;
+  margin: 8px 0 14px;
+}
+
 .reg-item {
   padding: 10px;
   border-bottom: 1px solid var(--soft-border);

@@ -172,16 +172,28 @@ document.addEventListener('DOMContentLoaded', function () {
     return true;
   }
 
-  function createResourceBlock(type) {
+  function escapeHtml(value) {
+    return String(value ?? '')
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#039;');
+  }
+
+  function createResourceBlock(type, data = {}) {
     const block = document.createElement('div');
     block.className = 'resource-block';
     block.dataset.id = '0';
+    const name = escapeHtml(data.name || '');
+    const quantity = escapeHtml(data.quantity || '');
+    const description = escapeHtml(data.description || '');
 
     const quantityField = type === 'materiel'
       ? `
         <div class="mb-3">
           <label class="form-label">Quantité <span class="required">*</span></label>
-          <input type="text" class="field resource-quantity" value="" inputmode="numeric" required />
+          <input type="text" class="field resource-quantity" value="${quantity}" inputmode="numeric" required />
           <div class="error-message"></div>
         </div>`
       : '';
@@ -193,13 +205,13 @@ document.addEventListener('DOMContentLoaded', function () {
       <div class="resource-fields">
         <div class="mb-3">
           <label class="form-label">Nom <span class="required">*</span></label>
-          <input type="text" class="field resource-name" value="" />
+          <input type="text" class="field resource-name" value="${name}" />
           <div class="error-message"></div>
         </div>
         ${quantityField}
         <div class="mb-3">
           <label class="form-label">Description</label>
-          <textarea class="field resource-description" rows="2"></textarea>
+          <textarea class="field resource-description" rows="2">${description}</textarea>
         </div>
       </div>`;
 
@@ -248,11 +260,6 @@ document.addEventListener('DOMContentLoaded', function () {
     }
   });
 
-  document.getElementById('resources-form')?.addEventListener('submit', function (event) {
-    event.preventDefault();
-    document.getElementById('btn-save-resources')?.click();
-  });
-
   function applyBackendResourceFieldErrors(generalTitleInput) {
     if (hasAnyResourceBlock() && !validateGeneralTitle(generalTitleInput)) {
       generalTitleInput?.focus();
@@ -280,7 +287,10 @@ document.addEventListener('DOMContentLoaded', function () {
     return false;
   }
 
-  document.getElementById('btn-save-resources')?.addEventListener('click', async function () {
+  async function handleSaveResources(event) {
+    event?.preventDefault();
+    console.log('click enregistrer ressources');
+
     const eventId = Number(document.getElementById('event-id')?.value || 0);
     const generalTitleInput = document.getElementById('general-resource-title');
     const generalDescriptionInput = document.getElementById('general-resource-description');
@@ -344,15 +354,24 @@ document.addEventListener('DOMContentLoaded', function () {
     // Les ressources sont maintenant facultatives - on peut sauvegarder sans ressources
     // Si aucune ressource, on sauvegarde quand même (éventuellement avec titre/description vide)
 
-    const result = await postJson('resources.php?action=save_resources', {
+    const payload = {
       event_id: eventId,
       resources_title: (generalTitleInput?.value || '').trim(),
       resources_description: (generalDescriptionInput?.value || '').trim(),
       resources: resources
-    });
+    };
+    console.log('payload ressources', payload);
+
+    let result;
+    try {
+      result = await postJson('resources.php?action=save_resources', payload);
+    } catch (error) {
+      showError('Erreur lors de l\'enregistrement des ressources: ' + error.message);
+      return;
+    }
 
     if (result?.success) {
-      showSuccess(result.message || 'Ressources enregistrées avec succès.');
+      showSuccess('Ressources enregistrées avec succès');
       setTimeout(() => { window.location.href = 'events.php'; }, 2000);
     } else {
       if (applyBackendResourceFieldErrors(generalTitleInput)) {
@@ -360,7 +379,164 @@ document.addEventListener('DOMContentLoaded', function () {
       }
       showError(result?.message || 'Erreur lors de l\'enregistrement des ressources.');
     }
-  });
+  }
+
+  async function handleDeleteResources() {
+    console.log('clic supprimer ressources');
+
+    const deleteButton = document.getElementById('delete-resources-btn') || document.getElementById('btn-delete-resources');
+    const eventId = Number(deleteButton?.dataset.eventId || document.getElementById('event-id')?.value || 0);
+    if (eventId <= 0) {
+      showError('Identifiant événement invalide.');
+      return;
+    }
+
+    showPopup(
+      'Voulez-vous vraiment supprimer toutes les ressources de cet événement ?',
+      'confirm',
+      async function () {
+        let result;
+        try {
+          result = await postJson('resources.php?action=delete_resources', { event_id: eventId });
+        } catch (error) {
+          showError('Erreur lors de la suppression des ressources: ' + error.message);
+          return;
+        }
+
+        if (result?.success) {
+          showSuccess(result?.message || 'Ressources supprimées avec succès');
+          setTimeout(() => { window.location.reload(); }, 1500);
+        } else {
+          showError(result?.message || 'Erreur lors de la suppression des ressources.');
+        }
+      }
+    );
+  }
+
+  function fillResourcesForm(importedData) {
+    const titleInput = document.getElementById('general-resource-title');
+    const descriptionInput = document.getElementById('general-resource-description');
+    const materielsList = document.getElementById('materiels-list');
+    const reglesList = document.getElementById('regles-list');
+
+    if (titleInput) titleInput.value = importedData.resources_title || '';
+    if (descriptionInput) descriptionInput.value = importedData.resources_description || '';
+    if (materielsList) materielsList.innerHTML = '';
+    if (reglesList) reglesList.innerHTML = '';
+
+    (importedData.resources || []).forEach(function (resource) {
+      const type = resource.type === 'regle' ? 'regle' : 'materiel';
+      const list = type === 'materiel' ? materielsList : reglesList;
+      if (!list) return;
+      list.appendChild(createResourceBlock(type, resource));
+    });
+
+    syncGeneralTitleRequiredState();
+    validateGeneralTitle();
+  }
+
+  function showImportEventsPopup(events) {
+    const existingPopup = document.getElementById('custom-popup');
+    if (existingPopup) existingPopup.remove();
+
+    const popup = document.createElement('div');
+    popup.id = 'custom-popup';
+    popup.style.cssText = `
+      position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+      background: rgba(0,0,0,0.5); display: flex; align-items: center;
+      justify-content: center; z-index: 10000; font-family: 'Outfit', sans-serif;
+    `;
+
+    const options = events.map(function (event) {
+      const meta = [event.start_date, event.location].filter(Boolean).join(' - ');
+      const label = meta ? `${event.name} (${meta})` : event.name;
+      return `<option value="${escapeHtml(event.id)}">${escapeHtml(label)}</option>`;
+    }).join('');
+
+    popup.innerHTML = `
+      <div style="background: white; padding: 30px 40px; border-radius: 12px;
+        max-width: 480px; width: min(92vw, 480px); text-align: left; box-shadow: 0 10px 40px rgba(0,0,0,0.2);">
+        <h3 style="margin: 0 0 15px 0; font-size: 20px; color: #1f2937;">Importer ressources</h3>
+        <p style="margin: 0 0 16px 0; color: #6b7280; line-height: 1.5;">Choisissez un événement source.</p>
+        <select id="import-source-event" class="field" style="width: 100%; margin-bottom: 20px;">${options}</select>
+        <div style="display: flex; gap: 10px; justify-content: flex-end;">
+          <button type="button" class="btn outline" id="import-cancel-btn">Annuler</button>
+          <button type="button" class="btn" id="import-confirm-btn">Importer</button>
+        </div>
+      </div>`;
+
+    document.body.appendChild(popup);
+
+    document.getElementById('import-cancel-btn')?.addEventListener('click', function () {
+      popup.remove();
+    });
+
+    document.getElementById('import-confirm-btn')?.addEventListener('click', async function () {
+      const sourceEventId = Number(document.getElementById('import-source-event')?.value || 0);
+      if (sourceEventId <= 0) {
+        showError('Événement source invalide.');
+        return;
+      }
+
+      let result;
+      try {
+        result = await postJson('resources.php?action=import_resources', { source_event_id: sourceEventId });
+      } catch (error) {
+        showError('Erreur lors de l\'import des ressources: ' + error.message);
+        return;
+      }
+
+      popup.remove();
+
+      if (result?.success) {
+        fillResourcesForm(result);
+        showSuccess('Ressources importées. Cliquez sur Enregistrer pour confirmer.');
+      } else {
+        showError(result?.message || 'Erreur lors de l\'import des ressources.');
+      }
+    });
+
+    popup.addEventListener('click', function (e) {
+      if (e.target === popup) popup.remove();
+    });
+  }
+
+  async function handleImportResources() {
+    console.log('clic importer ressources');
+
+    const importButton = document.getElementById('import-resources-btn');
+    const eventId = Number(importButton?.dataset.eventId || document.getElementById('event-id')?.value || 0);
+    if (eventId <= 0) {
+      showError('Identifiant événement invalide.');
+      return;
+    }
+
+    let result;
+    try {
+      result = await fetch('resources.php?action=list_importable_events&event_id=' + encodeURIComponent(String(eventId)))
+        .then(response => response.json());
+    } catch (error) {
+      showError('Erreur lors du chargement des événements: ' + error.message);
+      return;
+    }
+
+    if (!result?.success) {
+      showError(result?.message || 'Erreur lors du chargement des événements.');
+      return;
+    }
+
+    if (!Array.isArray(result.events) || result.events.length === 0) {
+      showError('Aucun événement source disponible.');
+      return;
+    }
+
+    showImportEventsPopup(result.events);
+  }
+
+  document.getElementById('resources-form')?.addEventListener('submit', handleSaveResources);
+  document.getElementById('import-resources-btn')?.addEventListener('click', handleImportResources);
+  document.getElementById('delete-resources-btn')?.addEventListener('click', handleDeleteResources);
+  document.getElementById('btn-delete-resources')?.addEventListener('click', handleDeleteResources);
 
   syncGeneralTitleRequiredState();
 });

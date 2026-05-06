@@ -91,6 +91,19 @@ error_log('ADMIN: Récupération des événements de l\'admin connecté...');
 $myEvents = $controller->getEventsByCreator($adminId);
 error_log('ADMIN: Nombre d\'événements de l\'admin: ' . count($myEvents));
 
+error_log('ADMIN: Récupération des statistiques mensuelles...');
+$adminStats = $controller->getAdminMonthlyStatistics();
+error_log('ADMIN: Statistiques mensuelles: ' . json_encode($adminStats));
+
+// Handler AJAX pour les statistiques temporelles
+if (isset($_GET['action']) && $_GET['action'] === 'get_stats' && isset($_GET['period'])) {
+    header('Content-Type: application/json');
+    $period = $_GET['period'];
+    $stats = $controller->getTemporalStatistics($period);
+    echo json_encode($stats);
+    exit;
+}
+
 error_log('ADMIN: Admin connecté ID: ' . $adminId);
 ?>
 <!DOCTYPE html>
@@ -154,6 +167,7 @@ error_log('ADMIN: Admin connecté ID: ' . $adminId);
             <button class="tab active" type="button" data-target="#tab-events">Événements</button>
             <button class="tab" type="button" data-target="#tab-my-events">Mes événements</button>
             <button class="tab" type="button" data-target="#tab-requests">Demandes</button>
+            <button class="tab" type="button" data-target="#tab-stats">Statistiques</button>
             <button class="tab" type="button" data-target="#tab-add">Ajouter / Modifier</button>
           </nav>
 
@@ -273,43 +287,44 @@ error_log('ADMIN: Admin connecté ID: ' . $adminId);
 
             <section id="tab-add" class="panel tab-panel">
               <h3>Ajouter / Modifier un événement</h3>
-              <form id="admin-event-form" novalidate>
-                <input type="hidden" id="evt-id" />
+              <form id="admin-event-form" method="POST" action="../frontoffice/events.php?action=create" novalidate>
+                <input type="hidden" id="evt-id" name="id" />
+                <input type="hidden" name="action" value="create" />
                 <div class="form-row form-row-full">
                   <label for="evt-name">Nom <span style="color: red; font-weight: bold;">*</span></label>
-                  <input id="evt-name" type="text" class="field" />
+                  <input id="evt-name" name="name" type="text" class="field" />
                   <div class="error-message" id="evt-name-error"></div>
                 </div>
                 <div class="form-row">
                   <label for="evt-start">Date début <span style="color: red; font-weight: bold;">*</span></label>
-                  <input id="evt-start" type="datetime-local" class="field" />
+                  <input id="evt-start" name="start_date" type="datetime-local" class="field" />
                   <div class="error-message" id="evt-start-error"></div>
                 </div>
                 <div class="form-row">
                   <label for="evt-end">Date fin <span style="color: red; font-weight: bold;">*</span></label>
-                  <input id="evt-end" type="datetime-local" class="field" />
+                  <input id="evt-end" name="end_date" type="datetime-local" class="field" />
                   <div class="error-message" id="evt-end-error"></div>
                 </div>
                 <div class="form-row">
                   <label for="evt-deadline">Date limite <span style="color: red; font-weight: bold;">*</span></label>
-                  <input id="evt-deadline" type="datetime-local" class="field" />
+                  <input id="evt-deadline" name="deadline" type="datetime-local" class="field" />
                   <div class="error-message" id="evt-deadline-error"></div>
                 </div>
                 <div class="form-row">
                   <label for="evt-location">Lieu <span style="color: red; font-weight: bold;">*</span></label>
-                  <input id="evt-location" type="text" class="field" />
+                  <input id="evt-location" name="location" type="text" class="field" />
                   <div class="error-message" id="evt-location-error"></div>
                 </div>
                 <div class="form-row form-row-full">
                   <label for="evt-desc">Description</label>
-                  <textarea id="evt-desc" class="field"></textarea>
+                  <textarea id="evt-desc" name="description" class="field"></textarea>
                 </div>
                 <div class="form-row form-row-half">
                   <label for="evt-max">Nombre max</label>
-                  <input id="evt-max" type="number" class="field" min="1" value="1" />
+                  <input id="evt-max" name="max" type="number" class="field" min="1" value="1" />
                 </div>
                 <div class="form-row form-row-full actions form-actions">
-                  <button id="admin-save" type="button" class="btn">Enregistrer</button>
+                  <button id="admin-save" type="submit" class="btn">Enregistrer</button>
                   <button id="admin-reset" type="button" class="btn outline">Réinitialiser</button>
                 </div>
               </form>
@@ -458,44 +473,122 @@ error_log('ADMIN: Admin connecté ID: ' . $adminId);
                     $newResources = is_array($newResources) ? $newResources : [];
                     $resMaterials = array_filter($newResources, fn($r) => ($r['type'] ?? '') === 'materiel');
                     $resRules = array_filter($newResources, fn($r) => ($r['type'] ?? '') === 'regle');
+                    $isResourceDeletionRequest = trim((string) ($resRequest['request_type'] ?? '')) === 'suppression ressources'
+                      || ($newResources === []
+                      && trim((string) ($resRequest['resources_title'] ?? '')) === ''
+                      && trim((string) ($resRequest['resources_description'] ?? '')) === '');
+                    $resourceRequestTypeLabel = $isResourceDeletionRequest ? 'Suppression ressources' : 'Modification ressources';
                   ?>
                   <div class="event-card"
                        data-request-id="<?= $resRequestId ?>"
                        data-event-id="<?= $resEventId ?>"
-                       data-search="<?= h(buildAdminEventSearchText($resRequest, $newResources, ['demande modification ressources', 'modification ressources', 'statut pending'])) ?>">
+                       data-request-type="<?= h($isResourceDeletionRequest ? 'delete' : 'modify') ?>"
+                       data-search="<?= h(buildAdminEventSearchText($resRequest, $newResources, [$resourceRequestTypeLabel, 'demande ressources', 'statut pending'])) ?>">
                     <div class="row between">
                       <h4 class="evt-name"><?= h((string) ($resRequest['event_name'] ?? '')) ?></h4>
-                      <span class="status pending">Modification ressources</span>
+                      <span class="status pending"><?= h($resourceRequestTypeLabel) ?></span>
                     </div>
                     <div class="meta">Événement ID: <?= $resEventId ?></div>
                     <div class="meta">Demandé par : <?= h((string) ($resRequest['requester_prenom'] ?? '') . ' ' . (string) ($resRequest['requester_name'] ?? '')) ?></div>
                     <div class="meta">Date demande : <?= h((string) ($resRequest['created_at'] ?? '')) ?></div>
 
                     <div style="margin: 15px 0; padding: 12px; background: rgba(255,255,255,0.05); border-radius: 8px;">
-                      <div style="font-weight: 600; margin-bottom: 8px; color: var(--text);">Nouvelles ressources proposées :</div>
-                      <?php if (!empty($resRequest['resources_title'])): ?>
-                        <div class="small" style="margin-bottom: 4px;"><strong>Titre :</strong> <?= h((string) $resRequest['resources_title']) ?></div>
-                      <?php endif; ?>
-                      <?php if (!empty($resRequest['resources_description'])): ?>
-                        <div class="small" style="margin-bottom: 4px;"><strong>Description :</strong> <?= h((string) $resRequest['resources_description']) ?></div>
-                      <?php endif; ?>
-                      <?php if ($resMaterials !== []): ?>
-                        <div class="small" style="margin-bottom: 4px;"><strong>Matériels :</strong> <?= h(implode(', ', array_column($resMaterials, 'name'))) ?></div>
-                      <?php endif; ?>
-                      <?php if ($resRules !== []): ?>
-                        <div class="small"><strong>Règles :</strong> <?= h(implode(', ', array_column($resRules, 'name'))) ?></div>
-                      <?php endif; ?>
-                      <?php if ($resMaterials === [] && $resRules === []): ?>
-                        <div class="small">Aucune ressource proposée (tout supprimer)</div>
+                      <?php if ($isResourceDeletionRequest): ?>
+                        <div style="font-weight: 600; margin-bottom: 8px; color: var(--text);">Suppression demandée :</div>
+                        <div class="small">Supprimer tous les matériels, règles, titre général et description des ressources.</div>
+                      <?php else: ?>
+                        <div style="font-weight: 600; margin-bottom: 8px; color: var(--text);">Nouvelles ressources proposées :</div>
+                        <?php if (!empty($resRequest['resources_title'])): ?>
+                          <div class="small" style="margin-bottom: 4px;"><strong>Titre :</strong> <?= h((string) $resRequest['resources_title']) ?></div>
+                        <?php endif; ?>
+                        <?php if (!empty($resRequest['resources_description'])): ?>
+                          <div class="small" style="margin-bottom: 4px;"><strong>Description :</strong> <?= h((string) $resRequest['resources_description']) ?></div>
+                        <?php endif; ?>
+                        <?php if ($resMaterials !== []): ?>
+                          <div class="small" style="margin-bottom: 4px;"><strong>Matériels :</strong> <?= h(implode(', ', array_column($resMaterials, 'name'))) ?></div>
+                        <?php endif; ?>
+                        <?php if ($resRules !== []): ?>
+                          <div class="small"><strong>Règles :</strong> <?= h(implode(', ', array_column($resRules, 'name'))) ?></div>
+                        <?php endif; ?>
+                        <?php if ($resMaterials === [] && $resRules === []): ?>
+                          <div class="small">Aucune ressource proposée.</div>
+                        <?php endif; ?>
                       <?php endif; ?>
                     </div>
 
                     <div class="actions">
-                      <button class="btn approve-resource-mod" type="button" data-request-id="<?= $resRequestId ?>">Approuver</button>
-                      <button class="btn reject-resource-mod" type="button" data-request-id="<?= $resRequestId ?>">Refuser</button>
+                      <button class="btn approve-resource-mod" type="button" data-request-id="<?= $resRequestId ?>" data-request-type="<?= h($isResourceDeletionRequest ? 'delete' : 'modify') ?>">Approuver</button>
+                      <button class="btn reject-resource-mod" type="button" data-request-id="<?= $resRequestId ?>" data-request-type="<?= h($isResourceDeletionRequest ? 'delete' : 'modify') ?>">Refuser</button>
                     </div>
                   </div>
                 <?php endforeach; ?>
+              </div>
+            </section>
+
+            <!-- Tab: Admin Statistics -->
+            <section id="tab-stats" class="panel tab-panel">
+              <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+                <h3 style="margin: 0;">Statistiques événements</h3>
+                
+                <!-- Filtres temporels -->
+                <div style="display: flex; gap: 8px;">
+                  <button type="button" class="btn period-filter" data-period="day" style="padding: 8px 16px; font-size: 13px;">Jour</button>
+                  <button type="button" class="btn period-filter" data-period="week" style="padding: 8px 16px; font-size: 13px;">Semaine</button>
+                  <button type="button" class="btn period-filter active" data-period="month" style="padding: 8px 16px; font-size: 13px; background: #6366f1; color: white;">Mois</button>
+                  <button type="button" class="btn period-filter" data-period="year" style="padding: 8px 16px; font-size: 13px;">Année</button>
+                </div>
+              </div>
+              
+              <div id="stats-container">
+                <?php if (isset($adminStats['success']) && $adminStats['success']): ?>
+                  <!-- Cartes récapitulatives -->
+                  <div id="stats-cards" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 16px; margin-bottom: 30px; margin-top: 20px;">
+                    
+                    <div style="background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%); border-radius: 16px; padding: 20px; color: white; box-shadow: 0 4px 15px rgba(99, 102, 241, 0.3);">
+                      <div style="font-size: 13px; opacity: 0.9; margin-bottom: 8px;">Total événements</div>
+                      <div id="stat-total-events" style="font-size: 32px; font-weight: 700;"><?= $adminStats['totaux']['total_events'] ?? 0 ?></div>
+                    </div>
+
+                    <div style="background: linear-gradient(135deg, #10b981 0%, #34d399 100%); border-radius: 16px; padding: 20px; color: white; box-shadow: 0 4px 15px rgba(16, 185, 129, 0.3);">
+                      <div style="font-size: 13px; opacity: 0.9; margin-bottom: 8px;">Validés</div>
+                      <div id="stat-total-valides" style="font-size: 32px; font-weight: 700;"><?= $adminStats['totaux']['total_valides'] ?? 0 ?></div>
+                    </div>
+
+                    <div style="background: linear-gradient(135deg, #3b82f6 0%, #60a5fa 100%); border-radius: 16px; padding: 20px; color: white; box-shadow: 0 4px 15px rgba(59, 130, 246, 0.3);">
+                      <div style="font-size: 13px; opacity: 0.9; margin-bottom: 8px;">En cours</div>
+                      <div id="stat-total-en-cours" style="font-size: 32px; font-weight: 700;"><?= $adminStats['totaux']['total_en_cours'] ?? 0 ?></div>
+                    </div>
+
+                    <div style="background: linear-gradient(135deg, #ef4444 0%, #f87171 100%); border-radius: 16px; padding: 20px; color: white; box-shadow: 0 4px 15px rgba(239, 68, 68, 0.3);">
+                      <div style="font-size: 13px; opacity: 0.9; margin-bottom: 8px;">Refusés</div>
+                      <div id="stat-total-refuses" style="font-size: 32px; font-weight: 700;"><?= $adminStats['totaux']['total_refuses'] ?? 0 ?></div>
+                    </div>
+
+                    <div style="background: linear-gradient(135deg, #f59e0b 0%, #fbbf24 100%); border-radius: 16px; padding: 20px; color: white; box-shadow: 0 4px 15px rgba(245, 158, 11, 0.3);">
+                      <div style="font-size: 13px; opacity: 0.9; margin-bottom: 8px;">Total inscriptions</div>
+                      <div id="stat-total-inscriptions" style="font-size: 32px; font-weight: 700;"><?= $adminStats['totaux']['total_inscriptions'] ?? 0 ?></div>
+                    </div>
+
+                  </div>
+
+                  <!-- Graphique Chart.js -->
+                  <div style="background: white; border-radius: 16px; padding: 24px; box-shadow: 0 2px 10px rgba(0,0,0,0.08); margin-top: 20px;">
+                    <h4 id="chart-title" style="margin-bottom: 20px; color: #1f2937;">Évolution mensuelle</h4>
+                    <div style="position: relative; height: 400px;">
+                      <canvas id="adminStatsChart"></canvas>
+                    </div>
+                  </div>
+
+                  <!-- Données JSON pour le graphique -->
+                  <script id="stats-data" type="application/json">
+                    <?= json_encode($adminStats['monthly']) ?>
+                  </script>
+
+                <?php else: ?>
+                  <div class="notice error">
+                    <?= $adminStats['message'] ?? 'Erreur lors de la récupération des statistiques' ?>
+                  </div>
+                <?php endif; ?>
               </div>
             </section>
           </div>
@@ -507,11 +600,235 @@ error_log('ADMIN: Admin connecté ID: ' . $adminId);
       <div class="modal-content">
         <button class="modal-close" type="button">×</button>
         <h3>Inscrits</h3>
+        <div class="registrants-modal-actions">
+          <button id="export-registrants-pdf" class="btn export-pdf-btn" type="button" data-event-id="">Exporter PDF</button>
+        </div>
         <div id="registrants-list"></div>
       </div>
     </div>
 
     <script src="assets/app.js"></script>
-    <script src="assets/events-admin.js?v=20260425-search"></script>
+    <script src="assets/events-admin.js?v=20260506-export-pdf-click"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+    <script>
+    document.addEventListener('DOMContentLoaded', function() {
+      // Gestion des statistiques avec filtres temporels
+      const statsDataElement = document.getElementById('stats-data');
+      const chartCanvas = document.getElementById('adminStatsChart');
+      let adminChart = null;
+      
+      // Labels pour les périodes
+      const periodLabels = {
+        'day': 'Évolution quotidienne (30 derniers jours)',
+        'week': 'Évolution hebdomadaire (12 dernières semaines)',
+        'month': 'Évolution mensuelle (12 derniers mois)',
+        'year': 'Évolution annuelle (5 dernières années)'
+      };
+      
+      // Fonction pour créer/mettre à jour le graphique
+      function createOrUpdateChart(data, period) {
+        const labels = data.map(d => d.label || d.month);
+        const eventsCreated = data.map(d => d.events_crees);
+        const eventsValides = data.map(d => d.events_valides);
+        const eventsEnCours = data.map(d => d.events_en_cours);
+        const eventsRefuses = data.map(d => d.events_refuses);
+        const inscriptions = data.map(d => d.inscriptions);
+        
+        const chartData = {
+          labels: labels,
+          datasets: [
+            {
+              label: 'Événements créés',
+              data: eventsCreated,
+              backgroundColor: 'rgba(99, 102, 241, 0.8)',
+              borderColor: 'rgba(99, 102, 241, 1)',
+              borderWidth: 1,
+              borderRadius: 4
+            },
+            {
+              label: 'Validés',
+              data: eventsValides,
+              backgroundColor: 'rgba(16, 185, 129, 0.8)',
+              borderColor: 'rgba(16, 185, 129, 1)',
+              borderWidth: 1,
+              borderRadius: 4
+            },
+            {
+              label: 'En cours',
+              data: eventsEnCours,
+              backgroundColor: 'rgba(59, 130, 246, 0.8)',
+              borderColor: 'rgba(59, 130, 246, 1)',
+              borderWidth: 1,
+              borderRadius: 4
+            },
+            {
+              label: 'Refusés',
+              data: eventsRefuses,
+              backgroundColor: 'rgba(239, 68, 68, 0.8)',
+              borderColor: 'rgba(239, 68, 68, 1)',
+              borderWidth: 1,
+              borderRadius: 4
+            },
+            {
+              label: 'Inscriptions',
+              data: inscriptions,
+              backgroundColor: 'rgba(245, 158, 11, 0.8)',
+              borderColor: 'rgba(245, 158, 11, 1)',
+              borderWidth: 1,
+              borderRadius: 4
+            }
+          ]
+        };
+        
+        if (adminChart) {
+          adminChart.data = chartData;
+          adminChart.update('active');
+        } else if (chartCanvas && typeof Chart !== 'undefined') {
+          adminChart = new Chart(chartCanvas, {
+            type: 'bar',
+            data: chartData,
+            options: {
+              responsive: true,
+              maintainAspectRatio: false,
+              plugins: {
+                legend: {
+                  position: 'top',
+                  labels: {
+                    usePointStyle: true,
+                    padding: 20,
+                    font: {
+                      size: 12,
+                      family: "'Outfit', sans-serif"
+                    }
+                  }
+                },
+                tooltip: {
+                  backgroundColor: 'rgba(31, 41, 55, 0.9)',
+                  padding: 12,
+                  cornerRadius: 8,
+                  titleFont: {
+                    size: 13,
+                    family: "'Outfit', sans-serif"
+                  },
+                  bodyFont: {
+                    size: 12,
+                    family: "'Outfit', sans-serif"
+                  }
+                }
+              },
+              scales: {
+                y: {
+                  beginAtZero: true,
+                  grid: {
+                    color: 'rgba(0, 0, 0, 0.05)',
+                    drawBorder: false
+                  },
+                  ticks: {
+                    font: {
+                      size: 11,
+                      family: "'Outfit', sans-serif"
+                    },
+                    color: '#6b7280'
+                  }
+                },
+                x: {
+                  grid: {
+                    display: false
+                  },
+                  ticks: {
+                    font: {
+                      size: 11,
+                      family: "'Outfit', sans-serif"
+                    },
+                    color: '#6b7280'
+                  }
+                }
+              }
+            }
+          });
+        }
+      }
+      
+      // Fonction pour mettre à jour les cartes de statistiques
+      function updateStatsCards(totaux) {
+        document.getElementById('stat-total-events').textContent = totaux.total_events || 0;
+        document.getElementById('stat-total-valides').textContent = totaux.total_valides || 0;
+        document.getElementById('stat-total-en-cours').textContent = totaux.total_en_cours || 0;
+        document.getElementById('stat-total-refuses').textContent = totaux.total_refuses || 0;
+        document.getElementById('stat-total-inscriptions').textContent = totaux.total_inscriptions || 0;
+      }
+      
+      // Chargement initial
+      if (statsDataElement && chartCanvas) {
+        try {
+          const initialData = JSON.parse(statsDataElement.textContent);
+          createOrUpdateChart(initialData, 'month');
+        } catch (e) {
+          console.error('Erreur lors du chargement initial:', e);
+        }
+      }
+      
+      // Gestion des filtres temporels
+      document.querySelectorAll('.period-filter').forEach(button => {
+        button.addEventListener('click', async function() {
+          const period = this.dataset.period;
+          
+          // Mettre à jour l'état actif
+          document.querySelectorAll('.period-filter').forEach(btn => {
+            btn.classList.remove('active');
+            btn.style.background = '';
+            btn.style.color = '';
+          });
+          this.classList.add('active');
+          this.style.background = '#6366f1';
+          this.style.color = 'white';
+          
+          // Mettre à jour le titre
+          const chartTitle = document.getElementById('chart-title');
+          if (chartTitle) {
+            chartTitle.textContent = periodLabels[period] || 'Évolution';
+          }
+          
+          // Afficher un indicateur de chargement
+          const container = document.getElementById('stats-container');
+          if (container) {
+            container.style.opacity = '0.6';
+          }
+          
+          try {
+            // Appel AJAX pour récupérer les nouvelles données
+            const response = await fetch(`gestion-evenements.php?action=get_stats&period=${period}`, {
+              method: 'GET',
+              headers: {
+                'X-Requested-With': 'XMLHttpRequest'
+              }
+            });
+            
+            if (!response.ok) {
+              throw new Error('Erreur réseau');
+            }
+            
+            const result = await response.json();
+            
+            if (result.success) {
+              // Mettre à jour le graphique
+              createOrUpdateChart(result.data, period);
+              // Mettre à jour les cartes
+              updateStatsCards(result.totaux);
+            } else {
+              console.error('Erreur lors de la récupération des données:', result.message);
+            }
+          } catch (error) {
+            console.error('Erreur AJAX:', error);
+          } finally {
+            // Rétablir l'opacité
+            if (container) {
+              container.style.opacity = '1';
+            }
+          }
+        });
+      });
+    });
+    </script>
   </body>
 </html>
