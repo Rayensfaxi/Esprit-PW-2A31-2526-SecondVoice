@@ -1,6 +1,15 @@
 <?php
 require_once '../../../controller/RendezvousC.php';
+require_once '../../../controller/ServiceC.php';
 $rendezvousC = new RendezvousC();
+$serviceC = new ServiceC();
+
+// Vérification de la bibliothèque QR Code
+$libQRCode = dirname(__DIR__, 3) . '/lib/phpqrcode/qrlib.php';
+$isQRCodeLibMissing = !file_exists($libQRCode);
+
+// Récupération des services pour le filtre calendrier
+$servicesList = $serviceC->listServices();
 
 // Récupération des filtres
 $startDate = isset($_GET['start_date']) ? $_GET['start_date'] : null;
@@ -29,8 +38,18 @@ foreach ($statsByService as $stat) {
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
     <link rel="stylesheet" href="../assets/style.css" />
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <!-- FullCalendar -->
+    <script src='https://cdn.jsdelivr.net/npm/fullcalendar@6.1.11/index.global.min.js'></script>
+    <script>
+      console.log("Scripts de base chargés.");
+    </script>
   </head>
   <body data-page="subscription">
+    <?php if ($isQRCodeLibMissing): ?>
+    <div style="background: #ff6b6b20; color: #ff6b6b; padding: 10px; text-align: center; border-bottom: 1px solid #ff6b6b40; font-size: 0.9rem;">
+      <strong>Attention :</strong> La bibliothèque <code>phpqrcode</code> est manquante dans <code>/lib/phpqrcode/</code>. Les QR Codes ne seront pas générés.
+    </div>
+    <?php endif; ?>
     <div class="overlay" data-overlay></div>
     <div class="shell">
       <aside class="sidebar">
@@ -159,6 +178,27 @@ foreach ($statsByService as $stat) {
               </div>
            </section>
 
+           <!-- Section Calendrier Interactif -->
+           <section class="calendar-section" style="grid-column: 1 / -1; margin-bottom: 30px;">
+              <div class="card" style="padding: 24px;">
+                 <div class="card-header" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+                    <div>
+                       <h3 class="panel-title">Calendrier des Rendez-vous</h3>
+                       <div class="helper">Visualisation mensuelle des rendez-vous.</div>
+                    </div>
+                    <div style="display: flex; gap: 10px; align-items: center;">
+                       <select id="calendarServiceFilter" class="search-input" style="width: auto; padding: 8px;">
+                          <option value="">Tous les services</option>
+                          <?php foreach ($servicesList as $s): ?>
+                             <option value="<?php echo $s->getId(); ?>"><?php echo $s->getNom(); ?></option>
+                          <?php endforeach; ?>
+                       </select>
+                    </div>
+                 </div>
+                 <div id='calendar' style="min-height: 600px; color: var(--text);"></div>
+              </div>
+           </section>
+
            <div style="grid-column: 1 / -1;">
               <?php include 'rendezvousList.php'; ?>
            </div>
@@ -201,6 +241,39 @@ foreach ($statsByService as $stat) {
           padding: 0 !important;
         }
       }
+
+      /* FullCalendar Dark Mode / Custom Styling */
+      :root {
+          --fc-border-color: var(--line);
+          --fc-daygrid-event-dot-width: 8px;
+      }
+      .fc .fc-toolbar-title {
+          font-family: 'Outfit', sans-serif;
+          color: var(--text);
+      }
+      .fc .fc-button-primary {
+          background-color: var(--purple);
+          border-color: var(--purple);
+      }
+      .fc .fc-button-primary:hover {
+          background-color: var(--purple-2);
+          border-color: var(--purple-2);
+      }
+      .fc .fc-button-primary:disabled {
+          background-color: var(--muted);
+          border-color: var(--muted);
+      }
+      .fc-theme-standard td, .fc-theme-standard th {
+          border-color: var(--line);
+      }
+      .fc-day-today {
+          background: var(--soft-surface) !important;
+      }
+      .fc-event {
+          cursor: pointer;
+          border-radius: 4px;
+          padding: 2px 4px;
+      }
     </style>
 
     <?php include 'detailsRendezvous.php'; ?>
@@ -240,6 +313,62 @@ foreach ($statsByService as $stat) {
         if (urlParams.has('error')) {
             Swal.fire('Erreur !', urlParams.get('error'), 'error');
         }
+
+        // Initialisation du Calendrier
+        document.addEventListener('DOMContentLoaded', function() {
+            var calendarEl = document.getElementById('calendar');
+            var serviceFilter = document.getElementById('calendarServiceFilter');
+
+            var calendar = new FullCalendar.Calendar(calendarEl, {
+                initialView: 'dayGridMonth',
+                locale: 'fr',
+                headerToolbar: {
+                    left: 'prev,next today',
+                    center: 'title',
+                    right: 'dayGridMonth,timeGridWeek,timeGridDay'
+                },
+                buttonText: {
+                    today: "Aujourd'hui",
+                    month: 'Mois',
+                    week: 'Semaine',
+                    day: 'Jour'
+                },
+                events: 'getCalendarEvents.php',
+                eventClick: function(info) {
+                    const props = info.event.extendedProps;
+                    Swal.fire({
+                        title: info.event.title,
+                        html: `
+                            <div style="text-align: left; font-family: 'Outfit', sans-serif;">
+                                <p style="margin-bottom: 8px;"><strong>Date:</strong> ${info.event.start.toLocaleString('fr-FR')}</p>
+                                <p style="margin-bottom: 8px;"><strong>Statut:</strong> <span style="color: ${info.event.backgroundColor}">${props.statut}</span></p>
+                                <p style="margin-bottom: 8px;"><strong>Assistant:</strong> ${props.assistant}</p>
+                                <p style="margin-bottom: 8px;"><strong>Mode:</strong> ${props.mode}</p>
+                                <p style="margin-bottom: 8px;"><strong>Remarques:</strong> ${props.remarques || 'Aucune'}</p>
+                                <p style="margin-bottom: 0;"><strong>ID Citoyen:</strong> ${props.id_citoyen}</p>
+                            </div>
+                        `,
+                        icon: 'info',
+                        confirmButtonColor: 'var(--purple)'
+                    });
+                },
+                eventDidMount: function(info) {
+                    // Optionnel: ajout d'un tooltip ou autre
+                }
+            });
+
+            calendar.render();
+
+            // Filtrage par service
+            serviceFilter.addEventListener('change', function() {
+                var serviceId = this.value;
+                var newUrl = 'getCalendarEvents.php' + (serviceId ? '?service_id=' + serviceId : '');
+                
+                // On retire l'ancienne source et on ajoute la nouvelle
+                calendar.getEventSources().forEach(source => source.remove());
+                calendar.addEventSource(newUrl);
+            });
+        });
     </script>
   </body>
 </html>

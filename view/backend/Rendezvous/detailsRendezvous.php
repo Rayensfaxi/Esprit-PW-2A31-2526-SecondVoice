@@ -36,6 +36,18 @@
           -
         </p>
       </div>
+
+      <!-- Section QR Code -->
+      <div id="qr-section" style="margin-top: 20px; text-align: center; display: none;">
+        <div class="detail-label" style="margin-bottom: 10px; font-size: 0.85rem;">QR Code du rendez-vous</div>
+        <div id="qr-error" style="color: #ff6b6b; font-size: 0.8rem; margin-bottom: 10px; display: none; background: var(--danger-soft); padding: 8px; border-radius: 8px;"></div>
+        <div style="background: white; padding: 10px; border-radius: 12px; display: inline-block; margin-bottom: 10px;">
+          <img id="det-qrcode" src="" alt="QR Code" style="width: 150px; height: 150px; display: block;">
+        </div>
+        <div style="display: flex; gap: 10px; justify-content: center;">
+            <a id="btn-download-qr" href="" download="rendezvous_qrcode.svg" class="action-button" style="background: var(--purple); color: white; padding: 6px 12px; font-size: 0.8rem; border: none;">Télécharger</a>
+        </div>
+      </div>
     </div>
     <div class="modal-footer" style="padding: 12px 20px;">
       <button class="action-button" onclick="closeDetails()" style="padding: 6px 16px; font-size: 0.9rem;">Fermer</button>

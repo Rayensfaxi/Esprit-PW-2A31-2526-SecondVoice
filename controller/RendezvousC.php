@@ -323,5 +323,89 @@ class RendezvousC {
             throw new Exception('Error: ' . $e->getMessage());
         }
     }
+
+    public function getCalendarData($serviceId = null) {
+        $sql = "SELECT r.*, s.nom as service_nom 
+                FROM rendezvous r 
+                LEFT JOIN service s ON r.service_id = s.id 
+                WHERE 1=1";
+        $params = [];
+
+        if ($serviceId) {
+            $sql .= " AND r.service_id = :service_id";
+            $params['service_id'] = $serviceId;
+        }
+
+        $db = Config::getConnexion();
+        try {
+            $query = $db->prepare($sql);
+            $query->execute($params);
+            $events = [];
+            while ($row = $query->fetch()) {
+                $color = '#ffb84d'; // Default En attente
+                if ($row['statut'] == 'Confirmé') $color = '#31d0aa';
+                elseif ($row['statut'] == 'Annulé') $color = '#ff6b6b';
+
+                $events[] = [
+                    'id' => $row['id'],
+                    'title' => ($row['service_nom'] ?? 'Service') . ' - ' . $row['assistant'],
+                    'start' => $row['date_rdv'] . 'T' . $row['heure_rdv'],
+                    'backgroundColor' => $color,
+                    'borderColor' => $color,
+                    'extendedProps' => [
+                        'statut' => $row['statut'],
+                        'assistant' => $row['assistant'],
+                        'mode' => $row['mode'],
+                        'remarques' => $row['remarques'],
+                        'id_citoyen' => $row['id_citoyen']
+                    ]
+                ];
+            }
+            return $events;
+        } catch (Exception $e) {
+            throw new Exception('Error: ' . $e->getMessage());
+        }
+    }
+
+    public function generateQRCode($id) {
+        $rdv = $this->getRendezvousById($id);
+        if (!$rdv) return null;
+
+        $libPath = dirname(__DIR__) . '/lib/phpqrcode/qrlib.php';
+        if (!file_exists($libPath)) {
+            return null;
+        }
+
+        require_once $libPath;
+
+        $qrDir = dirname(__DIR__) . '/view/backend/assets/qrcodes/';
+        if (!file_exists($qrDir)) {
+            mkdir($qrDir, 0777, true);
+        }
+
+        $fileName = 'rdv_' . $id . '.svg';
+        $filePath = $qrDir . $fileName;
+
+        // URL de redirection pour le scan
+        $protocol = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? "https" : "http";
+        $host = isset($_SERVER['HTTP_HOST']) ? $_SERVER['HTTP_HOST'] : 'localhost';
+        
+        $url = $protocol . "://" . $host . "/Esprit-PW-2A31-2526-SecondVoice/view/backend/Rendezvous/viewQRCode.php?id=" . $id;
+
+        $content = "RDV #" . $id . "\n";
+        $content .= "Service: " . $rdv->getService() . "\n";
+        $content .= "Date: " . $rdv->getDateRdv()->format('d/m/Y') . "\n";
+        $content .= "Heure: " . $rdv->getHeureRdv() . "\n";
+        $content .= "Lien: " . $url;
+
+        try {
+            // Utilisation de SVG qui ne nécessite pas l'extension GD
+            QRcode::svg($content, $filePath, QR_ECLEVEL_L, 4, 2);
+        } catch (Exception $e) {
+            return null;
+        }
+
+        return '../assets/qrcodes/' . $fileName;
+    }
 }
 ?>

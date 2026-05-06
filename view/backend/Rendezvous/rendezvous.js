@@ -1,4 +1,6 @@
-function filterAppointments() {
+console.log("rendezvous.js injecté avec succès");
+
+window.filterAppointments = function() {
   const searchInput = document.getElementById('appointmentSearch');
   const filterSearch = searchInput.value.toLowerCase();
   const statusSelect = document.getElementById('statusFilter');
@@ -86,7 +88,7 @@ window.toggleStatus = function(id, currentStatus) {
 
 let currentRdv = null;
 
-function openDetails(rdv) {
+window.openDetails = function(rdv) {
   currentRdv = rdv;
   document.getElementById('det-citizen').textContent = 'Citoyen #' + rdv.id_citoyen;
   document.getElementById('det-service').textContent = rdv.service;
@@ -96,16 +98,54 @@ function openDetails(rdv) {
   document.getElementById('det-status').textContent = rdv.statut;
   document.getElementById('det-notes').textContent = rdv.remarques;
   
+  // Génération du QR Code via AJAX
+  const qrSection = document.getElementById('qr-section');
+  const qrImg = document.getElementById('det-qrcode');
+  const qrDownload = document.getElementById('btn-download-qr');
+  const qrError = document.getElementById('qr-error');
+
+  if (qrSection) {
+    qrSection.style.display = 'block';
+    qrImg.style.display = 'none';
+    if (qrError) qrError.style.display = 'none';
+    
+    fetch('generateQR.php?id=' + rdv.id)
+      .then(response => response.json())
+      .then(data => {
+        if (data.success) {
+          qrImg.src = data.qrPath + '?t=' + new Date().getTime(); // Anti-cache
+          qrImg.style.display = 'block';
+          qrDownload.href = data.qrPath;
+          qrDownload.style.display = 'inline-block';
+        } else {
+          console.error("QR Code error:", data.message);
+          qrImg.style.display = 'none';
+          qrDownload.style.display = 'none';
+          if (qrError) {
+            qrError.textContent = data.message;
+            qrError.style.display = 'block';
+          }
+        }
+      })
+      .catch(err => {
+        console.error("Fetch error:", err);
+        if (qrError) {
+          qrError.textContent = "Erreur de connexion au serveur.";
+          qrError.style.display = 'block';
+        }
+      });
+  }
+
   document.getElementById('detailsModal').classList.add('active');
   document.body.style.overflow = 'hidden';
 }
 
-function closeDetails() {
+window.closeDetails = function() {
   document.getElementById('detailsModal').classList.remove('active');
   document.body.style.overflow = '';
 }
 
-function editRdv(rdv) {
+window.editRdv = function(rdv) {
     document.getElementById('edit-id').value = rdv.id;
     document.getElementById('edit-id-citoyen').value = rdv.id_citoyen;
     document.getElementById('edit-service').value = rdv.service_id;
@@ -121,7 +161,7 @@ function editRdv(rdv) {
     document.body.style.overflow = 'hidden';
 }
 
-function closeEditModal() {
+window.closeEditModal = function() {
     document.getElementById('editModal').classList.remove('active');
     document.body.style.overflow = '';
 }
