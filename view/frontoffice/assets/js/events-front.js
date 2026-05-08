@@ -7,6 +7,11 @@ document.addEventListener('DOMContentLoaded', function () {
   const btnAdd = document.getElementById('btn-add-event');
   const deleteBtn = document.getElementById('btn-delete-event');
   const btnCancelAdd = document.getElementById('btn-cancel-add');
+  const qrModal = document.getElementById('qr-modal');
+  const qrImage = document.getElementById('qr-code-image');
+  const qrEventName = document.getElementById('qr-event-name');
+  const qrEventMeta = document.getElementById('qr-event-meta');
+  const qrEncodedText = document.getElementById('qr-encoded-text');
   let modal = null;
 
   if (eventModalEl && window.bootstrap) {
@@ -102,6 +107,47 @@ document.addEventListener('DOMContentLoaded', function () {
     showPopup(message, 'confirm', onConfirm, onCancel);
   }
 
+  async function openQrModal(card, eventId) {
+    if (!qrModal || !qrImage || !eventId) return;
+
+    const name = card?.dataset.name || card?.querySelector('h3')?.textContent || 'Evenement';
+    const start = card?.dataset.start || '';
+    const location = card?.dataset.location || '';
+
+    if (qrEventName) qrEventName.textContent = name;
+    if (qrEventMeta) qrEventMeta.textContent = [start, location].filter(Boolean).join(' - ');
+
+    const encodedEventId = encodeURIComponent(String(eventId));
+    const qrUrl = 'events.php?action=qr&event_id=' + encodedEventId;
+    qrImage.src = qrUrl;
+    if (qrEncodedText) {
+      qrEncodedText.textContent = 'Chargement de l URL...';
+      try {
+        const response = await fetch('events.php?action=qr_payload&event_id=' + encodedEventId);
+        const responseText = await response.text();
+        console.log('[AJAX JSON]', 'events.php?action=qr_payload', responseText);
+        const result = JSON.parse(responseText);
+        qrEncodedText.textContent = result?.payload || '';
+      } catch (error) {
+        qrEncodedText.textContent = '';
+      }
+    }
+    qrModal.setAttribute('aria-hidden', 'false');
+    qrModal.classList.add('open');
+  }
+
+  function closeQrModal() {
+    qrModal?.setAttribute('aria-hidden', 'true');
+    qrModal?.classList.remove('open');
+    if (qrImage) qrImage.src = '';
+    if (qrEncodedText) qrEncodedText.textContent = '';
+  }
+
+  qrModal?.querySelector('.qr-modal-close')?.addEventListener('click', closeQrModal);
+  qrModal?.addEventListener('click', function(event) {
+    if (event.target === qrModal) closeQrModal();
+  });
+
   function showFeedback(message, type = 'success') {
     if (!feedback) {
       window.alert(message);
@@ -119,7 +165,56 @@ document.addEventListener('DOMContentLoaded', function () {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(body || {})
     });
-    return response.json();
+    const responseText = await response.text();
+    console.log('[AJAX JSON]', url, responseText);
+
+    try {
+      return JSON.parse(responseText);
+    } catch (error) {
+      throw new Error('Reponse serveur non JSON: ' + responseText.slice(0, 300));
+    }
+  }
+
+  function setAiLoading(button, loader, isLoading) {
+    if (button) {
+      button.disabled = isLoading;
+      button.classList.toggle('is-loading', isLoading);
+    }
+    if (loader) {
+      loader.hidden = !isLoading;
+    }
+  }
+
+  async function handleGenerateDescription() {
+    const button = document.getElementById('btn-ai-description');
+    const loader = document.getElementById('ai-description-loader');
+    const nameInput = document.getElementById('evt-name');
+    const locationInput = document.getElementById('evt-location');
+    const descriptionInput = document.getElementById('evt-description');
+
+    const name = (nameInput?.value || '').trim();
+    const location = (locationInput?.value || '').trim();
+
+    if (!name) {
+      showError('Ajoutez d abord le titre de l evenement.');
+      nameInput?.focus();
+      return;
+    }
+
+    setAiLoading(button, loader, true);
+    try {
+      const result = await postJson('generate_description.php', { name, location });
+      if (result?.success && result.description) {
+        descriptionInput.value = result.description;
+        descriptionInput.dispatchEvent(new Event('input', { bubbles: true }));
+      } else {
+        showError(result?.message || 'Aucune description IA n a pu etre generee.');
+      }
+    } catch (error) {
+      showError('Erreur IA locale: ' + error.message);
+    } finally {
+      setAiLoading(button, loader, false);
+    }
   }
 
   function toLocalInputValue(value) {
@@ -321,6 +416,14 @@ document.addEventListener('DOMContentLoaded', function () {
   }
 
   document.addEventListener('click', async function (event) {
+    const qrButton = event.target.closest('.view-qr-code');
+    if (qrButton) {
+      event.preventDefault();
+      const eventId = Number(qrButton.getAttribute('data-id'));
+      await openQrModal(qrButton.closest('.event-card'), eventId);
+      return;
+    }
+
     const registerButton = event.target.closest('.register');
     if (registerButton) {
       console.log('[FRONT] Bouton S\'inscrire cliqué');
@@ -433,7 +536,9 @@ document.addEventListener('DOMContentLoaded', function () {
     if (card && btnAdd && (event.ctrlKey || event.metaKey)) {
       const eventId = encodeURIComponent(card.getAttribute('data-id'));
       const response = await fetch('events.php?action=get&id=' + eventId);
-      const result = await response.json();
+      const responseText = await response.text();
+      console.log('[AJAX JSON]', 'events.php?action=get', responseText);
+      const result = JSON.parse(responseText);
       if (result?.success) {
         openEventModal('edit', result.event);
       } else {
@@ -446,6 +551,8 @@ document.addEventListener('DOMContentLoaded', function () {
     event.preventDefault();
     document.getElementById('btn-save-event')?.click();
   });
+
+  document.getElementById('btn-ai-description')?.addEventListener('click', handleGenerateDescription);
 
   document.getElementById('btn-save-event')?.addEventListener('click', async function (event) {
     event?.preventDefault();
@@ -648,6 +755,11 @@ document.addEventListener('DOMContentLoaded', function () {
   }
 
   const searchInput = document.getElementById('events-search');
+  const eventFilterDate = document.getElementById('event-filter-date');
+  const eventFilterLocation = document.getElementById('event-filter-location');
+  const eventFilterAvailability = document.getElementById('event-filter-availability');
+  const eventFilterResources = document.getElementById('event-filter-resources');
+  const eventFilterReset = document.getElementById('event-filter-reset');
 
   function normalizeSearchValue(value) {
     return String(value || '')
@@ -686,6 +798,119 @@ document.addEventListener('DOMContentLoaded', function () {
     ].filter(Boolean).join(' ');
   }
 
+  function parseCardJson(value) {
+    try {
+      const parsed = JSON.parse(value || '[]');
+      return Array.isArray(parsed) ? parsed : [];
+    } catch (error) {
+      return [];
+    }
+  }
+
+  function getDayBounds(date) {
+    const start = new Date(date);
+    start.setHours(0, 0, 0, 0);
+    const end = new Date(start);
+    end.setDate(end.getDate() + 1);
+    return { start, end };
+  }
+
+  function getWeekBounds(date) {
+    const start = new Date(date);
+    start.setHours(0, 0, 0, 0);
+    const day = start.getDay() || 7;
+    start.setDate(start.getDate() - day + 1);
+    const end = new Date(start);
+    end.setDate(end.getDate() + 7);
+    return { start, end };
+  }
+
+  function getMonthBounds(date) {
+    const start = new Date(date.getFullYear(), date.getMonth(), 1);
+    const end = new Date(date.getFullYear(), date.getMonth() + 1, 1);
+    return { start, end };
+  }
+
+  function dateRangesOverlap(startDate, endDate, rangeStart, rangeEnd) {
+    const eventStart = startDate instanceof Date && !Number.isNaN(startDate.getTime()) ? startDate : null;
+    const eventEnd = endDate instanceof Date && !Number.isNaN(endDate.getTime()) ? endDate : eventStart;
+    return !!eventStart && eventStart < rangeEnd && eventEnd >= rangeStart;
+  }
+
+  function matchesDateFilter(card, filterValue) {
+    if (!filterValue) return true;
+
+    const now = new Date();
+    const startDate = new Date(String(card.dataset.start || '').replace(' ', 'T'));
+    const endDate = new Date(String(card.dataset.end || card.dataset.start || '').replace(' ', 'T'));
+    const eventStart = !Number.isNaN(startDate.getTime()) ? startDate : null;
+    const eventEnd = !Number.isNaN(endDate.getTime()) ? endDate : eventStart;
+
+    if (!eventStart) return false;
+    if (filterValue === 'upcoming') return eventEnd >= now;
+    if (filterValue === 'past') return eventEnd < now;
+    if (filterValue === 'today') {
+      const range = getDayBounds(now);
+      return dateRangesOverlap(eventStart, eventEnd, range.start, range.end);
+    }
+    if (filterValue === 'week') {
+      const range = getWeekBounds(now);
+      return dateRangesOverlap(eventStart, eventEnd, range.start, range.end);
+    }
+    if (filterValue === 'month') {
+      const range = getMonthBounds(now);
+      return dateRangesOverlap(eventStart, eventEnd, range.start, range.end);
+    }
+
+    return true;
+  }
+
+  function matchesAvailabilityFilter(card, filterValue) {
+    if (!filterValue) return true;
+
+    const max = Number(card.dataset.max || 0);
+    const current = Number(card.dataset.current || 0);
+    const isFull = max > 0 && current >= max;
+
+    if (filterValue === 'available') return !isFull;
+    if (filterValue === 'full') return isFull;
+
+    return true;
+  }
+
+  function matchesResourcesFilter(card, filterValue) {
+    if (!filterValue) return true;
+
+    const materials = parseCardJson(card.getAttribute('data-materials'));
+    const rules = parseCardJson(card.getAttribute('data-rules'));
+
+    if (filterValue === 'with-materials') return materials.length > 0;
+    if (filterValue === 'without-materials') return materials.length === 0;
+    if (filterValue === 'with-rules') return rules.length > 0;
+    if (filterValue === 'without-rules') return rules.length === 0;
+
+    return true;
+  }
+
+  function hasActiveEventFilters() {
+    return !!(
+      eventFilterDate?.value ||
+      eventFilterLocation?.value.trim() ||
+      eventFilterAvailability?.value ||
+      eventFilterResources?.value
+    );
+  }
+
+  function matchesConsultFilters(card) {
+    const locationQuery = normalizeSearchValue(eventFilterLocation?.value || '');
+    const location = normalizeSearchValue(card.dataset.location || '');
+
+    return matchesDateFilter(card, eventFilterDate?.value || '')
+      && (locationQuery === '' || location.includes(locationQuery))
+      && matchesAvailabilityFilter(card, eventFilterAvailability?.value || '')
+      && matchesResourcesFilter(card, eventFilterResources?.value || '');
+  }
+
   function getSearchEmptyMessage(scope) {
     let message = scope.querySelector(':scope > .search-empty');
     if (!message) {
@@ -708,18 +933,36 @@ document.addEventListener('DOMContentLoaded', function () {
     const cards = Array.from(scope.querySelectorAll('.event-card'));
     let visibleCount = 0;
 
+    const filterableScope = scope.id === 'tab-consult';
+    const filtersActive = filterableScope && hasActiveEventFilters();
+
     cards.forEach(function(card) {
-      const matches = query === '' || normalizeSearchValue(getCardSearchText(card)).includes(query);
+      const matchesSearch = query === '' || normalizeSearchValue(getCardSearchText(card)).includes(query);
+      const matchesFilters = !filterableScope || matchesConsultFilters(card);
+      const matches = matchesSearch && matchesFilters;
       card.style.display = matches ? '' : 'none';
       if (matches) visibleCount += 1;
     });
 
     const emptyMessage = getSearchEmptyMessage(scope);
-    emptyMessage.hidden = query === '' || visibleCount > 0 || cards.length === 0;
+    emptyMessage.textContent = filterableScope ? 'Aucun événement trouvé' : 'Aucun résultat trouvé';
+    emptyMessage.hidden = (query === '' && !filtersActive) || visibleCount > 0 || cards.length === 0;
   }
 
   if (searchInput) {
     searchInput.addEventListener('input', applyEventSearch);
+    [eventFilterDate, eventFilterLocation, eventFilterAvailability, eventFilterResources].forEach(function(control) {
+      control?.addEventListener('input', applyEventSearch);
+      control?.addEventListener('change', applyEventSearch);
+    });
+
+    eventFilterReset?.addEventListener('click', function() {
+      if (eventFilterDate) eventFilterDate.value = '';
+      if (eventFilterLocation) eventFilterLocation.value = '';
+      if (eventFilterAvailability) eventFilterAvailability.value = '';
+      if (eventFilterResources) eventFilterResources.value = '';
+      applyEventSearch();
+    });
 
     document.addEventListener('click', function(event) {
       if (event.target.closest('.tab-toggle') || event.target.closest('.request-filter')) {

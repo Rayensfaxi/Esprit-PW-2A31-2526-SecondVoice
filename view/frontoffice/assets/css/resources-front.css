@@ -8,6 +8,37 @@
   border-radius: 12px;
 }
 
+.resource-search {
+  margin-bottom: 20px;
+}
+
+.resource-search .field {
+  width: 100%;
+}
+
+.resource-search-empty {
+  margin-top: 12px;
+  padding: 14px 16px;
+  border: 1px solid #e5e7eb;
+  border-radius: 12px;
+  background: #f9fafb;
+  color: #6b7280;
+  text-align: center;
+  font-weight: 600;
+}
+
+.ai-resource-toolbar {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin: 0 0 20px;
+}
+
+.resource-block[hidden] {
+  display: none;
+}
+
 .section-header {
   display: flex;
   justify-content: space-between;

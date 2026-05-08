@@ -69,7 +69,24 @@ document.addEventListener('DOMContentLoaded', function () {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(body || {})
     });
-    return response.json();
+    const responseText = await response.text();
+    console.log('[AJAX JSON]', url, responseText);
+
+    try {
+      return JSON.parse(responseText);
+    } catch (error) {
+      throw new Error('Reponse serveur non JSON: ' + responseText.slice(0, 300));
+    }
+  }
+
+  function setAiLoading(button, loader, isLoading) {
+    if (button) {
+      button.disabled = isLoading;
+      button.classList.toggle('is-loading', isLoading);
+    }
+    if (loader) {
+      loader.hidden = !isLoading;
+    }
   }
 
   function showInlineError(input, message) {
@@ -218,6 +235,62 @@ document.addEventListener('DOMContentLoaded', function () {
     return block;
   }
 
+  function normalizeSearchText(value) {
+    return String(value ?? '')
+      .toLowerCase()
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .trim();
+  }
+
+  function fieldStartsWith(value, query) {
+    return normalizeSearchText(value).startsWith(query);
+  }
+
+  function getResourceBlockSearchFields(block) {
+    return [
+      block.querySelector('.resource-name')?.value || '',
+      block.querySelector('.resource-quantity')?.value || '',
+      block.querySelector('.resource-description')?.value || ''
+    ];
+  }
+
+  function applyResourceSearch() {
+    const searchInput = document.getElementById('resource-search-input');
+    const emptyMessage = document.getElementById('resource-search-empty');
+    const query = normalizeSearchText(searchInput?.value || '');
+    const blocks = Array.from(document.querySelectorAll('.resource-block'));
+
+    if (!query) {
+      blocks.forEach(function (block) {
+        block.hidden = false;
+      });
+      if (emptyMessage) emptyMessage.hidden = true;
+      return;
+    }
+
+    const generalFields = [
+      document.getElementById('general-resource-title')?.value || '',
+      document.getElementById('general-resource-description')?.value || ''
+    ];
+    const generalMatches = generalFields.some(function (value) {
+      return fieldStartsWith(value, query);
+    });
+    let visibleCount = 0;
+
+    blocks.forEach(function (block) {
+      const matches = generalMatches || getResourceBlockSearchFields(block).some(function (value) {
+        return fieldStartsWith(value, query);
+      });
+      block.hidden = !matches;
+      if (matches) visibleCount += 1;
+    });
+
+    if (emptyMessage) {
+      emptyMessage.hidden = visibleCount > 0;
+    }
+  }
+
   document.addEventListener('click', function (e) {
     const addBtn = e.target.closest('.add-resource');
     if (!addBtn) return;
@@ -230,6 +303,7 @@ document.addEventListener('DOMContentLoaded', function () {
     const block = createResourceBlock(type);
     list.appendChild(block);
     syncGeneralTitleRequiredState();
+    applyResourceSearch();
 
     const nameInput = block.querySelector('.resource-name');
     if (nameInput) nameInput.focus();
@@ -243,20 +317,36 @@ document.addEventListener('DOMContentLoaded', function () {
     if (block) {
       block.remove();
       validateGeneralTitle();
+      applyResourceSearch();
     }
   });
 
   document.addEventListener('input', function (e) {
+    if (e.target.id === 'resource-search-input') {
+      applyResourceSearch();
+    }
+
     if (e.target.id === 'general-resource-title') {
       validateGeneralTitle(e.target);
+      applyResourceSearch();
+    }
+
+    if (e.target.id === 'general-resource-description') {
+      applyResourceSearch();
     }
 
     if (e.target.classList.contains('resource-name')) {
       validateResourceName(e.target);
+      applyResourceSearch();
     }
 
     if (e.target.classList.contains('resource-quantity')) {
       validateQuantityField(e.target);
+      applyResourceSearch();
+    }
+
+    if (e.target.classList.contains('resource-description')) {
+      applyResourceSearch();
     }
   });
 
@@ -433,6 +523,72 @@ document.addEventListener('DOMContentLoaded', function () {
 
     syncGeneralTitleRequiredState();
     validateGeneralTitle();
+    applyResourceSearch();
+  }
+
+  function resourceNameExists(name) {
+    const normalizedName = normalizeSearchText(name);
+    return Array.from(document.querySelectorAll('.resource-name')).some(function (input) {
+      return normalizeSearchText(input.value) === normalizedName;
+    });
+  }
+
+  function appendAiResource(type, resource) {
+    if (!resource || !resource.name || resourceNameExists(resource.name)) return;
+
+    const list = document.getElementById(type === 'materiel' ? 'materiels-list' : 'regles-list');
+    if (!list) return;
+
+    list.appendChild(createResourceBlock(type, resource));
+  }
+
+  async function handleSuggestResources() {
+    const button = document.getElementById('btn-ai-resources');
+    const loader = document.getElementById('ai-resources-loader');
+    const eventName = (document.getElementById('resource-event-name')?.value || '').trim();
+    const eventLocation = (document.getElementById('resource-event-location')?.value || '').trim();
+    const titleInput = document.getElementById('general-resource-title');
+    const descriptionInput = document.getElementById('general-resource-description');
+
+    if (!eventName) {
+      showError('Le nom de l evenement est introuvable.');
+      return;
+    }
+
+    setAiLoading(button, loader, true);
+    try {
+      const result = await postJson('suggest_resources.php', {
+        name: eventName,
+        location: eventLocation
+      });
+
+      if (!result?.success) {
+        showError(result?.message || 'Aucune suggestion IA disponible.');
+        return;
+      }
+
+      if (titleInput && !titleInput.value.trim()) {
+        titleInput.value = result.resources_title || '';
+      }
+      if (descriptionInput && !descriptionInput.value.trim()) {
+        descriptionInput.value = result.resources_description || '';
+      }
+
+      (result.materials || []).forEach(function (resource) {
+        appendAiResource('materiel', resource);
+      });
+      (result.rules || []).forEach(function (resource) {
+        appendAiResource('regle', resource);
+      });
+
+      syncGeneralTitleRequiredState();
+      validateGeneralTitle();
+      applyResourceSearch();
+    } catch (error) {
+      showError('Erreur IA locale: ' + error.message);
+    } finally {
+      setAiLoading(button, loader, false);
+    }
   }
 
   function showImportEventsPopup(events) {
@@ -513,8 +669,10 @@ document.addEventListener('DOMContentLoaded', function () {
 
     let result;
     try {
-      result = await fetch('resources.php?action=list_importable_events&event_id=' + encodeURIComponent(String(eventId)))
-        .then(response => response.json());
+      const response = await fetch('resources.php?action=list_importable_events&event_id=' + encodeURIComponent(String(eventId)));
+      const responseText = await response.text();
+      console.log('[AJAX JSON]', 'resources.php?action=list_importable_events', responseText);
+      result = JSON.parse(responseText);
     } catch (error) {
       showError('Erreur lors du chargement des événements: ' + error.message);
       return;
@@ -534,9 +692,11 @@ document.addEventListener('DOMContentLoaded', function () {
   }
 
   document.getElementById('resources-form')?.addEventListener('submit', handleSaveResources);
+  document.getElementById('btn-ai-resources')?.addEventListener('click', handleSuggestResources);
   document.getElementById('import-resources-btn')?.addEventListener('click', handleImportResources);
   document.getElementById('delete-resources-btn')?.addEventListener('click', handleDeleteResources);
   document.getElementById('btn-delete-resources')?.addEventListener('click', handleDeleteResources);
 
   syncGeneralTitleRequiredState();
+  applyResourceSearch();
 });

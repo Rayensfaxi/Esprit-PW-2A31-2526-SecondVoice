@@ -77,6 +77,8 @@ $registrants = $controller->getRegistrantsByEvent($eventId);
 $eventName = (string) ($event['name'] ?? 'Evenement');
 $exportDate = date('d/m/Y H:i');
 $total = count($registrants);
+$qrSvg = $controller->getEventRegistrationsQrSvg($eventId);
+$qrImage = $qrSvg !== null ? 'data:image/svg+xml;base64,' . base64_encode($qrSvg) : '';
 
 $rows = '';
 if ($registrants === []) {
@@ -101,6 +103,9 @@ $html = '<!DOCTYPE html>
     body { font-family: DejaVu Sans, Arial, sans-serif; color: #1f2937; font-size: 12px; line-height: 1.45; }
     h1 { text-align: center; color: #4338ca; font-size: 24px; margin: 0 0 18px; letter-spacing: 0; }
     .summary { border: 1px solid #d9ddff; background: #f7f7ff; border-radius: 8px; padding: 14px 16px; margin-bottom: 18px; }
+    .event-qr { text-align: center; border: 1px solid #d9ddff; border-radius: 8px; padding: 12px; margin-bottom: 18px; }
+    .event-qr-title { color: #4338ca; font-weight: 700; margin-bottom: 6px; }
+    .event-qr img { width: 132px; height: 132px; display: block; margin: 8px auto 0; }
     .summary-row { margin: 4px 0; }
     .label { color: #4f46e5; font-weight: 700; display: inline-block; min-width: 130px; }
     table { width: 100%; border-collapse: collapse; margin-top: 10px; }
@@ -120,6 +125,7 @@ $html = '<!DOCTYPE html>
     <div class="summary-row"><span class="label">Lieu</span>' . pdf_h((string) ($event['location'] ?? '-')) . '</div>
     <div class="summary-row"><span class="label">Total inscrits</span>' . $total . '</div>
   </div>
+  ' . ($qrImage !== '' ? '<div class="event-qr"><div class="event-qr-title">QR liste des inscrits</div><div>' . pdf_h($eventName) . ' - ' . pdf_h(pdf_format_date((string) ($event['start_date'] ?? ''))) . '</div><img src="' . $qrImage . '" alt="QR Code liste des inscrits"></div>' : '') . '
   <table>
     <thead>
       <tr><th>Nom</th><th>Prenom</th><th>Email</th><th>Telephone</th></tr>

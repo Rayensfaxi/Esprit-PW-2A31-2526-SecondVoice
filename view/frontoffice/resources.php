@@ -1,6 +1,10 @@
 <?php
 declare(strict_types=1);
-session_start();
+
+ob_start();
+ini_set('display_errors', '0');
+
+@session_start();
 
 require_once __DIR__ . '/../../config.php';
 require_once __DIR__ . '/../../controller/EventController.php';
@@ -20,81 +24,97 @@ function currentUserIsConnected(): bool
     return isset($_SESSION['user_id']) && $_SESSION['user_id'] > 0;
 }
 
-$controller = new EventController();
+function respondJson(array $payload, int $statusCode = 200): void
+{
+    while (ob_get_level() > 0) {
+        ob_end_clean();
+    }
+
+    http_response_code($statusCode);
+    header('Content-Type: application/json; charset=utf-8');
+    echo json_encode($payload, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+    exit;
+}
+
 $action = strtolower(trim((string) ($_REQUEST['action'] ?? '')));
 
 // Handle AJAX actions
 if ($action !== '') {
-    header('Content-Type: application/json; charset=utf-8');
     $input = json_decode(file_get_contents('php://input') ?: '', true);
     $input = is_array($input) ? $input : [];
 
-    switch ($action) {
-        case 'save_resources':
-            $userId = (int) ($_SESSION['user_id'] ?? 0);
-            if ($userId <= 0) {
-                echo json_encode(['success' => false, 'message' => 'Authentification requise.']);
+    try {
+        $controller = new EventController();
+
+        switch ($action) {
+            case 'save_resources':
+                $userId = (int) ($_SESSION['user_id'] ?? 0);
+                if ($userId <= 0) {
+                    respondJson(['success' => false, 'message' => 'Authentification requise.'], 401);
+                }
+                $eventId = (int) ($input['event_id'] ?? 0);
+                $resourcesTitle = trim((string) ($input['resources_title'] ?? ''));
+                $resourcesDescription = trim((string) ($input['resources_description'] ?? ''));
+                $resources = $input['resources'] ?? [];
+                respondJson($controller->saveResources($eventId, $userId, $resources, $resourcesTitle, $resourcesDescription));
                 exit;
-            }
-            $eventId = (int) ($input['event_id'] ?? 0);
-            $resourcesTitle = trim((string) ($input['resources_title'] ?? ''));
-            $resourcesDescription = trim((string) ($input['resources_description'] ?? ''));
-            $resources = $input['resources'] ?? [];
-            echo json_encode($controller->saveResources($eventId, $userId, $resources, $resourcesTitle, $resourcesDescription));
-            exit;
 
-        case 'delete_resources':
-            $userId = (int) ($_SESSION['user_id'] ?? 0);
-            if ($userId <= 0) {
-                echo json_encode(['success' => false, 'message' => 'Authentification requise.']);
+            case 'delete_resources':
+                $userId = (int) ($_SESSION['user_id'] ?? 0);
+                if ($userId <= 0) {
+                    respondJson(['success' => false, 'message' => 'Authentification requise.'], 401);
+                }
+                $eventId = (int) ($input['event_id'] ?? $_REQUEST['event_id'] ?? 0);
+                respondJson($controller->deleteResources($eventId, $userId));
                 exit;
-            }
-            $eventId = (int) ($input['event_id'] ?? $_REQUEST['event_id'] ?? 0);
-            echo json_encode($controller->deleteResources($eventId, $userId));
-            exit;
 
-        case 'list_importable_events':
-            $userId = (int) ($_SESSION['user_id'] ?? 0);
-            if ($userId <= 0) {
-                echo json_encode(['success' => false, 'message' => 'Authentification requise.']);
+            case 'list_importable_events':
+                $userId = (int) ($_SESSION['user_id'] ?? 0);
+                if ($userId <= 0) {
+                    respondJson(['success' => false, 'message' => 'Authentification requise.'], 401);
+                }
+                $currentEventId = (int) ($_GET['event_id'] ?? $input['event_id'] ?? 0);
+                respondJson([
+                    'success' => true,
+                    'events' => $controller->getImportableResourceEventsForUser($userId, $currentEventId),
+                ]);
                 exit;
-            }
-            $currentEventId = (int) ($_GET['event_id'] ?? $input['event_id'] ?? 0);
-            echo json_encode([
-                'success' => true,
-                'events' => $controller->getImportableResourceEventsForUser($userId, $currentEventId),
-            ]);
-            exit;
 
-        case 'import_resources':
-            $userId = (int) ($_SESSION['user_id'] ?? 0);
-            if ($userId <= 0) {
-                echo json_encode(['success' => false, 'message' => 'Authentification requise.']);
+            case 'import_resources':
+                $userId = (int) ($_SESSION['user_id'] ?? 0);
+                if ($userId <= 0) {
+                    respondJson(['success' => false, 'message' => 'Authentification requise.'], 401);
+                }
+                $sourceEventId = (int) ($input['source_event_id'] ?? $_REQUEST['source_event_id'] ?? 0);
+                respondJson($controller->getImportableResourcesFromEvent($sourceEventId, $userId));
                 exit;
-            }
-            $sourceEventId = (int) ($input['source_event_id'] ?? $_REQUEST['source_event_id'] ?? 0);
-            echo json_encode($controller->getImportableResourcesFromEvent($sourceEventId, $userId));
-            exit;
 
-        case 'get_resources':
-            $eventId = (int) ($_GET['event_id'] ?? 0);
-            $resources = $controller->getResourcesByEvent($eventId);
-            $hasPendingRequest = $controller->hasPendingResourceModificationRequest($eventId);
-            echo json_encode(['success' => true, 'resources' => $resources, 'has_pending_request' => $hasPendingRequest]);
-            exit;
+            case 'get_resources':
+                $eventId = (int) ($_GET['event_id'] ?? 0);
+                $resources = $controller->getResourcesByEvent($eventId);
+                $hasPendingRequest = $controller->hasPendingResourceModificationRequest($eventId);
+                respondJson(['success' => true, 'resources' => $resources, 'has_pending_request' => $hasPendingRequest]);
+                exit;
 
-        case 'check_pending_request':
-            $eventId = (int) ($_GET['event_id'] ?? 0);
-            $hasPendingRequest = $controller->hasPendingResourceModificationRequest($eventId);
-            echo json_encode(['success' => true, 'has_pending_request' => $hasPendingRequest]);
-            exit;
+            case 'check_pending_request':
+                $eventId = (int) ($_GET['event_id'] ?? 0);
+                $hasPendingRequest = $controller->hasPendingResourceModificationRequest($eventId);
+                respondJson(['success' => true, 'has_pending_request' => $hasPendingRequest]);
+                exit;
+        }
+    } catch (Throwable $e) {
+        error_log('Erreur AJAX resources.php action=' . $action . ': ' . $e->getMessage());
+        respondJson([
+            'success' => false,
+            'message' => 'Erreur serveur lors du traitement des ressources. Verifiez que MySQL est demarre dans XAMPP.',
+        ], 500);
     }
 
-    echo json_encode(['success' => false, 'message' => 'Action non reconnue.']);
-    exit;
+    respondJson(['success' => false, 'message' => 'Action non reconnue.'], 400);
 }
 
 // Page display
+$controller = new EventController();
 $eventId = (int) ($_GET['event_id'] ?? 0);
 $event = $controller->getEventById($eventId);
 $userId = (int) ($_SESSION['user_id'] ?? 0);
@@ -196,6 +216,18 @@ $hasPendingRequest = $canManageResources ? $controller->hasPendingResourceModifi
 
             <form id="resources-form" novalidate>
               <input type="hidden" id="event-id" name="event_id" value="<?= $eventId ?>" />
+              <input type="hidden" id="resource-event-name" value="<?= h($event['name'] ?? '') ?>" />
+              <input type="hidden" id="resource-event-location" value="<?= h($event['location'] ?? '') ?>" />
+
+              <div class="resource-search">
+                <input type="search" class="field" id="resource-search-input" placeholder="Rechercher une ressource..." autocomplete="off" />
+                <div id="resource-search-empty" class="resource-search-empty" hidden>Aucune ressource trouvée</div>
+              </div>
+
+              <div class="ai-resource-toolbar">
+                <button type="button" class="btn ai-btn" id="btn-ai-resources">✨ Suggérer ressources IA</button>
+                <span class="ai-loader" id="ai-resources-loader" hidden>Analyse IA locale...</span>
+              </div>
 
               <div class="resource-section">
                 <div class="section-header">
@@ -311,6 +343,6 @@ $hasPendingRequest = $canManageResources ? $controller->hasPendingResourceModifi
   </div>
 
   <script src="assets/js/main.js"></script>
-  <script src="assets/js/resources-front.js?v=20260505-import-resources"></script>
+  <script src="assets/js/resources-front.js?v=20260508-local-ai"></script>
 </body>
 </html>

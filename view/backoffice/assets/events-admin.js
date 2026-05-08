@@ -8,6 +8,14 @@ document.addEventListener('DOMContentLoaded', function () {
   const registrantsList = $('#registrants-list');
   const exportRegistrantsPdf = $('#export-registrants-pdf');
   const exportPdfButtons = $all('.export-pdf-btn');
+  const requestDetailsModal = $('#request-details-modal');
+  const requestDetailsContent = $('#request-details-content');
+  const qrModal = $('#qr-modal');
+  const qrImage = $('#qr-code-image');
+  const qrEventName = $('#qr-event-name');
+  const qrEventMeta = $('#qr-event-meta');
+  const qrDownloadLink = $('#qr-download-link');
+  const qrEncodedText = $('#qr-encoded-text');
 
   // Popup system for confirmation and success messages
   function showPopup(message, type = 'success', onConfirm = null, onCancel = null) {
@@ -208,8 +216,135 @@ document.addEventListener('DOMContentLoaded', function () {
     modal?.classList.remove('open');
   }
 
+  function openRequestDetailsModal() {
+    requestDetailsModal?.setAttribute('aria-hidden', 'false');
+    requestDetailsModal?.classList.add('open');
+  }
+
+  function closeRequestDetailsModal() {
+    requestDetailsModal?.setAttribute('aria-hidden', 'true');
+    requestDetailsModal?.classList.remove('open');
+  }
+
+  async function openQrModal(card, eventId) {
+    if (!qrModal || !qrImage || !eventId) return;
+
+    const name = card?.dataset.name || card?.querySelector('.evt-name')?.textContent || 'Evenement';
+    const start = card?.dataset.start || '';
+    const location = card?.dataset.location || '';
+
+    if (qrEventName) qrEventName.textContent = name;
+    if (qrEventMeta) qrEventMeta.textContent = [start, location].filter(Boolean).join(' - ');
+
+    const qrUrl = apiBase + '?action=qr&event_id=' + encodeURIComponent(String(eventId));
+    qrImage.src = qrUrl;
+    if (qrDownloadLink) {
+      qrDownloadLink.href = apiBase + '?action=qr_download&event_id=' + encodeURIComponent(String(eventId));
+      qrDownloadLink.setAttribute('download', 'event-' + eventId + '-qr.svg');
+    }
+    if (qrEncodedText) {
+      qrEncodedText.textContent = 'Chargement de l URL...';
+      try {
+        const response = await fetch(apiBase + '?action=qr_payload&event_id=' + encodeURIComponent(String(eventId)));
+        const result = await response.json();
+        qrEncodedText.textContent = result?.payload || '';
+      } catch (error) {
+        qrEncodedText.textContent = '';
+      }
+    }
+
+    qrModal.setAttribute('aria-hidden', 'false');
+    qrModal.classList.add('open');
+  }
+
+  function closeQrModal() {
+    qrModal?.setAttribute('aria-hidden', 'true');
+    qrModal?.classList.remove('open');
+    if (qrImage) qrImage.src = '';
+    if (qrEncodedText) qrEncodedText.textContent = '';
+  }
+
+  function escapeHtml(value) {
+    return String(value ?? '').replace(/[&<>"']/g, function (char) {
+      return {
+        '&': '&amp;',
+        '<': '&lt;',
+        '>': '&gt;',
+        '"': '&quot;',
+        "'": '&#039;'
+      }[char];
+    });
+  }
+
+  function detailValue(value) {
+    const text = String(value ?? '').trim();
+    return text ? escapeHtml(text) : '<span class="request-detail-empty">Non renseigné</span>';
+  }
+
+  function renderDetailField(label, value) {
+    return '<div class="request-detail-field"><span>' + escapeHtml(label) + '</span><strong>' + detailValue(value) + '</strong></div>';
+  }
+
+  function renderResources(resources) {
+    const items = Array.isArray(resources) ? resources : [];
+    const materials = items.filter(function (item) { return String(item.type || '').toLowerCase() === 'materiel'; });
+    const rules = items.filter(function (item) { return String(item.type || '').toLowerCase() === 'regle'; });
+
+    if (!materials.length && !rules.length) {
+      return '<div class="request-detail-empty-state">Aucune ressource</div>';
+    }
+
+    function renderResourceList(title, list, isRule) {
+      if (!list.length) return '';
+      return '<div class="request-resource-group"><h5>' + escapeHtml(title) + '</h5>' + list.map(function (resource) {
+        const name = resource.name || resource.title || 'Sans titre';
+        const quantity = resource.quantity || resource.quantite || '';
+        const description = resource.description || '';
+        return '<div class="request-resource-item">'
+          + '<div><strong>' + detailValue(name) + '</strong>'
+          + (isRule || !quantity ? '' : '<span>Quantité : ' + detailValue(quantity) + '</span>')
+          + '</div>'
+          + '<p>' + detailValue(description) + '</p>'
+          + '</div>';
+      }).join('') + '</div>';
+    }
+
+    return renderResourceList('Matériels', materials, false) + renderResourceList('Règles', rules, true);
+  }
+
+  function renderRequestDetails(details) {
+    if (!requestDetailsContent) return;
+    const user = details.user || {};
+    requestDetailsContent.innerHTML = ''
+      + '<div class="request-details-grid">'
+      + '<section class="request-detail-section"><h4>Événement</h4>'
+      + renderDetailField('Nom événement', details.name)
+      + renderDetailField('Description', details.description)
+      + renderDetailField('Date début', details.start_date)
+      + renderDetailField('Date fin', details.end_date)
+      + renderDetailField('Date limite', details.deadline)
+      + renderDetailField('Lieu', details.location)
+      + renderDetailField('Capacité max', details.max)
+      + renderDetailField('Statut demande', details.status)
+      + renderDetailField('Type demande', details.request_type)
+      + renderDetailField('Date création demande', details.created_at)
+      + '</section>'
+      + '<section class="request-detail-section"><h4>Utilisateur</h4>'
+      + renderDetailField('Nom utilisateur', user.nom)
+      + renderDetailField('Prénom utilisateur', user.prenom)
+      + renderDetailField('Email', user.email)
+      + renderDetailField('Téléphone', user.telephone)
+      + '</section>'
+      + '</div>'
+      + '<section class="request-detail-section request-detail-resources"><h4>Ressources</h4>'
+      + renderResources(details.resources)
+      + '</section>';
+  }
+
     $('#admin-reset')?.addEventListener('click', resetForm);
-  $('.modal-close')?.addEventListener('click', closeModal);
+  $all('#registrants-modal .modal-close').forEach(function (button) { button.addEventListener('click', closeModal); });
+  $all('#request-details-modal .modal-close').forEach(function (button) { button.addEventListener('click', closeRequestDetailsModal); });
+  $all('#qr-modal .modal-close').forEach(function (button) { button.addEventListener('click', closeQrModal); });
 
   $all('.admin-tabs .tab').forEach(function (tab) {
     tab.addEventListener('click', function () {
@@ -223,6 +358,11 @@ document.addEventListener('DOMContentLoaded', function () {
   });
 
   const adminSearchInput = document.getElementById('admin-events-search');
+  const adminFilterDate = document.getElementById('admin-filter-date');
+  const adminFilterLocation = document.getElementById('admin-filter-location');
+  const adminFilterAvailability = document.getElementById('admin-filter-availability');
+  const adminFilterResources = document.getElementById('admin-filter-resources');
+  const adminFilterReset = document.getElementById('admin-filter-reset');
 
   function normalizeSearchValue(value) {
     return String(value || '')
@@ -254,6 +394,119 @@ document.addEventListener('DOMContentLoaded', function () {
     ].filter(Boolean).join(' ');
   }
 
+  function parseAdminCardJson(value) {
+    try {
+      const parsed = JSON.parse(value || '[]');
+      return Array.isArray(parsed) ? parsed : [];
+    } catch (error) {
+      return [];
+    }
+  }
+
+  function getAdminDayBounds(date) {
+    const start = new Date(date);
+    start.setHours(0, 0, 0, 0);
+    const end = new Date(start);
+    end.setDate(end.getDate() + 1);
+    return { start, end };
+  }
+
+  function getAdminWeekBounds(date) {
+    const start = new Date(date);
+    start.setHours(0, 0, 0, 0);
+    const day = start.getDay() || 7;
+    start.setDate(start.getDate() - day + 1);
+    const end = new Date(start);
+    end.setDate(end.getDate() + 7);
+    return { start, end };
+  }
+
+  function getAdminMonthBounds(date) {
+    const start = new Date(date.getFullYear(), date.getMonth(), 1);
+    const end = new Date(date.getFullYear(), date.getMonth() + 1, 1);
+    return { start, end };
+  }
+
+  function adminDateRangesOverlap(startDate, endDate, rangeStart, rangeEnd) {
+    const eventStart = startDate instanceof Date && !Number.isNaN(startDate.getTime()) ? startDate : null;
+    const eventEnd = endDate instanceof Date && !Number.isNaN(endDate.getTime()) ? endDate : eventStart;
+    return !!eventStart && eventStart < rangeEnd && eventEnd >= rangeStart;
+  }
+
+  function matchesAdminDateFilter(card, filterValue) {
+    if (!filterValue) return true;
+
+    const now = new Date();
+    const startDate = new Date(String(card.dataset.start || '').replace(' ', 'T'));
+    const endDate = new Date(String(card.dataset.end || card.dataset.start || '').replace(' ', 'T'));
+    const eventStart = !Number.isNaN(startDate.getTime()) ? startDate : null;
+    const eventEnd = !Number.isNaN(endDate.getTime()) ? endDate : eventStart;
+
+    if (!eventStart) return false;
+    if (filterValue === 'upcoming') return eventEnd >= now;
+    if (filterValue === 'past') return eventEnd < now;
+    if (filterValue === 'today') {
+      const range = getAdminDayBounds(now);
+      return adminDateRangesOverlap(eventStart, eventEnd, range.start, range.end);
+    }
+    if (filterValue === 'week') {
+      const range = getAdminWeekBounds(now);
+      return adminDateRangesOverlap(eventStart, eventEnd, range.start, range.end);
+    }
+    if (filterValue === 'month') {
+      const range = getAdminMonthBounds(now);
+      return adminDateRangesOverlap(eventStart, eventEnd, range.start, range.end);
+    }
+
+    return true;
+  }
+
+  function matchesAdminAvailabilityFilter(card, filterValue) {
+    if (!filterValue) return true;
+
+    const max = Number(card.dataset.max || 0);
+    const current = Number(card.dataset.current || 0);
+    const isFull = max > 0 && current >= max;
+
+    if (filterValue === 'available') return !isFull;
+    if (filterValue === 'full') return isFull;
+
+    return true;
+  }
+
+  function matchesAdminResourcesFilter(card, filterValue) {
+    if (!filterValue) return true;
+
+    const materials = parseAdminCardJson(card.getAttribute('data-materials'));
+    const rules = parseAdminCardJson(card.getAttribute('data-rules'));
+
+    if (filterValue === 'with-materials') return materials.length > 0;
+    if (filterValue === 'without-materials') return materials.length === 0;
+    if (filterValue === 'with-rules') return rules.length > 0;
+    if (filterValue === 'without-rules') return rules.length === 0;
+
+    return true;
+  }
+
+  function hasActiveAdminFilters() {
+    return !!(
+      adminFilterDate?.value ||
+      adminFilterLocation?.value.trim() ||
+      adminFilterAvailability?.value ||
+      adminFilterResources?.value
+    );
+  }
+
+  function matchesAdminEventFilters(card) {
+    const locationQuery = normalizeSearchValue(adminFilterLocation?.value || '');
+    const location = normalizeSearchValue(card.dataset.location || '');
+
+    return matchesAdminDateFilter(card, adminFilterDate?.value || '')
+      && (locationQuery === '' || location.includes(locationQuery))
+      && matchesAdminAvailabilityFilter(card, adminFilterAvailability?.value || '')
+      && matchesAdminResourcesFilter(card, adminFilterResources?.value || '');
+  }
+
   function getAdminSearchEmptyMessage(scope) {
     let message = scope.querySelector(':scope > .admin-search-empty');
     if (!message) {
@@ -276,17 +529,36 @@ document.addEventListener('DOMContentLoaded', function () {
     const cards = $all('.event-card', scope);
     let visibleCount = 0;
 
+    const filterableScope = scope.id === 'tab-events';
+    const filtersActive = filterableScope && hasActiveAdminFilters();
+
     cards.forEach(function(card) {
-      const matches = query === '' || normalizeSearchValue(getAdminCardSearchText(card)).includes(query);
+      const matchesSearch = query === '' || normalizeSearchValue(getAdminCardSearchText(card)).includes(query);
+      const matchesFilters = !filterableScope || matchesAdminEventFilters(card);
+      const matches = matchesSearch && matchesFilters;
       card.style.display = matches ? '' : 'none';
       if (matches) visibleCount += 1;
     });
 
     const emptyMessage = getAdminSearchEmptyMessage(scope);
-    emptyMessage.hidden = query === '' || visibleCount > 0 || cards.length === 0;
+    emptyMessage.textContent = filterableScope ? 'Aucun événement trouvé' : 'Aucun résultat trouvé';
+    emptyMessage.hidden = (query === '' && !filtersActive) || visibleCount > 0 || cards.length === 0;
   }
 
   adminSearchInput?.addEventListener('input', applyAdminSearch);
+  [adminFilterDate, adminFilterLocation, adminFilterAvailability, adminFilterResources].forEach(function(control) {
+    control?.addEventListener('input', applyAdminSearch);
+    control?.addEventListener('change', applyAdminSearch);
+  });
+
+  adminFilterReset?.addEventListener('click', function() {
+    if (adminFilterDate) adminFilterDate.value = '';
+    if (adminFilterLocation) adminFilterLocation.value = '';
+    if (adminFilterAvailability) adminFilterAvailability.value = '';
+    if (adminFilterResources) adminFilterResources.value = '';
+    applyAdminSearch();
+  });
+
   applyAdminSearch();
 
   exportPdfButtons.forEach(function (button) {
@@ -338,6 +610,40 @@ document.addEventListener('DOMContentLoaded', function () {
       }
 
       openModal();
+    });
+  });
+
+  $all('.view-qr-code').forEach(function (button) {
+    button.addEventListener('click', function () {
+      const card = this.closest('.event-card');
+      const eventId = Number(card?.getAttribute('data-id') || this.getAttribute('data-id') || 0);
+      openQrModal(card, eventId);
+    });
+  });
+
+  $all('.request-details').forEach(function (button) {
+    button.addEventListener('click', function () {
+      const card = this.closest('.event-card');
+      if (!card) return;
+
+      let details = {};
+      try {
+        details = JSON.parse(card.getAttribute('data-details') || '{}');
+      } catch (error) {
+        details = {};
+      }
+
+      renderRequestDetails(details);
+      openRequestDetailsModal();
+    });
+  });
+
+  [modal, requestDetailsModal, qrModal].forEach(function (item) {
+    item?.addEventListener('click', function (event) {
+      if (event.target !== item) return;
+      if (item === modal) closeModal();
+      if (item === requestDetailsModal) closeRequestDetailsModal();
+      if (item === qrModal) closeQrModal();
     });
   });
 

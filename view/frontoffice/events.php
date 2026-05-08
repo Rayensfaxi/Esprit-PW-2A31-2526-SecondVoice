@@ -179,6 +179,41 @@ function renderRequestCards(array $requests, EventController $controller): void
  $action = strtolower(trim((string) ($_REQUEST['action'] ?? '')));
 
 if ($action !== '') {
+    if (in_array($action, ['qr', 'qr_download'], true)) {
+        $eventId = (int) ($_GET['event_id'] ?? $_POST['event_id'] ?? 0);
+        $svg = $controller->getEventQrSvg($eventId);
+        if ($svg === null) {
+            http_response_code(404);
+            header('Content-Type: text/plain; charset=utf-8');
+            echo 'QR Code introuvable pour cet evenement.';
+            exit;
+        }
+
+        header('Content-Type: image/svg+xml; charset=utf-8');
+        if ($action === 'qr_download') {
+            header('Content-Disposition: attachment; filename="event-' . $eventId . '-qr.svg"');
+        } else {
+            header('Cache-Control: private, max-age=300');
+        }
+        echo $svg;
+        exit;
+    }
+
+    if ($action === 'qr_payload') {
+        $eventId = (int) ($_GET['event_id'] ?? $_POST['event_id'] ?? 0);
+        $payload = $controller->getEventQrPayload($eventId);
+        if ($payload === null) {
+            http_response_code(404);
+            header('Content-Type: application/json; charset=utf-8');
+            echo json_encode(['success' => false, 'message' => 'QR Code introuvable pour cet evenement.']);
+            exit;
+        }
+
+        header('Content-Type: application/json; charset=utf-8');
+        echo json_encode(['success' => true, 'payload' => $payload], JSON_UNESCAPED_SLASHES);
+        exit;
+    }
+
     header('Content-Type: application/json; charset=utf-8');
     $input = json_decode(file_get_contents('php://input') ?: '', true);
     $input = is_array($input) ? $input : [];
@@ -430,7 +465,7 @@ if ($action !== '') {
     <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=Space+Grotesk:wght@500;700&display=swap" rel="stylesheet" />
     
     <link rel="stylesheet" href="assets/css/style.css" />
-    <link rel="stylesheet" href="assets/css/events-front.css?v=20260425-request-filters" />
+    <link rel="stylesheet" href="assets/css/events-front.css?v=20260508-filters" />
     
     <style>
       /* Specific layout tweaks for tabs */
@@ -541,6 +576,31 @@ if ($action !== '') {
                 <input id="events-search" class="field" type="search" placeholder="Rechercher un événement, une date ou un lieu..." aria-label="Rechercher les événements" />
               </div>
               
+              <div class="event-filters" aria-label="Filtres des evenements">
+                <select id="event-filter-date" class="field event-filter-control" aria-label="Filtrer par date">
+                  <option value="">Toutes les dates</option>
+                  <option value="upcoming">A venir</option>
+                  <option value="past">Passes</option>
+                  <option value="today">Aujourd'hui</option>
+                  <option value="week">Cette semaine</option>
+                  <option value="month">Ce mois</option>
+                </select>
+                <input id="event-filter-location" class="field event-filter-control" type="search" placeholder="Filtrer par lieu" aria-label="Filtrer par lieu" />
+                <select id="event-filter-availability" class="field event-filter-control" aria-label="Filtrer par disponibilite">
+                  <option value="">Toutes les disponibilites</option>
+                  <option value="available">Places disponibles</option>
+                  <option value="full">Evenements complets</option>
+                </select>
+                <select id="event-filter-resources" class="field event-filter-control" aria-label="Filtrer par ressources">
+                  <option value="">Toutes les ressources</option>
+                  <option value="with-materials">Avec materiel</option>
+                  <option value="without-materials">Sans materiel</option>
+                  <option value="with-rules">Avec regles</option>
+                  <option value="without-rules">Sans regles</option>
+                </select>
+                <button type="button" class="btn outline event-filter-reset" id="event-filter-reset">Reinitialiser</button>
+              </div>
+
               <nav class="events-tabs admin-tabs" aria-label="Navigation des evenements">
               <button class="btn tab tab-toggle active" type="button" data-target="#tab-consult">Consulter</button>
               <button class="btn tab tab-toggle" type="button" data-target="#tab-my">Mes inscriptions</button>
@@ -619,6 +679,7 @@ if ($action !== '') {
                       $isOwner = ($userId > 0 && $eventCreatedBy === $userId);
                       $isOwner = false;
                       ?>
+                      <button class="btn outline view-qr-code" type="button" data-id="<?= $eventId ?>">Voir QR Code</button>
                       <?php if ($userId > 0): ?>
                         <?php if ($isRegistered): ?>
                           <button class="btn outline unregister" type="button" data-id="<?= $eventId ?>">Se désinscrire</button>
@@ -654,7 +715,7 @@ if ($action !== '') {
                 <?php else: ?>
                   <div class="cards-wrapper registration-list">
                   <?php foreach ($userRegistrations as $registration): ?>
-                    <article class="event-card card reg-item fade-up">
+                    <article class="event-card card reg-item fade-up" data-id="<?= (int) ($registration['event_id'] ?? 0) ?>" data-name="<?= h((string) ($registration['name'] ?? '')) ?>" data-start="<?= h((string) ($registration['start_date'] ?? '')) ?>" data-location="<?= h((string) ($registration['location'] ?? '')) ?>">
                       <div class="row between">
                         <h3><?= h((string) ($registration['name'] ?? '')) ?></h3>
                           <div class="small"><?= h((string) ($registration['start_date'] ?? '')) ?> • <?= h((string) ($registration['location'] ?? '')) ?></div>
@@ -817,6 +878,10 @@ if ($action !== '') {
                     <div class="mb-3">
                       <label for="evt-description" class="form-label">Description</label>
                       <textarea class="field" id="evt-description" name="description" rows="3"></textarea>
+                      <div class="ai-action-row">
+                        <button type="button" class="btn ai-btn" id="btn-ai-description">✨ Générer description IA</button>
+                        <span class="ai-loader" id="ai-description-loader" hidden>Analyse IA locale...</span>
+                      </div>
                     </div>
                     <div class="grid-3 mb-3">
                       <div>
@@ -872,6 +937,19 @@ if ($action !== '') {
           </div>
         </div>
       </footer>
+    </div>
+
+    <div id="qr-modal" class="qr-modal" aria-hidden="true">
+      <div class="qr-modal-card" role="dialog" aria-modal="true" aria-labelledby="qr-modal-title">
+        <button class="qr-modal-close" type="button" aria-label="Fermer">&times;</button>
+        <h3 id="qr-modal-title">QR Code evenement</h3>
+        <div class="qr-event-name" id="qr-event-name"></div>
+        <div class="qr-event-meta" id="qr-event-meta"></div>
+        <div class="qr-image-wrap">
+          <img id="qr-code-image" src="" alt="QR Code de l'evenement" />
+        </div>
+        <div class="qr-encoded-text" id="qr-encoded-text"></div>
+      </div>
     </div>
 
     <script src="assets/js/main.js"></script>
@@ -1207,6 +1285,6 @@ if ($action !== '') {
       }
     });
     </script>
-    <script src="assets/js/events-front.js?v=20260425-search"></script>
+    <script src="assets/js/events-front.js?v=20260508-filters"></script>
   </body>
 </html>

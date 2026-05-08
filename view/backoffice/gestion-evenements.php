@@ -19,6 +19,11 @@ function h(?string $value): string
     return htmlspecialchars((string) $value, ENT_QUOTES, 'UTF-8');
 }
 
+function jsonAttr(array $value): string
+{
+    return h(json_encode($value, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) ?: '{}');
+}
+
 function buildAdminEventSearchText(array $event, array $resources = [], array $extra = []): string
 {
     $parts = [
@@ -116,7 +121,7 @@ error_log('ADMIN: Admin connecté ID: ' . $adminId);
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
     <link rel="stylesheet" href="assets/style.css" />
-    <link rel="stylesheet" href="assets/events-admin.css?v=20260425-search-design" />
+    <link rel="stylesheet" href="assets/events-admin.css?v=20260508-filters" />
   </head>
   <body data-page="events-admin">
     <div class="overlay" data-overlay></div>
@@ -161,6 +166,31 @@ error_log('ADMIN: Admin connecté ID: ' . $adminId);
 
           <div class="admin-searchbar search">
             <input id="admin-events-search" class="field" type="search" placeholder="Rechercher un événement, une demande, un statut ou un utilisateur..." aria-label="Rechercher dans la gestion des événements" />
+          </div>
+
+          <div class="admin-event-filters" aria-label="Filtres des evenements valides">
+            <select id="admin-filter-date" class="field admin-filter-control" aria-label="Filtrer par date">
+              <option value="">Toutes les dates</option>
+              <option value="upcoming">A venir</option>
+              <option value="past">Passes</option>
+              <option value="today">Aujourd'hui</option>
+              <option value="week">Cette semaine</option>
+              <option value="month">Ce mois</option>
+            </select>
+            <input id="admin-filter-location" class="field admin-filter-control" type="search" placeholder="Filtrer par lieu" aria-label="Filtrer par lieu" />
+            <select id="admin-filter-availability" class="field admin-filter-control" aria-label="Filtrer par disponibilite">
+              <option value="">Toutes les disponibilites</option>
+              <option value="available">Places disponibles</option>
+              <option value="full">Evenements complets</option>
+            </select>
+            <select id="admin-filter-resources" class="field admin-filter-control" aria-label="Filtrer par ressources">
+              <option value="">Toutes les ressources</option>
+              <option value="with-materials">Avec materiel</option>
+              <option value="without-materials">Sans materiel</option>
+              <option value="with-rules">Avec regles</option>
+              <option value="without-rules">Sans regles</option>
+            </select>
+            <button type="button" class="btn outline admin-filter-reset" id="admin-filter-reset">Reinitialiser</button>
           </div>
 
           <nav class="admin-tabs" role="tablist">
@@ -219,6 +249,7 @@ error_log('ADMIN: Admin connecté ID: ' . $adminId);
                     <div class="small">Règles : <?= h($rules !== [] ? implode(', ', $rules) : 'Aucune') ?></div>
                     <div class="small" style="color: #666;">Créé par : <?= h($creatorName) ?></div>
                     <div class="actions">
+                      <button class="btn view-qr-code" type="button" data-id="<?= $eventId ?>">QR Code</button>
                       <button class="btn view-registrants" type="button" data-id="<?= $eventId ?>">Voir les inscrits</button>
                       <?php if ($isOwner): ?>
                         <button class="btn modify" type="button" data-id="<?= $eventId ?>">Modifier</button>
@@ -245,6 +276,7 @@ error_log('ADMIN: Admin connecté ID: ' . $adminId);
                     $materials = array_values(array_filter(array_map(static fn(array $row): ?string => ($row['type'] ?? '') === 'materiel' ? (string) $row['name'] : null, $resources)));
                     $rules = array_values(array_filter(array_map(static fn(array $row): ?string => ($row['type'] ?? '') === 'regle' ? (string) $row['name'] : null, $resources)));
                     $hasResources = $resources !== [];
+                    $isValidatedEvent = str_contains(strtolower((string) ($event['status'] ?? '')), 'valid');
                   ?>
                   <div class="event-card"
                        data-id="<?= $eventId ?>"
@@ -271,6 +303,9 @@ error_log('ADMIN: Admin connecté ID: ' . $adminId);
                     <div class="small">Matériels : <?= h($materials !== [] ? implode(', ', $materials) : 'Aucun') ?></div>
                     <div class="small">Règles : <?= h($rules !== [] ? implode(', ', $rules) : 'Aucune') ?></div>
                     <div class="actions">
+                      <?php if ($isValidatedEvent): ?>
+                        <button class="btn view-qr-code" type="button" data-id="<?= $eventId ?>">QR Code</button>
+                      <?php endif; ?>
                       <button class="btn view-registrants" type="button" data-id="<?= $eventId ?>">Voir les inscrits</button>
                       <?php if ($hasResources): ?>
                         <a class="btn" href="../frontoffice/resources.php?event_id=<?= $eventId ?>">Modifier ressources</a>
@@ -345,7 +380,27 @@ error_log('ADMIN: Admin connecté ID: ' . $adminId);
                     $rules = array_values(array_filter(array_map(static fn(array $row): ?string => ($row['type'] ?? '') === 'regle' ? (string) $row['name'] : null, $resources)));
                     $requestCreatedBy = (int) ($request['created_by'] ?? 0);
                     $requestIsOwner = ($requestCreatedBy === $adminId);
-                    $requestCreatorName = $requestCreatedBy > 0 ? 'Utilisateur #' . $requestCreatedBy : 'Système';
+                    $requestCreatorName = trim((string) ($request['user_prenom'] ?? '') . ' ' . (string) ($request['user_nom'] ?? ''));
+                    $requestCreatorName = $requestCreatorName !== '' ? $requestCreatorName : ($requestCreatedBy > 0 ? 'Utilisateur #' . $requestCreatedBy : 'Système');
+                    $requestDetails = [
+                      'name' => (string) ($request['name'] ?? ''),
+                      'description' => (string) ($request['description'] ?? ''),
+                      'start_date' => (string) ($request['start_date'] ?? ''),
+                      'end_date' => (string) ($request['end_date'] ?? ''),
+                      'deadline' => (string) ($request['deadline'] ?? ''),
+                      'location' => (string) ($request['location'] ?? ''),
+                      'max' => (int) ($request['max'] ?? 0),
+                      'status' => (string) ($request['status'] ?? 'en cours'),
+                      'request_type' => 'ajout',
+                      'created_at' => (string) ($request['created_at'] ?? ''),
+                      'user' => [
+                        'nom' => (string) ($request['user_nom'] ?? ''),
+                        'prenom' => (string) ($request['user_prenom'] ?? ''),
+                        'email' => (string) ($request['user_email'] ?? ''),
+                        'telephone' => (string) ($request['user_telephone'] ?? ''),
+                      ],
+                      'resources' => $resources,
+                    ];
                   ?>
                   <div class="event-card"
                        data-id="<?= $requestId ?>"
@@ -360,6 +415,7 @@ error_log('ADMIN: Admin connecté ID: ' . $adminId);
                        data-status="<?= h((string) ($request['status'] ?? 'en cours')) ?>"
                        data-materials='<?= h(json_encode($materials, JSON_UNESCAPED_UNICODE)) ?>'
                        data-rules='<?= h(json_encode($rules, JSON_UNESCAPED_UNICODE)) ?>'
+                       data-details='<?= jsonAttr($requestDetails) ?>'
                        data-search="<?= h(buildAdminEventSearchText($request, $resources, array_merge($materials, $rules, [$requestCreatorName, 'demande ajout creation en cours']))) ?>">
                     <div class="row between">
                       <h4 class="evt-name"><?= h((string) ($request['name'] ?? '')) ?></h4>
@@ -372,6 +428,7 @@ error_log('ADMIN: Admin connecté ID: ' . $adminId);
                     <div class="small">Règles : <?= h($rules !== [] ? implode(', ', $rules) : 'Aucune') ?></div>
                     <div class="small" style="color: #666;">Demandé par : <?= h($requestCreatorName) ?></div>
                     <div class="actions">
+                      <button class="btn request-details" type="button">Voir détails</button>
                       <button class="btn view-registrants" type="button" data-id="<?= $requestId ?>">Voir les inscrits</button>
                       <?php if ($requestIsOwner): ?>
                         <button class="btn modify" type="button" data-id="<?= $requestId ?>">Modifier</button>
@@ -392,9 +449,33 @@ error_log('ADMIN: Admin connecté ID: ' . $adminId);
                 <?php endif; ?>
 
                 <?php foreach ($modificationRequests as $modRequest): ?>
+                  <?php
+                    $modEventId = (int) ($modRequest['event_id'] ?? 0);
+                    $modResources = $modEventId > 0 ? $controller->getResourcesByEvent($modEventId) : [];
+                    $modDetails = [
+                      'name' => (string) ($modRequest['new_name'] ?: ($modRequest['current_name'] ?? '')),
+                      'description' => (string) ($modRequest['new_description'] ?: ($modRequest['current_description'] ?? '')),
+                      'start_date' => (string) ($modRequest['new_start_date'] ?: ($modRequest['current_start_date'] ?? '')),
+                      'end_date' => (string) ($modRequest['new_end_date'] ?: ($modRequest['current_end_date'] ?? '')),
+                      'deadline' => (string) ($modRequest['new_deadline'] ?: ($modRequest['current_deadline'] ?? '')),
+                      'location' => (string) ($modRequest['new_location'] ?: ($modRequest['current_location'] ?? '')),
+                      'max' => (int) ($modRequest['new_max'] ?: ($modRequest['current_max'] ?? 0)),
+                      'status' => (string) ($modRequest['status'] ?? 'pending'),
+                      'request_type' => 'modification',
+                      'created_at' => (string) ($modRequest['requested_at'] ?? ''),
+                      'user' => [
+                        'nom' => (string) ($modRequest['user_nom'] ?? ''),
+                        'prenom' => (string) ($modRequest['user_prenom'] ?? ''),
+                        'email' => (string) ($modRequest['user_email'] ?? ''),
+                        'telephone' => (string) ($modRequest['user_telephone'] ?? ''),
+                      ],
+                      'resources' => $modResources,
+                    ];
+                  ?>
                   <div class="event-card modification-request"
                        data-request-id="<?= (int) $modRequest['request_id'] ?>"
                        data-event-id="<?= (int) $modRequest['event_id'] ?>"
+                       data-details='<?= jsonAttr($modDetails) ?>'
                        data-search="<?= h(buildAdminEventSearchText($modRequest, [], ['demande modification', 'modification', 'statut pending'])) ?>">
                     <div class="row between">
                       <h4 class="evt-name"><?= h((string) ($modRequest['current_name'] ?? '')) ?></h4>
@@ -423,6 +504,7 @@ error_log('ADMIN: Admin connecté ID: ' . $adminId);
                     </div>
                     
                     <div class="actions">
+                      <button class="btn request-details" type="button">Voir détails</button>
                       <button class="btn approve-modification" type="button" data-request-id="<?= (int) $modRequest['request_id'] ?>">Approuver la modification</button>
                       <button class="btn reject-modification" type="button" data-request-id="<?= (int) $modRequest['request_id'] ?>">Refuser la modification</button>
                     </div>
@@ -438,9 +520,33 @@ error_log('ADMIN: Admin connecté ID: ' . $adminId);
                 <?php endif; ?>
 
                 <?php foreach ($deletionRequests as $deletionRequest): ?>
+                  <?php
+                    $delEventId = (int) ($deletionRequest['event_id'] ?? 0);
+                    $delResources = $delEventId > 0 ? $controller->getResourcesByEvent($delEventId) : [];
+                    $deletionDetails = [
+                      'name' => (string) ($deletionRequest['event_name'] ?? ''),
+                      'description' => (string) ($deletionRequest['event_description'] ?? ''),
+                      'start_date' => (string) ($deletionRequest['event_start_date'] ?? ''),
+                      'end_date' => (string) ($deletionRequest['event_end_date'] ?? ''),
+                      'deadline' => (string) ($deletionRequest['event_deadline'] ?? ''),
+                      'location' => (string) ($deletionRequest['event_location'] ?? ''),
+                      'max' => (int) ($deletionRequest['event_max'] ?? 0),
+                      'status' => (string) ($deletionRequest['status'] ?? 'pending'),
+                      'request_type' => 'suppression',
+                      'created_at' => (string) ($deletionRequest['requested_at'] ?? ''),
+                      'user' => [
+                        'nom' => (string) ($deletionRequest['user_nom'] ?? ''),
+                        'prenom' => (string) ($deletionRequest['user_prenom'] ?? ''),
+                        'email' => (string) ($deletionRequest['user_email'] ?? ''),
+                        'telephone' => (string) ($deletionRequest['user_telephone'] ?? ''),
+                      ],
+                      'resources' => $delResources,
+                    ];
+                  ?>
                   <div class="event-card deletion-request"
                        data-request-id="<?= (int) $deletionRequest['request_id'] ?>"
                        data-event-id="<?= (int) $deletionRequest['event_id'] ?>"
+                       data-details='<?= jsonAttr($deletionDetails) ?>'
                        data-search="<?= h(buildAdminEventSearchText($deletionRequest, [], ['demande suppression', 'suppression', 'statut pending'])) ?>">
                     <div class="row between">
                       <h4 class="evt-name"><?= h((string) ($deletionRequest['event_name'] ?? '')) ?></h4>
@@ -451,6 +557,7 @@ error_log('ADMIN: Admin connecté ID: ' . $adminId);
                     <div class="small" style="color: #666;">Demandé par : <?= h((string) ($deletionRequest['user_prenom'] ?? '') . ' ' . (string) ($deletionRequest['user_nom'] ?? '')) ?> (<?= h((string) ($deletionRequest['user_email'] ?? '')) ?>)</div>
                     <div class="small" style="color: #666;">Date de la demande : <?= h((string) ($deletionRequest['requested_at'] ?? '')) ?></div>
                     <div class="actions">
+                      <button class="btn request-details" type="button">Voir détails</button>
                       <button class="btn approve-deletion" type="button" data-request-id="<?= (int) $deletionRequest['request_id'] ?>">Approuver la suppression</button>
                       <button class="btn reject-deletion" type="button" data-request-id="<?= (int) $deletionRequest['request_id'] ?>">Refuser la suppression</button>
                     </div>
@@ -478,11 +585,31 @@ error_log('ADMIN: Admin connecté ID: ' . $adminId);
                       && trim((string) ($resRequest['resources_title'] ?? '')) === ''
                       && trim((string) ($resRequest['resources_description'] ?? '')) === '');
                     $resourceRequestTypeLabel = $isResourceDeletionRequest ? 'Suppression ressources' : 'Modification ressources';
+                    $resourceDetails = [
+                      'name' => (string) ($resRequest['event_name'] ?? ''),
+                      'description' => (string) ($resRequest['event_description'] ?? ''),
+                      'start_date' => (string) ($resRequest['event_start_date'] ?? ''),
+                      'end_date' => (string) ($resRequest['event_end_date'] ?? ''),
+                      'deadline' => (string) ($resRequest['event_deadline'] ?? ''),
+                      'location' => (string) ($resRequest['event_location'] ?? ''),
+                      'max' => (int) ($resRequest['event_max'] ?? 0),
+                      'status' => (string) ($resRequest['status'] ?? 'pending'),
+                      'request_type' => $isResourceDeletionRequest ? 'suppression' : 'modification',
+                      'created_at' => (string) ($resRequest['created_at'] ?? ''),
+                      'user' => [
+                        'nom' => (string) ($resRequest['requester_name'] ?? ''),
+                        'prenom' => (string) ($resRequest['requester_prenom'] ?? ''),
+                        'email' => (string) ($resRequest['requester_email'] ?? ''),
+                        'telephone' => (string) ($resRequest['requester_telephone'] ?? ''),
+                      ],
+                      'resources' => $newResources,
+                    ];
                   ?>
                   <div class="event-card"
                        data-request-id="<?= $resRequestId ?>"
                        data-event-id="<?= $resEventId ?>"
                        data-request-type="<?= h($isResourceDeletionRequest ? 'delete' : 'modify') ?>"
+                       data-details='<?= jsonAttr($resourceDetails) ?>'
                        data-search="<?= h(buildAdminEventSearchText($resRequest, $newResources, [$resourceRequestTypeLabel, 'demande ressources', 'statut pending'])) ?>">
                     <div class="row between">
                       <h4 class="evt-name"><?= h((string) ($resRequest['event_name'] ?? '')) ?></h4>
@@ -517,6 +644,7 @@ error_log('ADMIN: Admin connecté ID: ' . $adminId);
                     </div>
 
                     <div class="actions">
+                      <button class="btn request-details" type="button">Voir détails</button>
                       <button class="btn approve-resource-mod" type="button" data-request-id="<?= $resRequestId ?>" data-request-type="<?= h($isResourceDeletionRequest ? 'delete' : 'modify') ?>">Approuver</button>
                       <button class="btn reject-resource-mod" type="button" data-request-id="<?= $resRequestId ?>" data-request-type="<?= h($isResourceDeletionRequest ? 'delete' : 'modify') ?>">Refuser</button>
                     </div>
@@ -598,7 +726,7 @@ error_log('ADMIN: Admin connecté ID: ' . $adminId);
 
     <div id="registrants-modal" class="modal" aria-hidden="true">
       <div class="modal-content">
-        <button class="modal-close" type="button">×</button>
+        <button class="modal-close" type="button">&times;</button>
         <h3>Inscrits</h3>
         <div class="registrants-modal-actions">
           <button id="export-registrants-pdf" class="btn export-pdf-btn" type="button" data-event-id="">Exporter PDF</button>
@@ -607,8 +735,32 @@ error_log('ADMIN: Admin connecté ID: ' . $adminId);
       </div>
     </div>
 
+    <div id="qr-modal" class="modal" aria-hidden="true">
+      <div class="modal-content qr-modal-content">
+        <button class="modal-close qr-modal-close" type="button">&times;</button>
+        <h3>QR Code evenement</h3>
+        <div class="qr-event-name" id="qr-event-name"></div>
+        <div class="qr-event-meta" id="qr-event-meta"></div>
+        <div class="qr-image-wrap">
+          <img id="qr-code-image" src="" alt="QR Code de l'evenement" />
+        </div>
+        <div class="qr-encoded-text" id="qr-encoded-text"></div>
+        <div class="qr-actions">
+          <a id="qr-download-link" class="btn" href="#">Telecharger le QR Code</a>
+        </div>
+      </div>
+    </div>
+
+    <div id="request-details-modal" class="modal" aria-hidden="true">
+      <div class="modal-content request-details-modal-content">
+        <button class="modal-close request-details-close" type="button">&times;</button>
+        <h3>Détails de la demande</h3>
+        <div id="request-details-content"></div>
+      </div>
+    </div>
+
     <script src="assets/app.js"></script>
-    <script src="assets/events-admin.js?v=20260506-export-pdf-click"></script>
+    <script src="assets/events-admin.js?v=20260508-filters"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
     <script>
     document.addEventListener('DOMContentLoaded', function() {

@@ -3,6 +3,7 @@ declare(strict_types=1);
 
 require_once __DIR__ . '/../config.php';
 require_once __DIR__ . '/../mailer.php';
+require_once __DIR__ . '/../model/SimpleQrCode.php';
 
 class EventController
 {
@@ -48,7 +49,29 @@ class EventController
 
     public function getPendingEvents(): array
     {
-        $stmt = $this->conn->prepare("SELECT id, name, description, start_date, end_date, deadline, location, `max`, `current`, status, created_by FROM events WHERE status = 'en cours' ORDER BY start_date ASC, id DESC");
+        $stmt = $this->conn->prepare("
+            SELECT
+                e.id,
+                e.name,
+                e.description,
+                e.start_date,
+                e.end_date,
+                e.deadline,
+                e.location,
+                e.`max`,
+                e.`current`,
+                e.status,
+                e.created_by,
+                e.created_at,
+                u.nom as user_nom,
+                u.prenom as user_prenom,
+                u.email as user_email,
+                u.telephone as user_telephone
+            FROM events e
+            LEFT JOIN utilisateur u ON u.id = e.created_by
+            WHERE e.status = 'en cours'
+            ORDER BY e.start_date ASC, e.id DESC
+        ");
         $stmt->execute();
         return $stmt->fetchAll(PDO::FETCH_ASSOC) ?: [];
     }
@@ -70,6 +93,191 @@ class EventController
         $stmt->execute([$id]);
         $row = $stmt->fetch(PDO::FETCH_ASSOC);
         return $row ?: null;
+    }
+
+    public function getEventQrPayload(int $eventId): ?string
+    {
+        $event = $this->getEventById($eventId);
+        if (!$event || !$this->isValidatedStatus((string) ($event['status'] ?? ''))) {
+            return null;
+        }
+
+        return $this->getEventQrUrl($eventId);
+    }
+
+    public function getEventQrSvg(int $eventId): ?string
+    {
+        $payload = $this->getEventQrPayload($eventId);
+        return $payload !== null ? SimpleQrCode::svg($payload) : null;
+    }
+
+    public function getEventRegistrationsQrPayload(int $eventId): ?string
+    {
+        return $this->getEventById($eventId) ? $this->getEventRegistrationsQrUrl($eventId) : null;
+    }
+
+    public function getEventRegistrationsQrSvg(int $eventId): ?string
+    {
+        $payload = $this->getEventRegistrationsQrPayload($eventId);
+        return $payload !== null ? SimpleQrCode::svg($payload) : null;
+    }
+
+    public function getEventQrUrl(int $eventId): string
+    {
+        return $this->buildAbsoluteAppUrl('/view/frontoffice/event-detail.php', ['id' => $eventId]);
+    }
+
+    public function getEventRegistrationsQrUrl(int $eventId): string
+    {
+        return $this->buildAbsoluteAppUrl('/view/backoffice/event-registrations.php', ['event_id' => $eventId]);
+    }
+
+    private function buildAbsoluteAppUrl(string $appPath, array $query = []): string
+    {
+        $https = strtolower((string) ($_SERVER['HTTPS'] ?? ''));
+        $scheme = ($https !== '' && $https !== 'off') ? 'https' : 'http';
+        $host = $this->getQrPublicHost();
+        $basePath = $this->getProjectBasePath();
+        $path = rtrim($basePath, '/') . '/' . ltrim($appPath, '/');
+        $queryString = $query !== [] ? '?' . http_build_query($query) : '';
+
+        return $scheme . '://' . $host . $path . $queryString;
+    }
+
+    private function getProjectBasePath(): string
+    {
+        $scriptName = str_replace('\\', '/', (string) ($_SERVER['SCRIPT_NAME'] ?? ''));
+        $marker = '/view/';
+        $position = strpos($scriptName, $marker);
+        if ($position !== false) {
+            return rtrim(substr($scriptName, 0, $position), '/');
+        }
+
+        return '/Esprit-PW-2A31-2526-SecondVoice';
+    }
+
+    private function getQrPublicHost(): string
+    {
+        $httpHost = trim((string) ($_SERVER['HTTP_HOST'] ?? ''));
+        $hostOnly = $httpHost;
+        $port = '';
+
+        if (str_starts_with($hostOnly, '[')) {
+            $closing = strpos($hostOnly, ']');
+            if ($closing !== false) {
+                $port = substr($hostOnly, $closing + 1);
+                $hostOnly = substr($hostOnly, 1, $closing - 1);
+            }
+        } elseif (substr_count($hostOnly, ':') === 1) {
+            [$hostOnly, $portPart] = explode(':', $hostOnly, 2);
+            $port = ':' . $portPart;
+        }
+
+        if ($hostOnly !== '' && !$this->isLoopbackHost($hostOnly)) {
+            return $httpHost;
+        }
+
+        $serverAddr = trim((string) ($_SERVER['SERVER_ADDR'] ?? ''));
+        if ($serverAddr !== '' && !$this->isLoopbackHost($serverAddr)) {
+            return $serverAddr . $port;
+        }
+
+        $localIp = $this->getPrimaryIpv4Address();
+        if ($localIp !== null) {
+            return $localIp . $port;
+        }
+
+        $localIp = gethostbyname(gethostname());
+        if ($localIp !== '' && $localIp !== gethostname() && !$this->isLoopbackHost($localIp)) {
+            return $localIp . $port;
+        }
+
+        return $httpHost !== '' ? $httpHost : 'localhost';
+    }
+
+    private function isLoopbackHost(string $host): bool
+    {
+        $host = strtolower(trim($host, '[] '));
+        return in_array($host, ['localhost', '127.0.0.1', '::1'], true)
+            || str_starts_with($host, '127.');
+    }
+
+    private function getPrimaryIpv4Address(): ?string
+    {
+        if (stripos(PHP_OS_FAMILY, 'Windows') === false) {
+            return null;
+        }
+
+        $output = @shell_exec('ipconfig');
+        if (!is_string($output) || trim($output) === '') {
+            return null;
+        }
+
+        $sections = preg_split('/\r?\n\s*\r?\n/', $output) ?: [];
+        $fallback = null;
+
+        foreach ($sections as $section) {
+            if (!preg_match('/IPv4[^\r\n:]*:\s*([0-9]{1,3}(?:\.[0-9]{1,3}){3})/', $section, $ipMatch)) {
+                continue;
+            }
+
+            $ip = $ipMatch[1];
+            if (!$this->isUsableLocalIpv4($ip)) {
+                continue;
+            }
+
+            if ($this->isVirtualNetworkSection($section)) {
+                continue;
+            }
+
+            if ($fallback === null) {
+                $fallback = $ip;
+            }
+
+            if (preg_match('/(?:Gateway|Passerelle)[^\r\n:]*:\s*([0-9]{1,3}(?:\.[0-9]{1,3}){3})/', $section)) {
+                return $ip;
+            }
+        }
+
+        return $fallback;
+    }
+
+    private function isVirtualNetworkSection(string $section): bool
+    {
+        $section = strtolower($section);
+        foreach (['vmware', 'virtualbox', 'hyper-v', 'wsl', 'vpn', 'loopback', 'tunnel'] as $needle) {
+            if (str_contains($section, $needle)) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    private function isUsableLocalIpv4(string $ip): bool
+    {
+        if (!filter_var($ip, FILTER_VALIDATE_IP, FILTER_FLAG_IPV4)) {
+            return false;
+        }
+
+        return !$this->isLoopbackHost($ip)
+            && !str_starts_with($ip, '169.254.');
+    }
+
+    public function getEventQrToken(int $eventId): string
+    {
+        return substr(hash_hmac('sha256', 'event:' . $eventId, $this->getQrSecret()), 0, 10);
+    }
+
+    private function getQrSecret(): string
+    {
+        return DB_NAME . '|' . DB_USER . '|secondvoice-event-qr';
+    }
+
+    private function isValidatedStatus(string $status): bool
+    {
+        $status = strtolower(trim($status));
+        return str_contains($status, 'valid') || str_contains($status, 'approuv');
     }
 
     public function getResourcesByEvent(int $eventId): array
@@ -1460,7 +1668,20 @@ class EventController
     public function getPendingResourceModificationRequests(): array
     {
         $stmt = $this->conn->prepare("
-            SELECT rmr.*, e.name as event_name, u.nom as requester_name, u.prenom as requester_prenom
+            SELECT
+                rmr.*,
+                e.name as event_name,
+                e.description as event_description,
+                e.start_date as event_start_date,
+                e.end_date as event_end_date,
+                e.deadline as event_deadline,
+                e.location as event_location,
+                e.max as event_max,
+                e.status as event_status,
+                u.nom as requester_name,
+                u.prenom as requester_prenom,
+                u.email as requester_email,
+                u.telephone as requester_telephone
             FROM resource_modification_requests rmr
             INNER JOIN events e ON e.id = rmr.event_id
             INNER JOIN utilisateur u ON u.id = rmr.requested_by
@@ -1680,11 +1901,18 @@ class EventController
                 edr.status,
                 edr.requested_at,
                 COALESCE(e.name, edr.event_name_snapshot, 'Événement supprimé') as event_name,
+                COALESCE(e.description, edr.event_description_snapshot, '') as event_description,
+                COALESCE(e.start_date, edr.event_start_date_snapshot) as event_start_date,
+                COALESCE(e.end_date, edr.event_end_date_snapshot) as event_end_date,
+                e.deadline as event_deadline,
+                COALESCE(e.location, edr.event_location_snapshot, '') as event_location,
+                e.max as event_max,
                 COALESCE(e.status, edr.event_status_snapshot, 'annulé') as event_status,
                 e.created_by as event_creator_id,
                 u.nom as user_nom,
                 u.prenom as user_prenom,
-                u.email as user_email
+                u.email as user_email,
+                u.telephone as user_telephone
             FROM event_deletion_requests edr
             LEFT JOIN events e ON edr.event_id = e.id
             JOIN utilisateur u ON edr.user_id = u.id
@@ -1866,7 +2094,8 @@ class EventController
                 e.status as event_status,
                 u.nom as user_nom,
                 u.prenom as user_prenom,
-                u.email as user_email
+                u.email as user_email,
+                u.telephone as user_telephone
             FROM event_modification_requests emr
             JOIN events e ON emr.event_id = e.id
             JOIN utilisateur u ON emr.requested_by = u.id
