@@ -7,20 +7,20 @@ SecondVoice est un projet academique (2025-2026) actuellement en phase **templat
 Le projet respecte une structure MVC minimale:
 
 - `view/`
-  - `frontoffice/` (templates front office)
-  - `backoffice/` (templates back office)
+  - `frontend/` (templates front office)
+  - `backend/` (templates back office)
 - `controller/` (vide pour le moment)
 - `model/` (vide pour le moment)
 
 ## Structure
 ```text
-Second voice/
+integration template/
   view/
-    frontoffice/
-    backoffice/
+    frontend/
+    backend/
   controller/
   model/
-  README.md
+  readme.md
 ```
 
 ## Notes
