@@ -19,6 +19,7 @@ if ($roleSession === 'agent') {
 }
 
 require_once __DIR__ . '/../../controller/BrainstormingController.php';
+require_once __DIR__ . '/../../controller/VoteController.php';
 
 function h($value): string
 {
@@ -37,6 +38,15 @@ function getStatusClass(string $status): string
     };
 }
 
+function getStatusLabel(string $status): string
+{
+    return match (strtolower(trim($status))) {
+        'approuve' => 'Approuve',
+        'desapprouve' => 'Desapprouve',
+        default => 'En attente'
+    };
+}
+
 function formatCreationDate(string $date): string
 {
     if ($date === '') {
@@ -50,7 +60,41 @@ function formatCreationDate(string $date): string
     }
 }
 
+function formatDateTimeLabel(string $date): string
+{
+    if ($date === '') {
+        return '-';
+    }
+
+    try {
+        return (new DateTime($date))->format('d/m/Y H:i');
+    } catch (Throwable $exception) {
+        return $date;
+    }
+}
+
+function isVoteOpen(?string $startDate, ?string $endDate): bool
+{
+    $startDate = trim((string) $startDate);
+    $endDate = trim((string) $endDate);
+
+    if ($startDate === '' || $endDate === '') {
+        return true;
+    }
+
+    try {
+        $now = new DateTime();
+        $start = new DateTime($startDate);
+        $end = new DateTime($endDate);
+
+        return $now >= $start && $now <= $end;
+    } catch (Throwable $exception) {
+        return false;
+    }
+}
+
 $controller = new BrainstormingController();
+$voteController = new VoteController();
 $feedbackType = '';
 $feedbackMessage = '';
 
@@ -62,10 +106,16 @@ $formValues = [
 
 $search = trim((string) ($_GET['q'] ?? ''));
 $selectedCategorie = trim((string) ($_GET['categorie'] ?? 'toutes'));
-$allowedCategorieFilters = ['toutes', 'innovation', 'amelioration', 'nouveau produit', 'autre'];
+$selectedStatus = trim((string) ($_GET['statut'] ?? 'toutes'));
+$allowedCategorieFilters = ['toutes', 'innovation', 'amelioration', 'processus', 'client', 'nouveau produit', 'autre'];
+$allowedStatusFilters = ['toutes', 'en attente', 'approuve', 'desapprouve'];
 
 if (!in_array($selectedCategorie, $allowedCategorieFilters, true)) {
     $selectedCategorie = 'toutes';
+}
+
+if (!in_array($selectedStatus, $allowedStatusFilters, true)) {
+    $selectedStatus = 'toutes';
 }
 
 $status = (string) ($_GET['status'] ?? '');
@@ -74,7 +124,10 @@ $statusMessages = [
     'updated' => 'Brainstorming modifie avec succes.',
     'deleted' => 'Brainstorming supprime avec succes.',
     'approved' => 'Brainstorming approuve avec succes.',
-    'disapproved' => 'Brainstorming desapprouve avec succes.'
+    'disapproved' => 'Brainstorming desapprouve avec succes.',
+    'vote_opened' => 'Periode de vote ouverte avec succes.',
+    'vote_closed' => 'Periode de vote fermee avec succes.',
+    'winner_calculated' => 'Gagnant calcule avec succes.'
 ];
 if (isset($statusMessages[$status])) {
     $feedbackType = 'success';
@@ -139,6 +192,44 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             exit;
         }
 
+        if ($action === 'open_vote') {
+            $id = (int) ($_POST['id'] ?? 0);
+            $start = trim((string) ($_POST['vote_start'] ?? ''));
+            $end = trim((string) ($_POST['vote_end'] ?? ''));
+            if ($start === '') {
+                $start = date('Y-m-d H:i:s');
+            }
+            if ($end === '') {
+                $end = date('Y-m-d H:i:s', strtotime('+7 days'));
+            }
+            $result = $voteController->openVotePeriod($id, $start, $end);
+            if (empty($result['success'])) {
+                throw new RuntimeException((string) ($result['message'] ?? 'Ouverture du vote impossible.'));
+            }
+            header('Location: gestion-brainstormings.php?status=vote_opened');
+            exit;
+        }
+
+        if ($action === 'close_vote') {
+            $id = (int) ($_POST['id'] ?? 0);
+            $result = $voteController->closeVotePeriod($id);
+            if (empty($result['success'])) {
+                throw new RuntimeException((string) ($result['message'] ?? 'Fermeture du vote impossible.'));
+            }
+            header('Location: gestion-brainstormings.php?status=vote_closed');
+            exit;
+        }
+
+        if ($action === 'calculate_winner') {
+            $id = (int) ($_POST['id'] ?? 0);
+            $result = $voteController->calculateWinner($id);
+            if (empty($result['success'])) {
+                throw new RuntimeException((string) ($result['message'] ?? 'Calcul du gagnant impossible.'));
+            }
+            header('Location: gestion-brainstormings.php?status=winner_calculated');
+            exit;
+        }
+
         throw new InvalidArgumentException('Action invalide.');
     } catch (Throwable $exception) {
         $feedbackType = 'error';
@@ -156,7 +247,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
 $brainstormings = $controller->getBrainstormings([
     'q' => $search,
-    'categorie' => $selectedCategorie
+    'categorie' => $selectedCategorie,
+    'statut' => $selectedStatus
 ]);
 ?>
 <!DOCTYPE html>
@@ -168,7 +260,7 @@ $brainstormings = $controller->getBrainstormings([
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
-    <link rel="stylesheet" href="assets/style.css" />
+    <link rel="stylesheet" href="assets/style.css?v=brainstorming-submenu-v5" />
   </head>
   <body data-page="community">
     <div class="overlay" data-overlay></div>
@@ -185,6 +277,8 @@ $brainstormings = $controller->getBrainstormings([
               <a class="nav-link" href="index.php" data-nav="home"><span class="nav-icon icon-home"></span><span>Tableau de bord</span></a>
               <a class="nav-link" href="gestion-utilisateurs.php" data-nav="profile"><span class="nav-icon icon-profile"></span><span>Gestion des utilisateurs</span></a>
               <a class="nav-link" href="gestion-brainstormings.php" data-nav="community"><span class="nav-icon icon-community"></span><span>Gestion des brainstormings</span></a>
+              <a class="nav-link nav-sub-link" href="statistiques-brainstormings.php" data-nav="community" hidden><span class="nav-icon icon-community"></span><span>Statistiques</span></a>
+              <a class="nav-link nav-sub-link" href="gestion-idees.php" data-nav="community" hidden><span class="nav-icon icon-community"></span><span>Gestion des idees</span></a>
               <a class="nav-link" href="gestion-rendezvous.php" data-nav="subscription"><span class="nav-icon icon-card"></span><span>Gestion des rendez-vous</span></a>
               <a class="nav-link" href="gestion-accompagnements.php" data-nav="chatbot"><span class="nav-icon icon-chat"></span><span>Gestion des accompagnements</span></a>
               <a class="nav-link" href="gestion-evenements.php" data-nav="images"><span class="nav-icon icon-image"></span><span>Gestion des evenements</span></a>
@@ -218,6 +312,7 @@ $brainstormings = $controller->getBrainstormings([
               </div>
               <div class="users-actions">
                 <a class="ghost-button" href="gestion-brainstormings.php">Reinitialiser</a>
+                <a class="action-button secondary-action" href="export-brainstormings.php">Exporter Excel</a>
                 <a class="action-button" href="#brainstorming-form"><?= $editBrainstorming ? 'Modifier brainstorming' : 'Ajouter' ?></a>
               </div>
             </div>
@@ -233,8 +328,19 @@ $brainstormings = $controller->getBrainstormings([
                   <option value="toutes" <?= $selectedCategorie === 'toutes' ? 'selected' : '' ?>>Toutes</option>
                   <option value="innovation" <?= $selectedCategorie === 'innovation' ? 'selected' : '' ?>>Innovation</option>
                   <option value="amelioration" <?= $selectedCategorie === 'amelioration' ? 'selected' : '' ?>>Amelioration</option>
+                  <option value="processus" <?= $selectedCategorie === 'processus' ? 'selected' : '' ?>>Processus</option>
+                  <option value="client" <?= $selectedCategorie === 'client' ? 'selected' : '' ?>>Experience client</option>
                   <option value="nouveau produit" <?= $selectedCategorie === 'nouveau produit' ? 'selected' : '' ?>>Nouveau produit</option>
                   <option value="autre" <?= $selectedCategorie === 'autre' ? 'selected' : '' ?>>Autre</option>
+                </select>
+              </div>
+              <div class="filter-field">
+                <label for="brainstorming-status">Statut</label>
+                <select id="brainstorming-status" name="statut">
+                  <option value="toutes" <?= $selectedStatus === 'toutes' ? 'selected' : '' ?>>Tous</option>
+                  <option value="en attente" <?= $selectedStatus === 'en attente' ? 'selected' : '' ?>>En attente</option>
+                  <option value="approuve" <?= $selectedStatus === 'approuve' ? 'selected' : '' ?>>Approuve</option>
+                  <option value="desapprouve" <?= $selectedStatus === 'desapprouve' ? 'selected' : '' ?>>Desapprouve</option>
                 </select>
               </div>
               <div class="filter-field">
@@ -269,11 +375,13 @@ $brainstormings = $controller->getBrainstormings([
                   <select id="categorie" name="categorie">
                     <option value="innovation" <?= strtolower((string) $formValues['categorie']) === 'innovation' ? 'selected' : '' ?>>Innovation</option>
                     <option value="amelioration" <?= strtolower((string) $formValues['categorie']) === 'amelioration' ? 'selected' : '' ?>>Amelioration</option>
+                    <option value="processus" <?= strtolower((string) $formValues['categorie']) === 'processus' ? 'selected' : '' ?>>Processus</option>
+                    <option value="client" <?= strtolower((string) $formValues['categorie']) === 'client' ? 'selected' : '' ?>>Experience client</option>
                     <option value="nouveau produit" <?= strtolower((string) $formValues['categorie']) === 'nouveau produit' ? 'selected' : '' ?>>Nouveau produit</option>
                     <option value="autre" <?= strtolower((string) $formValues['categorie']) === 'autre' ? 'selected' : '' ?>>Autre</option>
                   </select>
                 </div>
-                <div class="filter-field full-width">
+                <div class="filter-field">
                   <label for="description">Description</label>
                   <textarea id="description" name="description" placeholder="Description du brainstorming"><?= h($formValues['description']) ?></textarea>
                 </div>
@@ -296,8 +404,8 @@ $brainstormings = $controller->getBrainstormings([
                 <tr>
                   <th>Titre</th>
                   <th>Categorie</th>
-                  <th>Description</th>
                   <th>Statut</th>
+                  <th>Vote</th>
                   <th>Date creation</th>
                   <th>Actions</th>
                 </tr>
@@ -309,7 +417,10 @@ $brainstormings = $controller->getBrainstormings([
                   </tr>
                 <?php else: ?>
                   <?php foreach ($brainstormings as $brainstorming): ?>
-                    <?php $currentStatus = strtolower(trim((string) $brainstorming['statut'])); ?>
+                    <?php
+                      $currentStatus = strtolower(trim((string) $brainstorming['statut']));
+                      $voteOpen = isVoteOpen((string) ($brainstorming['vote_start'] ?? ''), (string) ($brainstorming['vote_end'] ?? ''));
+                    ?>
                     <tr>
                       <td>
                         <div class="user-cell">
@@ -320,8 +431,14 @@ $brainstormings = $controller->getBrainstormings([
                         </div>
                       </td>
                       <td><?= h($brainstorming['categorie']) ?></td>
-                      <td><?= h(substr($brainstorming['description'], 0, 50)) ?><?= strlen($brainstorming['description']) > 50 ? '...' : '' ?></td>
-                      <td><span class="status-pill <?= h(getStatusClass((string) $brainstorming['statut'])) ?>"><?= ucfirst(h((string) $brainstorming['statut'])) ?></span></td>
+                      <td><span class="status-pill <?= h(getStatusClass((string) $brainstorming['statut'])) ?>"><?= h(getStatusLabel((string) $brainstorming['statut'])) ?></span></td>
+                      <td>
+                        <?php if ($voteOpen): ?>
+                          <span class="status-pill active">Ouvert</span>
+                        <?php else: ?>
+                          <span class="status-pill risk">Ferme</span>
+                        <?php endif; ?>
+                      </td>
                       <td><?= h(formatCreationDate((string) $brainstorming['dateCreation'])) ?></td>
                       <td>
                         <div class="table-actions">
@@ -334,6 +451,29 @@ $brainstormings = $controller->getBrainstormings([
                             <input type="hidden" name="action" value="disapprove" />
                             <input type="hidden" name="id" value="<?= (int) $brainstorming['id'] ?>" />
                             <button class="ghost-button danger" type="submit" <?= $currentStatus === 'desapprouve' ? 'disabled' : '' ?>>Desapprouver</button>
+                          </form>
+                          <?php if (!$voteOpen): ?>
+                            <form class="inline-delete-form vote-window-form" method="post" action="gestion-brainstormings.php" data-status-form data-status-label="ouvrir le vote">
+                              <input type="hidden" name="action" value="open_vote" />
+                              <input type="hidden" name="id" value="<?= (int) $brainstorming['id'] ?>" />
+                              <button class="ghost-button" type="submit">Ouvrir vote</button>
+                            </form>
+                          <?php else: ?>
+                            <form class="inline-delete-form" method="post" action="gestion-brainstormings.php" data-status-form data-status-label="fermer le vote">
+                              <input type="hidden" name="action" value="close_vote" />
+                              <input type="hidden" name="id" value="<?= (int) $brainstorming['id'] ?>" />
+                              <button class="ghost-button danger" type="submit">Fermer vote</button>
+                            </form>
+                          <?php endif; ?>
+                          <form class="inline-delete-form" method="post" action="gestion-brainstormings.php" data-status-form data-status-label="calculer le gagnant de">
+                            <input type="hidden" name="action" value="calculate_winner" />
+                            <input type="hidden" name="id" value="<?= (int) $brainstorming['id'] ?>" />
+                            <button class="ghost-button" type="submit">Calculer le gagnant</button>
+                          </form>
+                          <form class="inline-delete-form" method="post" action="gestion-brainstormings.php" data-delete-form>
+                            <input type="hidden" name="action" value="delete" />
+                            <input type="hidden" name="id" value="<?= (int) $brainstorming['id'] ?>" />
+                            <button class="ghost-button danger" type="submit">Supprimer</button>
                           </form>
                         </div>
                       </td>
@@ -396,9 +536,18 @@ $brainstormings = $controller->getBrainstormings([
             }
           });
         });
+
+        const deleteForms = document.querySelectorAll('[data-delete-form]');
+        deleteForms.forEach(form => {
+          form.addEventListener('submit', function (event) {
+            if (!confirm('Etes-vous sur de vouloir supprimer ce brainstorming ?')) {
+              event.preventDefault();
+            }
+          });
+        });
       })();
     </script>
-      <script src="assets/app.js"></script>
+      <script src="assets/app.js?v=brainstorming-submenu-v5"></script>
   </body>
 </html>
 

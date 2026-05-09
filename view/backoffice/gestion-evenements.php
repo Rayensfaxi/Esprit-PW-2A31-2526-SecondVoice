@@ -122,7 +122,7 @@ error_log('ADMIN: Admin connecte ID: ' . $adminId);
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
-    <link rel="stylesheet" href="assets/style.css" />
+    <link rel="stylesheet" href="assets/style.css?v=brainstorming-submenu-v5" />
     <link rel="stylesheet" href="assets/events-admin.css" />
   </head>
   <body data-page="events-admin">
@@ -415,7 +415,7 @@ error_log('ADMIN: Admin connecte ID: ' . $adminId);
     <script>
       try { localStorage.setItem("intellectai-theme", "<?= h($activeTheme) ?>"); } catch (e) {}
     </script>
-    <script src="assets/app.js"></script>
+    <script src="assets/app.js?v=brainstorming-submenu-v5"></script>
     <script src="assets/events-admin.js"></script>
     <script>
       function switchAdminTab(tabButton) {

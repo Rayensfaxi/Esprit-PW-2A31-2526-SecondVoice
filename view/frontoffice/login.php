@@ -181,7 +181,8 @@ if (isset($_GET['status']) && $_GET['status'] === 'reset_link_sent') {
     $feedback = 'Si cet e-mail existe, un lien de reinitialisation a ete envoye.';
 }
 if (isset($_GET['status']) && $_GET['status'] === 'reset_link_sent_log') {
-    $feedback = "Si ce compte est eligible, un lien de reinitialisation est envoye. Sinon, verifiez la config e-mail.";
+    $feedback = "L'e-mail de reinitialisation n'a pas pu etre envoye automatiquement. Verifiez Brevo/SMTP dans config.php et storage/mail/outbox.log.";
+    $feedbackType = 'error';
 }
 if (isset($_GET['status']) && $_GET['status'] === 'password_reset_done') {
     $feedback = 'Mot de passe mis a jour. Connectez-vous avec le nouveau mot de passe.';
@@ -307,14 +308,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
       href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=Space+Grotesk:wght@500;700&display=swap"
       rel="stylesheet"
     />
-    <link rel="stylesheet" href="assets/css/style.css" />
-    <link rel="stylesheet" href="assets/css/auth.css" />
+    <link rel="stylesheet" href="assets/css/style.css?v=<?= h((string) @filemtime(__DIR__ . '/assets/css/style.css')) ?>" />
+    <link rel="stylesheet" href="assets/css/auth.css?v=<?= h((string) @filemtime(__DIR__ . '/assets/css/auth.css')) ?>" />
   </head>
   <body class="auth-screen">
     <main class="auth-stage">
       <div class="auth-theme-row">
         <button class="icon-btn auth-theme-toggle" type="button" data-theme-toggle aria-label="Changer le theme">
-          <span class="theme-glyph" data-theme-glyph aria-hidden="true">☾</span>
+          <span class="theme-glyph theme-icon-moon" data-theme-glyph aria-hidden="true"></span>
         </button>
       </div>
 
@@ -411,7 +412,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             themeToggle.setAttribute("aria-label", theme === "light" ? "Activer le mode sombre" : "Activer le mode clair");
           }
           if (themeGlyph) {
-            themeGlyph.textContent = theme === "light" ? "☀" : "☾";
+            themeGlyph.classList.toggle("theme-icon-moon", theme === "light");
+            themeGlyph.classList.toggle("theme-icon-sun", theme !== "light");
           }
         }
 

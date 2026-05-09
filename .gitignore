@@ -1,3 +1,6 @@
 Agent-key.txt
+.env
+.env.local
+.env.*.local
 storage/mail/outbox.log
 storage/security/*.json

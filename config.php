@@ -12,7 +12,7 @@ class Config
     private static $pdo = null;
     private static array $mailManual = [
         // Provider: 'brevo', 'smtp', ou 'auto' (brevo puis smtp)
-        'provider' => 'auto'
+        'provider' => 'brevo'
     ];
     private static array $brevoManual = [
         // REMPLIS CES VALEURS POUR BREVO API
@@ -35,16 +35,17 @@ class Config
     private static array $recaptchaManual = [
         // REMPLIS CES VALEURS POUR GOOGLE reCAPTCHA v2 Checkbox
         'enabled' => true,
-        // Cles de test Google (DEV UNIQUEMENT)
-        // Remplace-les par tes vraies cles en production.
-        'site_key' => '6LeIxAcTAAAAAJcZVRqyHh71UMIEGNQ_MXjiZKhI',
-        'secret_key' => '6LeIxAcTAAAAAGG-vFI1TnRWxMZNFuojJ4WifJWe'
+        'site_key' => '',
+        'secret_key' => ''
     ];
     private static array $appManual = [
         // URL publique de frontoffice pour le QR mobile (sans slash final)
         // Exemple LAN: http://192.168.1.5/Second%20voice/view/frontoffice
-        'public_base_url' => ''
+        'public_base_url' => '',
+        // Code requis pour initialiser une empreinte faciale admin quand aucun visage n'existe.
+        'face_enroll_code' => 'SV-ADMIN-2026'
     ];
+
     public static function getConnexion()
     {
         //         public → accessible partout.
@@ -84,13 +85,13 @@ class Config
 
     public static function getSmtpConfig(): array
     {
-        $host = getenv('SECONDVOICE_SMTP_HOST');
-        $port = getenv('SECONDVOICE_SMTP_PORT');
-        $encryption = getenv('SECONDVOICE_SMTP_ENCRYPTION');
-        $username = getenv('SECONDVOICE_SMTP_USER');
-        $password = getenv('SECONDVOICE_SMTP_PASS');
-        $fromEmail = getenv('SECONDVOICE_MAIL_FROM');
-        $fromName = getenv('SECONDVOICE_MAIL_FROM_NAME');
+        $host = getenv('SECONDVOICE_SMTP_HOST') ?: getenv('SMTP_HOST');
+        $port = getenv('SECONDVOICE_SMTP_PORT') ?: getenv('SMTP_PORT');
+        $encryption = getenv('SECONDVOICE_SMTP_ENCRYPTION') ?: getenv('SMTP_ENCRYPTION');
+        $username = getenv('SECONDVOICE_SMTP_USER') ?: getenv('SMTP_USER');
+        $password = getenv('SECONDVOICE_SMTP_PASS') ?: getenv('SMTP_PASS');
+        $fromEmail = getenv('SECONDVOICE_MAIL_FROM') ?: getenv('MAIL_FROM');
+        $fromName = getenv('SECONDVOICE_MAIL_FROM_NAME') ?: getenv('MAIL_FROM_NAME');
 
         $manual = self::$smtpManual;
         $defaultHost = (string) ($manual['host'] ?? 'smtp.gmail.com');
@@ -116,9 +117,12 @@ class Config
 
     public static function getMailProvider(): string
     {
-        $env = getenv('SECONDVOICE_MAIL_PROVIDER');
+        $env = getenv('SECONDVOICE_MAIL_PROVIDER') ?: getenv('MAIL_PROVIDER');
         if ($env !== false && $env !== '') {
-            return strtolower(trim($env));
+            $provider = strtolower(trim($env));
+            if (in_array($provider, ['brevo', 'smtp', 'auto'], true)) {
+                return $provider;
+            }
         }
 
         return strtolower((string) (self::$mailManual['provider'] ?? 'brevo'));
@@ -126,9 +130,10 @@ class Config
 
     public static function getBrevoConfig(): array
     {
-        $apiKey = getenv('SECONDVOICE_BREVO_API_KEY');
-        $fromEmail = getenv('SECONDVOICE_MAIL_FROM');
-        $fromName = getenv('SECONDVOICE_MAIL_FROM_NAME');
+        $apiKey = getenv('SECONDVOICE_BREVO_API_KEY') ?: getenv('BREVO_API_KEY');
+        $fromEmail = getenv('SECONDVOICE_MAIL_FROM') ?: getenv('MAIL_FROM');
+        $fromName = getenv('SECONDVOICE_MAIL_FROM_NAME') ?: getenv('MAIL_FROM_NAME');
+        $smtpUser = getenv('SECONDVOICE_SMTP_USER') ?: getenv('SMTP_USER');
 
         $manual = self::$brevoManual;
         $defaultApiKey = (string) ($manual['api_key'] ?? '');
@@ -136,19 +141,27 @@ class Config
         $defaultFromName = (string) ($manual['from_name'] ?? 'SecondVoice');
         $defaultTimeout = (int) ($manual['timeout'] ?? 20);
 
+        $resolvedFromEmail = $defaultFromEmail !== '' ? $defaultFromEmail : (string) $smtpUser;
+        if ($fromEmail !== false && $fromEmail !== '' && filter_var($fromEmail, FILTER_VALIDATE_EMAIL)) {
+            $resolvedFromEmail = $fromEmail;
+        }
+        if (!filter_var($resolvedFromEmail, FILTER_VALIDATE_EMAIL)) {
+            $resolvedFromEmail = $defaultFromEmail;
+        }
+
         return [
-            'api_key' => $apiKey !== false && $apiKey !== '' ? $apiKey : $defaultApiKey,
-            'from_email' => $fromEmail !== false && $fromEmail !== '' ? $fromEmail : $defaultFromEmail,
-            'from_name' => $fromName !== false && $fromName !== '' ? $fromName : $defaultFromName,
+            'api_key' => $apiKey !== false && trim((string) $apiKey) !== '' ? trim((string) $apiKey) : $defaultApiKey,
+            'from_email' => $resolvedFromEmail,
+            'from_name' => $fromName !== false && trim((string) $fromName) !== '' ? trim((string) $fromName) : $defaultFromName,
             'timeout' => $defaultTimeout
         ];
     }
 
     public static function getRecaptchaConfig(): array
     {
-        $enabled = getenv('SECONDVOICE_RECAPTCHA_ENABLED');
-        $siteKey = getenv('SECONDVOICE_RECAPTCHA_SITE_KEY');
-        $secretKey = getenv('SECONDVOICE_RECAPTCHA_SECRET_KEY');
+        $enabled = getenv('SECONDVOICE_RECAPTCHA_ENABLED') ?: getenv('RECAPTCHA_ENABLED');
+        $siteKey = getenv('SECONDVOICE_RECAPTCHA_SITE_KEY') ?: getenv('RECAPTCHA_SITE_KEY');
+        $secretKey = getenv('SECONDVOICE_RECAPTCHA_SECRET_KEY') ?: getenv('RECAPTCHA_SECRET_KEY');
 
         $manual = self::$recaptchaManual;
         $manualEnabled = (bool) ($manual['enabled'] ?? true);
@@ -170,12 +183,22 @@ class Config
 
     public static function getPublicBaseUrl(): string
     {
-        $env = getenv('SECONDVOICE_PUBLIC_BASE_URL');
+        $env = getenv('SECONDVOICE_PUBLIC_BASE_URL') ?: getenv('PUBLIC_BASE_URL');
         if ($env !== false && trim($env) !== '') {
             return rtrim(trim($env), '/');
         }
 
         return rtrim((string) (self::$appManual['public_base_url'] ?? ''), '/');
+    }
+
+    public static function getFaceEnrollCode(): string
+    {
+        $env = getenv('SECONDVOICE_FACE_ENROLL_CODE') ?: getenv('FACE_ENROLL_CODE');
+        if ($env !== false && trim($env) !== '') {
+            return trim($env);
+        }
+
+        return trim((string) (self::$appManual['face_enroll_code'] ?? ''));
     }
 }
 Config::getConnexion();

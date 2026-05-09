@@ -33,6 +33,24 @@ function makeInitials(string $nom, string $prenom): string
     return $initials !== '' ? $initials : 'SV';
 }
 
+function getUserProfilePhotoUrl(int $userId): string
+{
+    if ($userId <= 0) {
+        return '';
+    }
+
+    $photoDir = __DIR__ . '/../frontoffice/assets/media/profile-users';
+    $files = glob($photoDir . DIRECTORY_SEPARATOR . 'user_' . $userId . '.*') ?: [];
+    foreach ($files as $file) {
+        $extension = strtolower(pathinfo($file, PATHINFO_EXTENSION));
+        if (is_file($file) && in_array($extension, ['jpg', 'jpeg', 'png', 'webp'], true)) {
+            return '../frontoffice/assets/media/profile-users/' . rawurlencode(basename($file)) . '?v=' . (string) @filemtime($file);
+        }
+    }
+
+    return '';
+}
+
 function getStatusClass(string $status): string
 {
     $status = strtolower(trim($status));
@@ -311,7 +329,7 @@ if (!$isFormView) {
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
-    <link rel="stylesheet" href="assets/style.css" />
+    <link rel="stylesheet" href="assets/style.css?v=brainstorming-submenu-v5" />
     <?php if ($isFormView): ?>
       <style>
         .field-error-inline {
@@ -440,6 +458,8 @@ if (!$isFormView) {
                         if ($selectedRole !== 'tout') {
                             $editQueryParams['return_role'] = $selectedRole;
                         }
+                        $profilePhotoUrl = getUserProfilePhotoUrl((int) $user['id']);
+                        $displayName = trim((string) $user['nom'] . ' ' . (string) $user['prenom']);
                         $searchIndex = strtolower(trim(
                             ((string) ($user['nom'] ?? '')) . ' '
                             . ((string) ($user['prenom'] ?? '')) . ' '
@@ -455,9 +475,15 @@ if (!$isFormView) {
                       >
                         <td>
                           <div class="user-cell">
-                            <span class="user-avatar"><?= h(makeInitials((string) $user['nom'], (string) $user['prenom'])) ?></span>
+                            <?php if ($profilePhotoUrl !== ''): ?>
+                              <span class="user-avatar has-photo">
+                                <img src="<?= h($profilePhotoUrl) ?>" alt="Photo de <?= h($displayName !== '' ? $displayName : 'utilisateur') ?>" />
+                              </span>
+                            <?php else: ?>
+                              <span class="user-avatar"><?= h(makeInitials((string) $user['nom'], (string) $user['prenom'])) ?></span>
+                            <?php endif; ?>
                             <div>
-                              <strong><?= h($user['nom'] . ' ' . $user['prenom']) ?></strong>
+                              <strong><?= h($displayName) ?></strong>
                               <span>ID #<?= (int) $user['id'] ?></span>
                             </div>
                           </div>
@@ -803,6 +829,6 @@ if (!$isFormView) {
         })();
       </script>
     <?php endif; ?>
-    <script src="assets/app.js"></script>
+    <script src="assets/app.js?v=brainstorming-submenu-v5"></script>
   </body>
 </html>

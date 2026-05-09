@@ -9,6 +9,7 @@ require_once __DIR__ . '/BrevoMailer.php';
 class UtilisateurController
 {
     private PDO $conn;
+    private string $lastMailError = '';
 
     private const ALLOWED_ROLES = ['admin', 'agent', 'client'];
     private const ALLOWED_ACCOUNT_STATUS = ['actif', 'bloque', 'en_pause'];
@@ -40,6 +41,11 @@ class UtilisateurController
         }
 
         throw new RuntimeException('Connexion base de donnees indisponible.');
+    }
+
+    public function getLastMailError(): string
+    {
+        return $this->lastMailError;
     }
 
     public function addUser(string $nom, string $prenom, string $email, string $password, string $telephone, string $role, string $statutCompte = 'actif'): int
@@ -845,6 +851,7 @@ class UtilisateurController
 
     private function sendEmail(string $to, string $subject, string $body): bool
     {
+        $this->lastMailError = '';
         $provider = class_exists('Config') && method_exists('Config', 'getMailProvider')
             ? strtolower((string) Config::getMailProvider())
             : 'brevo';
@@ -860,8 +867,23 @@ class UtilisateurController
             $sent = $brevoMailer->send($to, $subject, $body);
             $error = $brevoMailer->getLastError();
             if ($sent) {
+                $this->lastMailError = '';
                 $this->logEmail($to, $subject, $body, true, '', 'brevo');
                 return true;
+            }
+
+            // Fallback: Brevo SMTP relay using the same API key as password.
+            $brevoSmtpConfig = $this->buildBrevoSmtpRelayConfig($brevoConfig);
+            if ($brevoSmtpConfig !== null) {
+                $relayMailer = new SmtpMailer($brevoSmtpConfig);
+                $sent = $relayMailer->send($to, $subject, $body);
+                $relayError = $relayMailer->getLastError();
+                if ($sent) {
+                    $this->lastMailError = '';
+                    $this->logEmail($to, $subject, $body, true, '', 'brevo-smtp-relay');
+                    return true;
+                }
+                $error = $error !== '' ? ($error . ' | BREVO_SMTP: ' . $relayError) : $relayError;
             }
         }
 
@@ -873,14 +895,36 @@ class UtilisateurController
             $sent = $smtpMailer->send($to, $subject, $body);
             $smtpError = $smtpMailer->getLastError();
             if ($sent) {
+                $this->lastMailError = '';
                 $this->logEmail($to, $subject, $body, true, '', 'smtp');
                 return true;
             }
             $error = $error !== '' ? ($error . ' | SMTP: ' . $smtpError) : $smtpError;
         }
 
+        $this->lastMailError = $error !== '' ? $error : 'Aucun fournisseur mail valide.';
         $this->logEmail($to, $subject, $body, false, $error, $provider);
         return false;
+    }
+
+    private function buildBrevoSmtpRelayConfig(array $brevoConfig): ?array
+    {
+        $apiKey = trim((string) ($brevoConfig['api_key'] ?? ''));
+        $fromEmail = trim((string) ($brevoConfig['from_email'] ?? ''));
+        if ($apiKey === '' || $fromEmail === '' || !filter_var($fromEmail, FILTER_VALIDATE_EMAIL)) {
+            return null;
+        }
+
+        return [
+            'host' => 'smtp-relay.brevo.com',
+            'port' => 587,
+            'encryption' => 'tls',
+            'username' => 'apikey',
+            'password' => $apiKey,
+            'from_email' => $fromEmail,
+            'from_name' => (string) ($brevoConfig['from_name'] ?? 'SecondVoice'),
+            'timeout' => (int) ($brevoConfig['timeout'] ?? 20)
+        ];
     }
 
     private function logEmail(string $to, string $subject, string $body, bool $sent, string $error = '', string $provider = ''): void

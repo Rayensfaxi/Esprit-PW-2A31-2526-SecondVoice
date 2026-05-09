@@ -22,9 +22,23 @@ $email = '';
 $fieldError = '';
 $feedback = '';
 $feedbackType = '';
+$returnTo = trim((string) ($_POST['return_to'] ?? ''));
+
+function sanitizeReturnTo(string $returnTo): string
+{
+    $returnTo = trim($returnTo);
+    if ($returnTo === '') {
+        return '';
+    }
+    if (preg_match('/^[a-zA-Z0-9._-]+\.php$/', $returnTo) !== 1) {
+        return '';
+    }
+    return $returnTo;
+}
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $email = trim((string) ($_POST['email'] ?? ''));
+    $returnTo = sanitizeReturnTo($returnTo);
 
     if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
         $fieldError = 'Adresse e-mail invalide.';
@@ -34,9 +48,23 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         try {
             $controller = new UtilisateurController();
             $controller->requestPasswordReset($email, frontofficeBaseUrl() . '/reset-password.php');
-            // Message volontairement générique pour ne pas divulguer l'état du compte.
-            header('Location: login.php?status=reset_link_sent');
-            exit;
+            $mailError = trim($controller->getLastMailError());
+            if ($mailError !== '') {
+                if ($returnTo !== '') {
+                    header('Location: ' . $returnTo . '?status=reset_mail_error');
+                    exit;
+                }
+                $feedback = "E-mail non envoye: {$mailError}. Configurez Brevo ou SMTP dans config.php. Le lien est aussi trace dans storage/mail/outbox.log.";
+                $feedbackType = 'error';
+            } else {
+                // Message volontairement générique pour ne pas divulguer l'état du compte.
+                if ($returnTo !== '') {
+                    header('Location: ' . $returnTo . '?status=reset_mail_sent');
+                    exit;
+                }
+                header('Location: login.php?status=reset_link_sent');
+                exit;
+            }
         } catch (Throwable $exception) {
             $feedback = 'Une erreur est survenue. Reessayez plus tard.';
             $feedbackType = 'error';

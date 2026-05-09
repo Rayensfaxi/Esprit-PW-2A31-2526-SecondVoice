@@ -107,7 +107,103 @@ function formatTimeAgo(string $isoDate): string
     }
 }
 
-function frontofficeBaseUrl(): string
+function isLocalWebHost(string $host): bool
+{
+    $host = strtolower(trim($host, "[] \t\n\r\0\x0B"));
+    return $host === 'localhost' || $host === '::1' || preg_match('/^127(?:\.\d{1,3}){3}$/', $host) === 1;
+}
+
+function isUsableIpv4(string $ip): bool
+{
+    $ip = trim($ip);
+    if (strpos($ip, ':') !== false && preg_match('/^(\d{1,3}(?:\.\d{1,3}){3}):\d+$/', $ip, $matches) === 1) {
+        $ip = $matches[1];
+    }
+
+    return filter_var($ip, FILTER_VALIDATE_IP, FILTER_FLAG_IPV4) !== false
+        && preg_match('/^(?:0|127)\./', $ip) !== 1
+        && $ip !== '255.255.255.255';
+}
+
+function isPrivateIpv4(string $ip): bool
+{
+    return preg_match('/^(?:10\.|192\.168\.|172\.(?:1[6-9]|2\d|3[0-1])\.)/', $ip) === 1;
+}
+
+function detectLanIpv4(): string
+{
+    $candidates = [];
+    $addCandidate = static function ($value) use (&$candidates): void {
+        $ip = trim((string) $value);
+        if (strpos($ip, ':') !== false && preg_match('/^(\d{1,3}(?:\.\d{1,3}){3}):\d+$/', $ip, $matches) === 1) {
+            $ip = $matches[1];
+        }
+
+        if (isUsableIpv4($ip) && !in_array($ip, $candidates, true)) {
+            $candidates[] = $ip;
+        }
+    };
+
+    // On Windows with VirtualBox/VMware adapters, hostname resolution often
+    // returns a virtual network IP. The UDP socket exposes the default route IP.
+    $socket = @stream_socket_client('udp://8.8.8.8:80', $errno, $error, 0.2);
+    if (is_resource($socket)) {
+        $localSocketName = stream_socket_get_name($socket, false);
+        fclose($socket);
+        if (is_string($localSocketName)) {
+            $addCandidate($localSocketName);
+        }
+    }
+
+    foreach (['LOCAL_ADDR', 'SERVER_ADDR'] as $serverKey) {
+        $addCandidate($_SERVER[$serverKey] ?? '');
+    }
+
+    if (function_exists('gethostname')) {
+        $hostname = (string) gethostname();
+        if ($hostname !== '') {
+            $addCandidate(gethostbyname($hostname));
+        }
+    }
+
+    foreach ($candidates as $candidate) {
+        if (isPrivateIpv4($candidate)) {
+            return $candidate;
+        }
+    }
+
+    return $candidates[0] ?? '';
+}
+
+function requestHostName(string $hostHeader): string
+{
+    return (string) (parse_url('http://' . $hostHeader, PHP_URL_HOST) ?: $hostHeader);
+}
+
+function requestHostPort(string $hostHeader, string $scheme): string
+{
+    $port = parse_url('http://' . $hostHeader, PHP_URL_PORT);
+    if ($port === null) {
+        $serverPort = (int) ($_SERVER['SERVER_PORT'] ?? 0);
+        if ($serverPort > 0 && !(($scheme === 'http' && $serverPort === 80) || ($scheme === 'https' && $serverPort === 443))) {
+            $port = $serverPort;
+        }
+    }
+
+    return $port !== null ? ':' . (string) $port : '';
+}
+
+function encodeUrlPath(string $path): string
+{
+    $segments = explode('/', $path);
+    $segments = array_map(static function (string $segment): string {
+        return rawurlencode(rawurldecode($segment));
+    }, $segments);
+
+    return implode('/', $segments);
+}
+
+function frontofficeBaseUrl(?string &$source = null): string
 {
     $forcedPublicBase = '';
     if (class_exists('Config') && method_exists('Config', 'getPublicBaseUrl')) {
@@ -116,15 +212,29 @@ function frontofficeBaseUrl(): string
         $forcedPublicBase = trim((string) (getenv('SECONDVOICE_PUBLIC_BASE_URL') ?: ''));
     }
     if ($forcedPublicBase !== '') {
+        $source = 'configured';
         return rtrim($forcedPublicBase, '/');
     }
 
     $https = isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off';
     $scheme = $https ? 'https' : 'http';
     $host = (string) ($_SERVER['HTTP_HOST'] ?? 'localhost');
+    $hostName = requestHostName($host);
+    if (isLocalWebHost($hostName)) {
+        $lanIp = detectLanIpv4();
+        if ($lanIp !== '') {
+            $host = $lanIp . requestHostPort($host, $scheme);
+            $source = 'detected_lan';
+        } else {
+            $source = 'local';
+        }
+    } else {
+        $source = 'request';
+    }
+
     $script = str_replace('\\', '/', (string) ($_SERVER['SCRIPT_NAME'] ?? '/'));
     $dir = rtrim(dirname($script), '/');
-    return $scheme . '://' . $host . $dir;
+    return $scheme . '://' . $host . encodeUrlPath($dir);
 }
 
 $controller = new UtilisateurController();
@@ -167,6 +277,14 @@ if (isset($_GET['status']) && $_GET['status'] === 'face_reset_forbidden') {
     $feedback = "Action reservee a l'administrateur.";
     $feedbackType = 'error';
 }
+if (isset($_GET['status']) && $_GET['status'] === 'reset_mail_sent') {
+    $feedback = "E-mail de reinitialisation envoye. Verifiez votre boite mail.";
+    $feedbackType = 'success';
+}
+if (isset($_GET['status']) && $_GET['status'] === 'reset_mail_error') {
+    $feedback = "Impossible d'envoyer l'e-mail de reinitialisation. Verifiez la configuration mail.";
+    $feedbackType = 'error';
+}
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $action = strtolower(trim((string) ($_POST['action'] ?? 'update')));
@@ -196,7 +314,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 'role' => (string) ($user['role'] ?? 'admin'),
                 'nom' => (string) ($user['nom'] ?? ''),
                 'prenom' => (string) ($user['prenom'] ?? ''),
-                'email' => (string) ($user['email'] ?? '')
+                'email' => (string) ($user['email'] ?? ''),
+                'allow_face_enroll' => true
             ];
 
             unset($_SESSION['user_id'], $_SESSION['user_role'], $_SESSION['user_nom'], $_SESSION['user_prenom'], $_SESSION['user_email']);
@@ -325,10 +444,17 @@ if ($currentPhotoPath) {
     $currentPhotoUrl = $photoWebDir . '/' . basename($currentPhotoPath) . '?v=' . (string) @filemtime($currentPhotoPath);
 }
 $initials = getInitials($user);
-$mobileOpenUrl = frontofficeBaseUrl() . '/index.php';
+$mobileBaseSource = '';
+$mobileOpenUrl = frontofficeBaseUrl($mobileBaseSource) . '/index.php';
 $qrCodeUrl = 'https://api.qrserver.com/v1/create-qr-code/?size=220x220&data=' . rawurlencode($mobileOpenUrl);
 $mobileHost = strtolower((string) (parse_url($mobileOpenUrl, PHP_URL_HOST) ?? ''));
 $mobileUrlIsLocal = in_array($mobileHost, ['localhost', '127.0.0.1', '::1'], true);
+$mobileUrlUsesDetectedLan = $mobileBaseSource === 'detected_lan';
+$roleLabel = ucfirst((string) ($user['role'] ?? 'client'));
+$statusLabel = ucfirst((string) ($user['statut_compte'] ?? 'actif'));
+$joinedRaw = (string) ($user['date_inscription'] ?? $user['created_at'] ?? $user['date_creation'] ?? $user['dateCreation'] ?? '');
+$joinedLabel = $joinedRaw !== '' ? formatEventDate($joinedRaw) : '-';
+$lastSeenLabel = $lastActivity ? formatTimeAgo((string) ($lastActivity['at'] ?? '')) : '-';
 ?>
 <!DOCTYPE html>
 <html lang="fr">
@@ -352,7 +478,111 @@ $mobileUrlIsLocal = in_array($mobileHost, ['localhost', '127.0.0.1', '::1'], tru
       href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=Space+Grotesk:wght@500;700&display=swap"
       rel="stylesheet"
     />
-    <link rel="stylesheet" href="assets/css/style.css" />
+    <link rel="stylesheet" href="assets/css/style.css?v=<?= h((string) @filemtime(__DIR__ . '/assets/css/style.css')) ?>" />
+    <style>
+      .profile-showcase { padding: 24px 0 52px; }
+      .profile-header-box { border: 1px solid rgba(164,111,255,.4); border-radius: 24px; padding: 26px 30px; background: radial-gradient(circle at 80% 20%, rgba(140,76,255,.2), transparent 45%), #0b0d28; margin-bottom: 18px; }
+      .profile-header-box h1 { margin: 6px 0 10px; font-size: clamp(2rem, 4vw, 3.7rem); line-height: 1.05; }
+      .profile-layout { display: grid; grid-template-columns: 320px minmax(0,1fr); gap: 18px; }
+      .panel { border: 1px solid rgba(164,111,255,.34); border-radius: 22px; background: linear-gradient(160deg, rgba(29,22,72,.88), rgba(13,13,33,.92)); padding: 22px; }
+      .left-stack, .right-stack { display: grid; gap: 16px; }
+      .profile-avatar-big { width: 142px; height: 142px; border-radius: 50%; border: 3px solid #9d63ff; margin: 2px auto 14px; }
+      .profile-avatar-big.has-image { background-size: cover; background-position: center; }
+      .profile-avatar-big span { display: grid; place-items: center; height: 100%; font-weight: 800; font-size: 2rem; }
+      .name-center { text-align: center; }
+      .badge-role { display: inline-flex; align-items: center; justify-content: center; border-radius: 999px; padding: 7px 14px; background: linear-gradient(90deg, #6b5cff, #ed59b9); font-weight: 700; }
+      .dot-ok { width: 9px; height: 9px; border-radius: 50%; background: #42e888; display: inline-block; margin-right: 8px; }
+      .left-menu { margin-top: 20px; border-top: 1px solid rgba(255,255,255,.08); padding-top: 14px; display: grid; gap: 8px; }
+      .left-menu a { border: 1px solid rgba(255,255,255,.14); border-radius: 12px; padding: 11px 12px; color: #f3f5ff; }
+      .left-menu a.active { background: linear-gradient(90deg, #6b5cff, #ed59b9); border-color: transparent; }
+      .pref-row { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 7px 0; }
+      .panel-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px; }
+      .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+      .field-label { display: block; margin: 0 0 6px; color: #d8dcff; font-weight: 600; }
+      .profile-input { width: 100%; height: 50px; border-radius: 12px; border: 1px solid rgba(255,255,255,.17); background: rgba(255,255,255,.03); color: #f7f8ff; padding: 0 14px; }
+      .profile-input.readonly { opacity: .82; }
+      .save-btn { margin-top: 14px; width: 100%; height: 52px; border-radius: 12px; border: 0; font-weight: 800; font-size: 1.12rem; color: #fff; background: linear-gradient(90deg, #6b5cff, #ed59b9); }
+      .duo-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+      .activity-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 10px; }
+      .activity-list li { display: flex; justify-content: space-between; gap: 12px; }
+      .activity-list li::before { content: ""; width: 8px; height: 8px; border-radius: 50%; background: #a86dff; margin-top: 8px; margin-right: 8px; flex: 0 0 auto; }
+      .activity-line { display: flex; justify-content: space-between; width: 100%; border-bottom: 1px solid rgba(255,255,255,.08); padding-bottom: 6px; }
+      .stats-grid { display: grid; grid-template-columns: repeat(4, minmax(0,1fr)); gap: 12px; }
+      .stat-item { border: 1px solid rgba(255,255,255,.15); border-radius: 16px; padding: 18px 10px; text-align: center; }
+      .stat-item strong { display: block; font-size: 2rem; margin: 8px 0 2px; }
+      @media (max-width: 1080px) { .profile-layout, .duo-grid, .form-grid, .stats-grid { grid-template-columns: 1fr; } }
+
+      /* Legacy profile layout remap to match the requested mockup */
+      main .section .profile-grid {
+        display: grid;
+        grid-template-columns: 320px minmax(0, 1fr);
+        gap: 18px;
+        align-items: start;
+      }
+      main .section .profile-grid .contact-card {
+        order: 2;
+        border: 1px solid rgba(164,111,255,.34);
+        border-radius: 22px;
+        background: linear-gradient(160deg, rgba(29,22,72,.88), rgba(13,13,33,.92));
+        padding: 22px;
+      }
+      main .section .profile-grid .sidebar {
+        order: 1;
+        display: grid;
+        gap: 16px;
+      }
+      main .section .profile-grid .sidebar-card {
+        border: 1px solid rgba(164,111,255,.34);
+        border-radius: 22px;
+        background: linear-gradient(160deg, rgba(29,22,72,.88), rgba(13,13,33,.92));
+        padding: 20px;
+      }
+      main .section .profile-grid .sidebar-card:first-child {
+        text-align: center;
+      }
+      main .section .profile-grid .sidebar-card:first-child .profile-photo-preview {
+        margin: 0 auto 14px;
+        width: 142px;
+        height: 142px;
+        border: 3px solid #9d63ff;
+      }
+      #profile-form .field,
+      #profile-form .profile-input {
+        width: 100%;
+        height: 50px;
+        border-radius: 12px;
+        border: 1px solid rgba(255,255,255,.17);
+        background: rgba(255,255,255,.03);
+        color: #f7f8ff;
+        padding: 0 14px;
+      }
+      #profile-form .input-row {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 12px;
+      }
+      #profile-form .btn.btn-primary {
+        width: 100%;
+        height: 52px;
+        border: 0;
+        border-radius: 12px;
+        font-weight: 800;
+        font-size: 1.05rem;
+        background: linear-gradient(90deg, #6b5cff, #ed59b9);
+      }
+      @media (max-width: 1080px) {
+        main .section .profile-grid {
+          grid-template-columns: 1fr;
+        }
+        main .section .profile-grid .contact-card,
+        main .section .profile-grid .sidebar {
+          order: unset;
+        }
+        #profile-form .input-row {
+          grid-template-columns: 1fr;
+        }
+      }
+    </style>
   </head>
   <body>
     <div class="page-shell">
@@ -385,152 +615,133 @@ $mobileUrlIsLocal = in_array($mobileHost, ['localhost', '127.0.0.1', '::1'], tru
           </div>
         </div>
       </header>
-
-      <main>
-        <section class="page-hero">
-          <div class="container">
-            <div class="page-hero-card fade-up">
-              <div class="breadcrumbs"><span>Accueil</span><span>/</span><span>Profil</span></div>
-              <h1>Mon profil utilisateur</h1>
-              <p>Modifiez vos informations personnelles et votre photo de profil.</p>
-            </div>
+      <main class="profile-showcase">
+        <section class="container">
+          <div class="profile-header-box fade-up">
+            <div class="breadcrumbs"><span>Accueil</span><span>/</span><span>Profil</span></div>
+            <h1>Mon profil utilisateur</h1>
+            <p>Modifiez vos informations personnelles et vos preferences.</p>
           </div>
-        </section>
 
-        <section class="section">
-          <div class="container profile-grid">
-            <article class="contact-card fade-up">
-              <h3>Informations personnelles</h3>
-              <p>Les modifications sont enregistrees en base de donnees.</p>
-
-              <form id="profile-form" class="profile-form" method="post" action="profile.php" enctype="multipart/form-data" novalidate>
-                <input type="hidden" name="action" value="update" />
-                <input type="hidden" name="remove_photo" id="remove-photo-flag" value="0" />
-
-                <div class="profile-photo-row">
-                  <div
-                    class="profile-photo-preview<?= $currentPhotoUrl !== '' ? ' has-image' : '' ?>"
-                    id="profile-photo-preview"
-                    <?php if ($currentPhotoUrl !== ''): ?>style="background-image: url('<?= h($currentPhotoUrl) ?>');"<?php endif; ?>
-                  >
-                    <span id="profile-photo-initials"><?= h($initials) ?></span>
-                  </div>
-                  <div class="profile-photo-actions">
-                    <label class="btn btn-secondary" for="profile-photo-input">Ajouter/Changer photo</label>
-                    <button class="btn btn-secondary" id="profile-photo-clear" type="button">Supprimer photo</button>
-                    <p class="profile-help">Formats: JPG/PNG/WEBP, max 4 Mo.</p>
-                  </div>
+          <div class="profile-layout">
+            <aside class="left-stack">
+              <div class="panel fade-up">
+                <div class="profile-avatar-big<?= $currentPhotoUrl !== '' ? ' has-image' : '' ?>" id="profile-photo-preview" <?php if ($currentPhotoUrl !== ''): ?>style="background-image:url('<?= h($currentPhotoUrl) ?>');"<?php endif; ?>>
+                  <span id="profile-photo-initials"><?= h($initials) ?></span>
                 </div>
-
-                <input id="profile-photo-input" class="profile-photo-input" type="file" name="photo" accept="image/jpeg,image/png,image/webp" />
-
-                <div class="input-row">
-                  <input class="field" type="text" name="nom" value="<?= h($user['nom'] ?? '') ?>" placeholder="Nom" />
-                  <input class="field" type="text" name="prenom" value="<?= h($user['prenom'] ?? '') ?>" placeholder="Prenom" />
+                <div class="name-center">
+                  <h3 style="margin-bottom:4px;"><?= h(($user['nom'] ?? '') . ' ' . ($user['prenom'] ?? '')) ?></h3>
+                  <p style="margin-bottom:10px;"><?= h($user['email'] ?? '') ?></p>
+                  <span class="badge-role"><?= h($roleLabel) ?></span>
+                  <p style="margin-top:12px;"><span class="dot-ok"></span>Compte <?= h(strtolower($statusLabel)) ?></p>
                 </div>
-
-                <div class="input-row">
-                  <input class="field" type="text" name="email" value="<?= h($user['email'] ?? '') ?>" placeholder="Email" />
-                  <input class="field" type="text" name="telephone" value="<?= h($user['telephone'] ?? '') ?>" placeholder="Telephone" />
-                </div>
-
-                <input class="field" type="password" name="mot_de_passe" placeholder="Nouveau mot de passe (optionnel)" />
-
-                <p id="profile-feedback" class="profile-feedback <?= $feedbackType === 'error' ? 'error' : ($feedbackType === 'success' ? 'success' : '') ?>"><?= h($feedback) ?></p>
-                <button class="btn btn-primary" type="submit">Enregistrer le profil</button>
-              </form>
-            </article>
-
-            <aside class="sidebar">
-              <div class="sidebar-card fade-up">
-                <div class="profile-photo-preview<?= $currentPhotoUrl !== '' ? ' has-image' : '' ?>"
-                     <?php if ($currentPhotoUrl !== ''): ?>style="background-image: url('<?= h($currentPhotoUrl) ?>'); margin-bottom: 14px;"<?php else: ?>style="margin-bottom: 14px;"<?php endif; ?>
-                >
-                  <span><?= h($initials) ?></span>
-                </div>
-                <h3><?= h(($user['nom'] ?? '') . ' ' . ($user['prenom'] ?? '')) ?></h3>
-                <p><?= h($user['email'] ?? '') ?></p>
-                <p class="profile-help">Role: <?= h(ucfirst((string) ($user['role'] ?? 'client'))) ?></p>
-                <p class="profile-help">Statut: <?= h(ucfirst((string) ($user['statut_compte'] ?? 'actif'))) ?></p>
-                <?php if (strtolower((string) ($user['role'] ?? 'client')) === 'admin'): ?>
-                  <form method="post" action="profile.php" style="margin-top: 12px;">
-                    <input type="hidden" name="action" value="reset_face_template" />
-                    <button
-                      class="btn btn-secondary"
-                      type="submit"
-                      onclick="return confirm('Reinitialiser l empreinte faciale admin ? Un nouvel enrolement sera demande a la prochaine connexion.');"
-                    >
-                      Reinitialiser empreinte faciale
-                    </button>
-                    <p class="profile-help" style="margin-top:8px;">Cette action force un nouvel enrôlement facial a la prochaine connexion admin.</p>
+                <div class="left-menu">
+                  <a class="active" href="#">Mon profil</a>
+                  <a href="settings.php">Parametres</a>
+                  <a href="#activity-card">Notifications</a>
+                  <a href="#security-card">Securite</a>
+                  <form method="post" action="profile.php" style="margin-top:4px;">
+                    <input type="hidden" name="action" value="logout" />
+                    <button class="btn btn-primary" type="submit" style="width:100%;">Deconnexion</button>
                   </form>
-                <?php endif; ?>
+                </div>
               </div>
 
-              <div class="sidebar-card fade-up">
-                <h3>Derniere activite</h3>
-                <?php if ($lastActivity): ?>
-                  <p class="profile-help">Type : <?= h((string) ($lastActivity['type'] ?? '-')) ?></p>
-                  <p class="profile-help">Date : <?= h(formatEventDate((string) ($lastActivity['at'] ?? ''))) ?></p>
-                  <p class="profile-help">Heure : <?= h(formatEventTime((string) ($lastActivity['at'] ?? ''))) ?></p>
-                  <p class="profile-help">Detail : <?= h((string) ($lastActivity['detail'] ?? '-')) ?></p>
-                <?php else: ?>
-                  <p class="profile-help">Aucune activite enregistree pour le moment.</p>
-                <?php endif; ?>
+              <div class="panel fade-up">
+                <h3>Preferences</h3>
+                <div class="pref-row"><span>Theme</span><strong>Sombre</strong></div>
+                <div class="pref-row"><span>Langue</span><strong>Francais</strong></div>
+                <div class="pref-row"><span>Notifications</span><strong>Activees</strong></div>
               </div>
 
-              <div class="sidebar-card fade-up">
-                <h3>Activite recente</h3>
-                <?php if (count($recentActivities) === 0): ?>
-                  <p class="profile-help">Aucune activite recente.</p>
-                <?php else: ?>
-                  <ul class="footer-list">
-                    <?php foreach ($recentActivities as $activity): ?>
-                      <li>
-                        <?= h((string) ($activity['detail'] ?? 'Activite')) ?>
-                        <span class="profile-help"> - <?= h(formatTimeAgo((string) ($activity['at'] ?? ''))) ?></span>
-                      </li>
-                    <?php endforeach; ?>
-                  </ul>
-                <?php endif; ?>
-              </div>
-
-              <div class="sidebar-card fade-up">
-                <h3>Liens rapides</h3>
-                <ul class="footer-list">
-                  <li><a href="index.php">Accueil</a></li>
-                  <li><a href="services.php">Services</a></li>
-                  <li><a href="contact.php">Support</a></li>
-                  <?php
-                    $role = strtolower((string) ($user['role'] ?? 'client'));
-                    if ($role === 'admin'):
-                  ?>
-                  <li><a href="../backoffice/index.php">Dashboard</a></li>
-                  <?php elseif ($role === 'agent'): ?>
-                  <li><a href="../backoffice/gestion-accompagnements.php">Dashboard</a></li>
-                  <?php endif; ?>
-                </ul>
-              </div>
-
-              <div class="sidebar-card fade-up">
+              <div class="panel fade-up">
                 <h3>Acces mobile</h3>
                 <p class="profile-help">Scannez ce QR code pour ouvrir le site sur votre telephone.</p>
                 <?php if ($mobileUrlIsLocal): ?>
-                  <p class="profile-help" style="color:#d64b6a;">
-                    URL locale detectee (<?= h($mobileHost) ?>). Configurez `SECONDVOICE_PUBLIC_BASE_URL` avec l'IP LAN de votre PC pour ouvrir depuis telephone.
-                  </p>
+                  <p class="profile-help" style="color:#d64b6a;">URL locale detectee (<?= h($mobileHost) ?>). Configurez SECONDVOICE_PUBLIC_BASE_URL avec l'IP LAN de votre PC.</p>
                 <?php endif; ?>
-                <img
-                  src="<?= h($qrCodeUrl) ?>"
-                  alt="QR code vers le site SecondVoice"
-                  style="width: 100%; max-width: 220px; border-radius: 12px; border: 1px solid rgba(255,255,255,0.15); margin: 10px 0;"
-                />
+                <img src="<?= h($qrCodeUrl) ?>" alt="QR code vers le site SecondVoice" style="width: 100%; max-width: 220px; border-radius: 12px; border: 1px solid rgba(255,255,255,0.15); margin: 10px 0;" />
                 <p class="profile-help" style="word-break: break-all;"><?= h($mobileOpenUrl) ?></p>
               </div>
             </aside>
+
+            <div class="right-stack">
+              <section class="panel fade-up">
+                <div class="panel-head"><h3 style="margin:0;">Informations personnelles</h3></div>
+                <form id="profile-form" method="post" action="profile.php" enctype="multipart/form-data" novalidate>
+                  <input type="hidden" name="action" value="update" />
+                  <input type="hidden" name="remove_photo" id="remove-photo-flag" value="0" />
+
+                  <div style="margin-bottom:12px;">
+                    <label class="btn btn-secondary" for="profile-photo-input">Ajouter/Changer photo</label>
+                    <button class="btn btn-secondary" id="profile-photo-clear" type="button">Supprimer photo</button>
+                    <input id="profile-photo-input" class="profile-photo-input" type="file" name="photo" accept="image/jpeg,image/png,image/webp" />
+                  </div>
+
+                  <div class="form-grid">
+                    <div><label class="field-label">Nom</label><input class="profile-input" type="text" name="nom" value="<?= h($user['nom'] ?? '') ?>" /></div>
+                    <div><label class="field-label">Prenom</label><input class="profile-input" type="text" name="prenom" value="<?= h($user['prenom'] ?? '') ?>" /></div>
+                    <div><label class="field-label">Email</label><input class="profile-input" type="text" name="email" value="<?= h($user['email'] ?? '') ?>" /></div>
+                    <div><label class="field-label">Role</label><input class="profile-input readonly" type="text" value="<?= h($roleLabel) ?>" readonly /></div>
+                    <div><label class="field-label">Telephone</label><input class="profile-input" type="text" name="telephone" value="<?= h($user['telephone'] ?? '') ?>" /></div>
+                    <div><label class="field-label">Date d'inscription</label><input class="profile-input readonly" type="text" value="<?= h($joinedLabel) ?>" readonly /></div>
+                    <div><label class="field-label">Localisation</label><input class="profile-input readonly" type="text" value="Tunisie" readonly /></div>
+                    <div><label class="field-label">Derniere connexion</label><input class="profile-input readonly" type="text" value="<?= h($lastSeenLabel) ?>" readonly /></div>
+                  </div>
+
+                  <div style="margin-top:12px;"><label class="field-label">Nouveau mot de passe (optionnel)</label><input id="new-password-input" class="profile-input" type="password" name="mot_de_passe" /></div>
+                  <p id="profile-feedback" class="profile-feedback <?= $feedbackType === 'error' ? 'error' : ($feedbackType === 'success' ? 'success' : '') ?>" style="margin-top:12px;"><?= h($feedback) ?></p>
+                  <button class="save-btn" type="submit">Enregistrer les modifications</button>
+                </form>
+              </section>
+
+              <div class="duo-grid">
+                <section class="panel fade-up" id="security-card">
+                  <h3>Securite du compte</h3>
+                  <div class="pref-row"><span>Reconnaissance faciale</span><strong style="color:#48ec8f;">Activee</strong></div>
+                  <div class="pref-row"><span>Derniere connexion</span><strong><?= h($lastSeenLabel) ?></strong></div>
+                  <div class="pref-row"><span>Appareil actuel</span><strong>Chrome / Windows</strong></div>
+                  <?php if (strtolower((string) ($user['role'] ?? 'client')) === 'admin'): ?>
+                    <form method="post" action="profile.php" style="margin-top: 12px;">
+                      <input type="hidden" name="action" value="reset_face_template" />
+                      <button class="btn btn-secondary" type="submit" onclick="return confirm('Reinitialiser l empreinte faciale admin ?');">Reinitialiser empreinte faciale</button>
+                    </form>
+                  <?php endif; ?>
+                  <form method="post" action="forgot-password.php" style="margin-top:12px;">
+                    <input type="hidden" name="email" value="<?= h((string) ($user['email'] ?? '')) ?>" />
+                    <input type="hidden" name="return_to" value="profile.php" />
+                    <button class="btn btn-secondary" type="submit">Reinitialiser mot de passe</button>
+                  </form>
+                </section>
+
+                <section class="panel fade-up" id="activity-card">
+                  <h3>Activite recente</h3>
+                  <?php if (count($recentActivities) === 0): ?>
+                    <p class="profile-help">Aucune activite recente.</p>
+                  <?php else: ?>
+                    <ul class="activity-list">
+                      <?php foreach ($recentActivities as $activity): ?>
+                        <li><div class="activity-line"><span><?= h((string) ($activity['detail'] ?? 'Activite')) ?></span><span><?= h(formatTimeAgo((string) ($activity['at'] ?? ''))) ?></span></div></li>
+                      <?php endforeach; ?>
+                    </ul>
+                  <?php endif; ?>
+                </section>
+              </div>
+
+              <section class="panel fade-up">
+                <h3>Statistiques</h3>
+                <div class="stats-grid">
+                  <div class="stat-item"><small>Rendez-vous</small><strong>12</strong><span>Ce mois</span></div>
+                  <div class="stat-item"><small>Reclamations</small><strong>4</strong><span>Total</span></div>
+                  <div class="stat-item"><small>Evenements</small><strong>6</strong><span>Participes</span></div>
+                  <div class="stat-item"><small>Brainstormings</small><strong>3</strong><span>Crees</span></div>
+                </div>
+              </section>
+            </div>
           </div>
         </section>
       </main>
+
     </div>
 
     <script>
@@ -613,7 +824,7 @@ $mobileUrlIsLocal = in_array($mobileHost, ['localhost', '127.0.0.1', '::1'], tru
           const telephone = (form.telephone.value || "").trim().replace(/\s+/g, "");
           const password = form.mot_de_passe.value || "";
 
-          const namePattern = /^[A-Za-z�-��-��-�\s'-]{2,60}$/;
+          const namePattern = /^[A-Za-zï¿½-ï¿½ï¿½-ï¿½ï¿½-ï¿½\s'-]{2,60}$/;
           const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
           const phonePattern = /^\+?[0-9]{8,15}$/;
 
@@ -664,3 +875,4 @@ $mobileUrlIsLocal = in_array($mobileHost, ['localhost', '127.0.0.1', '::1'], tru
     <script src="assets/js/main.js"></script>
   </body>
 </html>
+

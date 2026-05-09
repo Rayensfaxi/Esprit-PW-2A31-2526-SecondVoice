@@ -15,6 +15,7 @@ $isConnected = $currentUserId > 0;
 
 $currentSearch = $_GET['q'] ?? '';
 $currentCategorie = $_GET['categorie'] ?? 'toutes';
+$currentStatus = $_GET['status'] ?? 'toutes';
 $submitted = isset($_GET['submitted']) && (string) $_GET['submitted'] === '1';
 $updated = isset($_GET['updated']) && (string) $_GET['updated'] === '1';
 $deleted = isset($_GET['deleted']) && (string) $_GET['deleted'] === '1';
@@ -73,20 +74,24 @@ $brainstormings = [];
 if ($isAdmin) {
     $brainstormings = $controller->getBrainstormings([
         'q' => $currentSearch,
-        'categorie' => $currentCategorie
+        'categorie' => $currentCategorie,
+        'statut' => $currentStatus
     ]);
 } elseif ($isConnected) {
     $brainstormings = $controller->getBrainstormings([
         'q' => $currentSearch,
         'categorie' => $currentCategorie,
+        'statut' => $currentStatus,
         'owner_id' => $currentUserId,
-        'include_global' => true
+        'include_global' => true,
+        'approved_only' => true
     ]);
 } else {
     $brainstormings = $controller->getBrainstormings([
         'q' => $currentSearch,
         'categorie' => $currentCategorie,
-        'global_only' => true
+        'statut' => $currentStatus,
+        'approved_only' => true
     ]);
 }
 
@@ -128,6 +133,7 @@ function statusClass(string $status): string
       rel="stylesheet"
     />
     <link rel="stylesheet" href="assets/css/style.css" />
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <style>
       .brainstorming-container {
         display: grid;
@@ -428,9 +434,9 @@ function statusClass(string $status): string
           <div class="container">
             <div class="page-hero-card fade-up">
               <div class="breadcrumbs"><span>Accueil</span><span>/</span><span>Brainstorming</span></div>
-              <h1>Partagez vos idees pour ameliorer nos services.</h1>
+              <h1>Partagez vos brainstormings pour ameliorer nos services.</h1>
               <p>
-                Contribuez au developpement de SecondVoice en proposant vos idees d'innovation et d'amelioration.
+                Contribuez au developpement de SecondVoice en proposant vos brainstormings d'innovation et d'amelioration.
               </p>
             </div>
           </div>
@@ -440,23 +446,23 @@ function statusClass(string $status): string
           <div class="container">
             <div class="brainstorming-container">
               <aside class="brainstorming-form fade-up">
-                <h3 style="margin-top: 0;"><?= $editIdea ? 'Modifier une idee' : 'Soumettre une idee' ?></h3>
+                <h3 style="margin-top: 0;"><?= $editIdea ? 'Modifier un brainstorming' : 'Soumettre un brainstorming' ?></h3>
 
                 <?php if ($submitted): ?>
                 <div class="success-message">
-                  Votre idee a ete soumise avec succes. Merci de votre contribution.
+                  Votre brainstorming a ete soumis avec succes. Merci de votre contribution.
                 </div>
                 <?php endif; ?>
 
                 <?php if ($updated): ?>
                 <div class="success-message">
-                  Votre idee a ete modifiee avec succes.
+                  Votre brainstorming a ete modifie avec succes.
                 </div>
                 <?php endif; ?>
 
                 <?php if ($deleted): ?>
                 <div class="success-message">
-                  L'idee a ete supprimee avec succes.
+                  Le brainstorming a ete supprime avec succes.
                 </div>
                 <?php endif; ?>
 
@@ -473,8 +479,8 @@ function statusClass(string $status): string
                   <?php endif; ?>
 
                   <div class="form-group">
-                    <label for="titre">Titre de l'idee *</label>
-                    <input type="text" id="titre" name="titre" placeholder="Donnez un titre a votre idee" value="<?= h($formValues['titre']) ?>" />
+                    <label for="titre">Titre du brainstorming *</label>
+                    <input type="text" id="titre" name="titre" placeholder="Donnez un titre a votre brainstorming" value="<?= h($formValues['titre']) ?>" />
                     <?php if ($fieldErrors['titre'] !== ''): ?>
                       <small class="field-error"><?= h($fieldErrors['titre']) ?></small>
                     <?php endif; ?>
@@ -482,7 +488,7 @@ function statusClass(string $status): string
 
                   <div class="form-group">
                     <label for="description">Description *</label>
-                    <textarea id="description" name="description" placeholder="Decrivez votre idee en detail..."><?= h($formValues['description']) ?></textarea>
+                    <textarea id="description" name="description" placeholder="Decrivez votre brainstorming en detail..."><?= h($formValues['description']) ?></textarea>
                     <?php if ($fieldErrors['description'] !== ''): ?>
                       <small class="field-error"><?= h($fieldErrors['description']) ?></small>
                     <?php endif; ?>
@@ -504,7 +510,7 @@ function statusClass(string $status): string
                   </div>
 
                   <div style="display: flex; gap: 0.75rem; flex-wrap: wrap;">
-                    <button type="submit" class="btn btn-primary" style="width: 100%;"><?= $editIdea ? 'Enregistrer les modifications' : 'Soumettre l\'idee' ?></button>
+                    <button type="submit" class="btn btn-primary" style="width: 100%;"><?= $editIdea ? 'Enregistrer les modifications' : 'Soumettre le brainstorming' ?></button>
                     <?php if ($editIdea): ?>
                     <a href="service-brainstorming.php" class="btn btn-secondary" style="width: 100%; text-decoration: none;">Annuler</a>
                     <?php endif; ?>
@@ -512,16 +518,16 @@ function statusClass(string $status): string
                 </form>
 
                 <p style="font-size: 0.75rem; color: var(--color-text-secondary); margin-top: 1rem;">
-                  * Champs obligatoires. Vos idees seront examinees par notre equipe.
+                  * Champs obligatoires. Vos brainstormings seront examines par notre equipe.
                 </p>
               </aside>
 
               <div class="fade-up">
-                <h3 style="margin-top: 0;">Idees en cours</h3>
+                <h3 style="margin-top: 0;">Brainstormings en cours</h3>
 
                 <div class="search-box">
                   <form action="" method="GET" style="display: flex; gap: 0.75rem; width: 100%;">
-                    <input type="text" name="q" placeholder="Rechercher une idee..." value="<?= h($currentSearch) ?>" />
+                    <input type="text" name="q" placeholder="Rechercher un brainstorming..." value="<?= h($currentSearch) ?>" />
                     <button type="submit" class="btn btn-primary">Rechercher</button>
                   </form>
                 </div>
@@ -531,6 +537,7 @@ function statusClass(string $status): string
                     <label for="categorie-filter">Filtrer par categorie</label>
                     <form action="" method="GET" id="filter-form">
                       <input type="hidden" name="q" value="<?= h($currentSearch) ?>" />
+                      <input type="hidden" name="status" value="<?= h($currentStatus) ?>" />
                       <select id="categorie-filter" name="categorie" onchange="document.getElementById('filter-form').submit()">
                         <option value="toutes" <?= $currentCategorie === 'toutes' ? 'selected' : '' ?>>Toutes les categories</option>
                         <option value="innovation" <?= $currentCategorie === 'innovation' ? 'selected' : '' ?>>Innovation</option>
@@ -541,12 +548,25 @@ function statusClass(string $status): string
                       </select>
                     </form>
                   </div>
+                  <div class="filter-group">
+                    <label for="status-filter">Filtrer par statut</label>
+                    <form action="" method="GET" id="status-filter-form">
+                      <input type="hidden" name="q" value="<?= h($currentSearch) ?>" />
+                      <input type="hidden" name="categorie" value="<?= h($currentCategorie) ?>" />
+                      <select id="status-filter" name="status" onchange="document.getElementById('status-filter-form').submit()">
+                        <option value="toutes" <?= $currentStatus === 'toutes' ? 'selected' : '' ?>>Tous les statuts</option>
+                        <option value="en attente" <?= $currentStatus === 'en attente' ? 'selected' : '' ?>>En attente</option>
+                        <option value="approuve" <?= $currentStatus === 'approuve' ? 'selected' : '' ?>>Approuve</option>
+                        <option value="desapprouve" <?= $currentStatus === 'desapprouve' ? 'selected' : '' ?>>Desapprouve</option>
+                      </select>
+                    </form>
+                  </div>
                 </div>
 
                 <div class="brainstorming-list">
                   <?php if (count($brainstormings) === 0): ?>
                     <div class="no-results">
-                      <p>Aucune idee trouvee. Soyez le premier a soumettre une idee.</p>
+                      <p>Aucun brainstorming trouve. Soyez le premier a soumettre un brainstorming.</p>
                     </div>
                   <?php else: ?>
                     <?php foreach ($brainstormings as $idea): ?>
@@ -566,16 +586,17 @@ function statusClass(string $status): string
                           <span>Publication: Administration</span>
                           <?php endif; ?>
                         </div>
-                        <?php if ($canManageIdea): ?>
-                          <div class="brainstorming-actions">
+                        <div class="brainstorming-actions">
+                          <a class="btn btn-primary" href="brainstorming-detail.php?id=<?= (int) ($idea['id'] ?? 0) ?>">Voir les idees</a>
+                          <?php if ($canManageIdea): ?>
                             <a class="btn btn-secondary" href="service-brainstorming.php?edit=<?= (int) ($idea['id'] ?? 0) ?>">Modifier</a>
                             <form method="POST" action="service-brainstorming-submit.php" data-delete-idea-form>
                               <input type="hidden" name="action" value="delete" />
                               <input type="hidden" name="id" value="<?= (int) ($idea['id'] ?? 0) ?>" />
                               <button type="submit" class="btn btn-danger">Supprimer</button>
                             </form>
-                          </div>
-                        <?php endif; ?>
+                          <?php endif; ?>
+                        </div>
                       </div>
                     <?php endforeach; ?>
                   <?php endif; ?>
@@ -601,12 +622,40 @@ function statusClass(string $status): string
         const deleteForms = document.querySelectorAll('[data-delete-idea-form]');
         deleteForms.forEach((deleteForm) => {
           deleteForm.addEventListener('submit', (e) => {
-            const confirmed = confirm('Etes-vous sur de vouloir supprimer cette idee ?');
+            const confirmed = confirm('Etes-vous sur de vouloir supprimer ce brainstorming ?');
             if (!confirmed) {
               e.preventDefault();
             }
           });
         });
+
+        // Show SweetAlert on success
+        <?php if ($submitted): ?>
+        Swal.fire({
+          title: "Succès!",
+          text: "Votre brainstorming a ete ajoute avec succes.",
+          icon: "success",
+          draggable: true
+        });
+        <?php endif; ?>
+
+        <?php if ($updated): ?>
+        Swal.fire({
+          title: "Succès!",
+          text: "Votre brainstorming a ete modifie avec succes.",
+          icon: "success",
+          draggable: true
+        });
+        <?php endif; ?>
+
+        <?php if ($deleted): ?>
+        Swal.fire({
+          title: "Succès!",
+          text: "Le brainstorming a ete supprime avec succes.",
+          icon: "success",
+          draggable: true
+        });
+        <?php endif; ?>
       })();
     </script>
   </body>

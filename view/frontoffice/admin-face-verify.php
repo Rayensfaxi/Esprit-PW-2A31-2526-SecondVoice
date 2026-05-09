@@ -192,6 +192,41 @@ function saveTemplateHashes(int $userId, array $hashes): void
     }
 }
 
+function rememberLatestFaceHash(int $userId, array $hashes, string $currentHash): array
+{
+    $hashes = normalizeHashList($hashes);
+    $currentHash = trim($currentHash);
+    if (preg_match('/^[01]{64}$/', $currentHash) !== 1) {
+        throw new InvalidArgumentException('Empreinte invalide.');
+    }
+
+    $hashes = array_values(array_filter($hashes, static function (string $hash) use ($currentHash): bool {
+        return $hash !== $currentHash;
+    }));
+    $hashes[] = $currentHash;
+    $hashes = array_slice($hashes, -3);
+    saveTemplateHashes($userId, $hashes);
+
+    return loadTemplateHashes($userId);
+}
+
+function getFaceEnrollCode(): string
+{
+    if (class_exists('Config') && method_exists('Config', 'getFaceEnrollCode')) {
+        return Config::getFaceEnrollCode();
+    }
+
+    $env = getenv('SECONDVOICE_FACE_ENROLL_CODE');
+    return $env !== false ? trim($env) : '';
+}
+
+function normalizeEnrollCode(string $code): string
+{
+    $code = strtoupper(trim($code));
+    $code = str_replace(["\xE2\x80\x90", "\xE2\x80\x91", "\xE2\x80\x92", "\xE2\x80\x93", "\xE2\x80\x94", "\xE2\x88\x92"], '-', $code);
+    return preg_replace('/[^A-Z0-9]/', '', $code) ?? '';
+}
+
 $pending = $_SESSION['pending_admin_user'] ?? null;
 if (!is_array($pending) || (int) ($pending['id'] ?? 0) <= 0) {
     header('Location: login.php?status=auth_required');
@@ -210,6 +245,10 @@ $feedback = '';
 $feedbackType = '';
 $templateHashes = loadTemplateHashes($adminId);
 $hasEnrolledFace = count($templateHashes) > 0;
+$faceEnrollCode = getFaceEnrollCode();
+$enrollAllowedFromProfile = !empty($pending['allow_face_enroll']);
+$enrollRequiresCode = !$enrollAllowedFromProfile;
+$allowFaceEnroll = $enrollAllowedFromProfile || (!$hasEnrolledFace && $faceEnrollCode !== '');
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $action = strtolower(trim((string) ($_POST['action'] ?? 'verify')));
@@ -223,16 +262,31 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     try {
         $snapshot = trim((string) ($_POST['face_snapshot'] ?? ''));
         $clientHash = (string) ($_POST['face_hash'] ?? '');
+        $faceDetectorMethod = strtolower(trim((string) ($_POST['face_detector'] ?? '')));
+        if (!in_array($faceDetectorMethod, ['native', 'heuristic'], true)) {
+            throw new RuntimeException('Detection visage invalide. Centrez votre visage puis reessayez.');
+        }
+
+        $facePresent = (string) ($_POST['face_present'] ?? '') === '1';
+        if (!$facePresent) {
+            throw new RuntimeException('Aucun visage detecte. Centrez votre visage puis reessayez.');
+        }
+
         $binary = parseSnapshotDataUrl($snapshot);
         $currentHash = resolveSnapshotHash($binary, $clientHash);
 
         if ($action === 'enroll') {
-            $templateHashes[] = $currentHash;
-            $templateHashes = normalizeHashList($templateHashes);
-            $templateHashes = array_slice($templateHashes, -3);
-            saveTemplateHashes($adminId, $templateHashes);
+            if (!$allowFaceEnroll) {
+                throw new RuntimeException("Enregistrement visage refuse pendant le login.");
+            }
+            if ($enrollRequiresCode) {
+                $submittedEnrollCode = trim((string) ($_POST['face_enroll_code'] ?? ''));
+                if ($faceEnrollCode === '' || !hash_equals(normalizeEnrollCode($faceEnrollCode), normalizeEnrollCode($submittedEnrollCode))) {
+                    throw new RuntimeException("Code d'enrolement visage invalide.");
+                }
+            }
 
-            $savedHashes = loadTemplateHashes($adminId);
+            $savedHashes = rememberLatestFaceHash($adminId, $templateHashes, $currentHash);
             if ($savedHashes === []) {
                 throw new RuntimeException("Enregistrement visage echoue. Verifiez les permissions du dossier storage/security.");
             }
@@ -245,7 +299,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $feedbackType = 'success';
         } elseif ($action === 'verify') {
             if (!$hasEnrolledFace || $templateHashes === []) {
-                throw new RuntimeException("Aucun visage admin enregistre. Cliquez d'abord sur Enregistrer mon visage.");
+                throw new RuntimeException("Aucun visage admin enregistre. L'enregistrement doit etre lance depuis le profil admin.");
             }
 
             $distance = null;
@@ -260,9 +314,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             }
 
             // Seuil plus tolérant pour accepter de légères variations caméra/lumière/position.
-            $maxDistance = 22;
+            $maxDistance = 32;
             if ($distance > $maxDistance) {
-                throw new RuntimeException('Visage non reconnu. Verification echouee.');
+                throw new RuntimeException('Visage non reconnu. Verification echouee. Reessayez avec le visage bien centre et le meme eclairage.');
+            }
+
+            $templateHashes = rememberLatestFaceHash($adminId, $templateHashes, $currentHash);
+            if ($templateHashes === []) {
+                throw new RuntimeException("Enregistrement visage echoue. Verifiez les permissions du dossier storage/security.");
             }
 
             $_SESSION['user_id'] = (int) $pending['id'];
@@ -276,7 +335,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             ActivityLogger::log(
                 (int) $_SESSION['user_id'],
                 'Connexion',
-                'Connexion admin validee par reconnaissance faciale (matching biometrique).'
+                'Connexion admin validee par reconnaissance faciale. Capture du login enregistree.'
             );
 
             header('Location: ../backoffice/index.php');
@@ -312,8 +371,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
       href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=Space+Grotesk:wght@500;700&display=swap"
       rel="stylesheet"
     />
-    <link rel="stylesheet" href="assets/css/style.css" />
-    <link rel="stylesheet" href="assets/css/auth.css" />
+    <link rel="stylesheet" href="assets/css/style.css?v=<?= h((string) @filemtime(__DIR__ . '/assets/css/style.css')) ?>" />
+    <link rel="stylesheet" href="assets/css/auth.css?v=<?= h((string) @filemtime(__DIR__ . '/assets/css/auth.css')) ?>" />
     <style>
       .face-video-wrap {
         margin-top: 14px;
@@ -341,7 +400,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     <main class="auth-stage">
       <div class="auth-theme-row">
         <button class="icon-btn auth-theme-toggle" type="button" data-theme-toggle aria-label="Changer le theme">
-          <span class="theme-glyph" data-theme-glyph aria-hidden="true">â˜¾</span>
+          <span class="theme-glyph theme-icon-moon" data-theme-glyph aria-hidden="true"></span>
         </button>
       </div>
 
@@ -356,7 +415,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             <div>
               <p class="user-panel-title">Verification admin</p>
               <p class="user-modal-copy">
-                <?= $hasEnrolledFace ? ('Profil facial actif (' . count($templateHashes) . '/3 captures). Verifiez votre identite.') : 'Aucun visage enregistre. Faites un enrolement initial.' ?>
+                <?php if ($hasEnrolledFace): ?>
+                  <?= h('Profil facial actif (' . count($templateHashes) . '/3 captures). Chaque login valide met a jour la capture.') ?>
+                <?php elseif ($allowFaceEnroll): ?>
+                  Initialisation visage admin autorisee avec code d'enrolement.
+                <?php else: ?>
+                  Aucun visage admin enregistre. Enrolement bloque pendant le login.
+                <?php endif; ?>
               </p>
             </div>
           </div>
@@ -375,17 +440,25 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             <p id="face-note" class="face-note">Initialisation de la camera...</p>
           </div>
 
-          <form class="auth-form" id="face-verify-form" method="post" action="admin-face-verify.php" data-has-enrolled="<?= $hasEnrolledFace ? '1' : '0' ?>">
-            <input type="hidden" name="action" id="face-action" value="<?= $hasEnrolledFace ? 'verify' : 'enroll' ?>" />
+          <form class="auth-form" id="face-verify-form" method="post" action="admin-face-verify.php" data-has-enrolled="<?= $hasEnrolledFace ? '1' : '0' ?>" data-allow-enroll="<?= $allowFaceEnroll ? '1' : '0' ?>">
+            <input type="hidden" name="action" id="face-action" value="verify" />
             <input type="hidden" name="face_snapshot" id="face-snapshot" value="" />
             <input type="hidden" name="face_hash" id="face-hash" value="" />
+            <input type="hidden" name="face_present" id="face-present" value="0" />
+            <input type="hidden" name="face_detector" id="face-detector" value="0" />
             <canvas id="face-canvas" style="display:none;"></canvas>
+
+            <?php if ($allowFaceEnroll && $enrollRequiresCode): ?>
+              <input class="field" type="password" name="face_enroll_code" placeholder="Code d'enrolement admin" autocomplete="off" />
+            <?php endif; ?>
 
             <p id="face-feedback" class="auth-feedback <?= $feedbackType === 'error' ? 'error' : ($feedbackType === 'success' ? 'success' : '') ?>"><?= h($feedback) ?></p>
 
             <div style="display:flex; gap:12px; flex-wrap:wrap;">
-              <button class="btn btn-secondary" id="face-enroll-btn" type="button"><?= $hasEnrolledFace ? 'Ajouter une capture visage' : 'Enregistrer mon visage' ?></button>
-              <button class="btn btn-primary" id="face-verify-btn" type="button" <?= $hasEnrolledFace ? '' : 'disabled' ?>>Verifier mon visage</button>
+              <?php if ($allowFaceEnroll): ?>
+                <button class="btn btn-secondary" id="face-enroll-btn" type="button"><?= $hasEnrolledFace ? 'Reinitialiser mon visage' : 'Initialiser visage admin' ?></button>
+              <?php endif; ?>
+              <button class="btn btn-primary" id="face-verify-btn" type="button" <?= $hasEnrolledFace ? '' : 'disabled' ?>>Se connecter avec mon visage</button>
               <button class="btn btn-secondary" id="face-retry-btn" type="button">Relancer camera</button>
             </div>
           </form>
@@ -405,7 +478,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             themeToggle.setAttribute("aria-label", theme === "light" ? "Activer le mode sombre" : "Activer le mode clair");
           }
           if (themeGlyph) {
-            themeGlyph.textContent = theme === "light" ? "â˜€" : "â˜¾";
+            themeGlyph.classList.toggle("theme-icon-moon", theme === "light");
+            themeGlyph.classList.toggle("theme-icon-sun", theme !== "light");
           }
         }
 
@@ -424,15 +498,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         const canvas = document.getElementById("face-canvas");
         const snapshotField = document.getElementById("face-snapshot");
         const faceHashField = document.getElementById("face-hash");
+        const facePresentField = document.getElementById("face-present");
+        const faceDetectorField = document.getElementById("face-detector");
         const feedback = document.getElementById("face-feedback");
         const note = document.getElementById("face-note");
         const enrollBtn = document.getElementById("face-enroll-btn");
         const verifyBtn = document.getElementById("face-verify-btn");
         const retryBtn = document.getElementById("face-retry-btn");
-        if (!form || !actionField || !video || !canvas || !snapshotField || !faceHashField || !feedback || !note || !verifyBtn || !retryBtn) return;
+        if (!form || !actionField || !video || !canvas || !snapshotField || !faceHashField || !facePresentField || !faceDetectorField || !feedback || !note || !verifyBtn || !retryBtn) return;
 
         let stream = null;
         let hasEnrolledFace = form.dataset.hasEnrolled === "1";
+        const allowFaceEnroll = form.dataset.allowEnroll === "1";
 
         function setError(message) {
           feedback.textContent = message;
@@ -444,12 +521,22 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
           feedback.classList.remove("error");
         }
 
+        function setFaceActionsDisabled(disabled) {
+          verifyBtn.disabled = disabled || !hasEnrolledFace;
+          if (enrollBtn) {
+            enrollBtn.disabled = disabled;
+          }
+        }
+
         async function startCamera() {
           note.textContent = "Demande d'acces camera...";
+          faceDetectorField.value = "0";
+          facePresentField.value = "0";
 
           if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
             note.textContent = "Camera non supportee sur ce navigateur.";
             setError("Votre navigateur ne supporte pas la camera.");
+            setFaceActionsDisabled(true);
             return;
           }
 
@@ -460,10 +547,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             }
             stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "user" }, audio: false });
             video.srcObject = stream;
+            setFaceActionsDisabled(false);
             note.textContent = "Camera active. Centrez votre visage puis capturez.";
           } catch (error) {
             note.textContent = "Impossible d'acceder a la camera.";
             setError("Acces camera refuse ou indisponible.");
+            setFaceActionsDisabled(true);
           }
         }
 
@@ -515,18 +604,190 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
           return bits;
         }
 
-        function submitWithAction(action) {
+        function hasUsableFaceBox(face, width, height) {
+          const box = face && face.boundingBox;
+          if (!box) {
+            return false;
+          }
+
+          const boxWidth = Number(box.width || 0);
+          const boxHeight = Number(box.height || 0);
+          const centerX = Number(box.x || 0) + boxWidth / 2;
+          const centerY = Number(box.y || 0) + boxHeight / 2;
+          return boxWidth >= width * 0.14
+            && boxHeight >= height * 0.14
+            && boxWidth <= width * 0.9
+            && boxHeight <= height * 0.9
+            && centerX >= width * 0.16
+            && centerX <= width * 0.84
+            && centerY >= height * 0.12
+            && centerY <= height * 0.88;
+        }
+
+        function hasSkinTone(r, g, b) {
+          const max = Math.max(r, g, b);
+          const min = Math.min(r, g, b);
+          const y = r * 0.299 + g * 0.587 + b * 0.114;
+          const cb = 128 - r * 0.168736 - g * 0.331264 + b * 0.5;
+          const cr = 128 + r * 0.5 - g * 0.418688 - b * 0.081312;
+
+          return r > 45
+            && g > 35
+            && b > 18
+            && max - min > 14
+            && y > 45
+            && y < 238
+            && cb >= 75
+            && cb <= 138
+            && cr >= 132
+            && cr <= 182
+            && r >= g * 0.82
+            && r > b * 1.02;
+        }
+
+        function detectFaceHeuristic(sourceCanvas) {
+          const size = 96;
+          const crop = Math.min(sourceCanvas.width, sourceCanvas.height);
+          const sx = Math.max(0, Math.round((sourceCanvas.width - crop) / 2));
+          const sy = Math.max(0, Math.round((sourceCanvas.height - crop) / 2));
+          const work = document.createElement("canvas");
+          work.width = size;
+          work.height = size;
+          const wctx = work.getContext("2d", { willReadFrequently: true });
+          if (!wctx) {
+            throw new Error("CANVAS_ERROR");
+          }
+
+          wctx.drawImage(sourceCanvas, sx, sy, crop, crop, 0, 0, size, size);
+          const pixels = wctx.getImageData(0, 0, size, size).data;
+          let headArea = 0;
+          let skin = 0;
+          let outsideArea = 0;
+          let outsideSkin = 0;
+          let darkFeatures = 0;
+          let detail = 0;
+          let detailSamples = 0;
+          let minX = size;
+          let minY = size;
+          let maxX = -1;
+          let maxY = -1;
+
+          for (let y = 0; y < size; y++) {
+            for (let x = 0; x < size; x++) {
+              const index = (y * size + x) * 4;
+              const r = pixels[index];
+              const g = pixels[index + 1];
+              const b = pixels[index + 2];
+              const gray = r * 0.299 + g * 0.587 + b * 0.114;
+              const inHeadZone = Math.pow((x - 48) / 37, 2) + Math.pow((y - 48) / 43, 2) <= 1;
+              const skinTone = hasSkinTone(r, g, b);
+
+              if (inHeadZone) {
+                headArea++;
+                if (skinTone) {
+                  skin++;
+                  minX = Math.min(minX, x);
+                  minY = Math.min(minY, y);
+                  maxX = Math.max(maxX, x);
+                  maxY = Math.max(maxY, y);
+                }
+
+                const inFeatureBand = x >= 22 && x <= 74 && ((y >= 28 && y <= 56) || (y >= 56 && y <= 76));
+                if (inFeatureBand && gray < 98 && (r + g + b) < 330) {
+                  darkFeatures++;
+                }
+
+                if (x > 0) {
+                  const left = index - 4;
+                  const leftGray = pixels[left] * 0.299 + pixels[left + 1] * 0.587 + pixels[left + 2] * 0.114;
+                  detail += Math.abs(gray - leftGray);
+                  detailSamples++;
+                }
+                if (y > 0) {
+                  const up = index - size * 4;
+                  const upGray = pixels[up] * 0.299 + pixels[up + 1] * 0.587 + pixels[up + 2] * 0.114;
+                  detail += Math.abs(gray - upGray);
+                  detailSamples++;
+                }
+              } else {
+                outsideArea++;
+                if (skinTone) {
+                  outsideSkin++;
+                }
+              }
+            }
+          }
+
+          const skinRatio = headArea > 0 ? skin / headArea : 0;
+          const outsideSkinRatio = outsideArea > 0 ? outsideSkin / outsideArea : 0;
+          const darkFeatureRatio = headArea > 0 ? darkFeatures / headArea : 0;
+          const averageDetail = detailSamples > 0 ? detail / detailSamples : 0;
+          const bboxWidth = maxX >= minX ? maxX - minX + 1 : 0;
+          const bboxHeight = maxY >= minY ? maxY - minY + 1 : 0;
+          const centerX = maxX >= minX ? (minX + maxX) / 2 : 0;
+          const centerY = maxY >= minY ? (minY + maxY) / 2 : 0;
+
+          const detected = skinRatio >= 0.07
+            && skinRatio <= 0.58
+            && outsideSkinRatio <= Math.max(0.1, skinRatio * 1.25)
+            && bboxWidth >= 18
+            && bboxHeight >= 20
+            && centerX >= 27
+            && centerX <= 69
+            && centerY >= 24
+            && centerY <= 76
+            && darkFeatureRatio >= 0.008
+            && darkFeatureRatio <= 0.34
+            && averageDetail >= 3;
+
+          return { detected, method: "heuristic" };
+        }
+
+        async function detectFacePresence(sourceCanvas) {
+          const heuristicResult = detectFaceHeuristic(sourceCanvas);
+
+          if ("FaceDetector" in window) {
+            try {
+              const detector = new FaceDetector({ fastMode: true, maxDetectedFaces: 1 });
+              const faces = await detector.detect(sourceCanvas);
+              const nativeDetected = faces.some((face) => hasUsableFaceBox(face, sourceCanvas.width, sourceCanvas.height));
+              return { detected: nativeDetected && heuristicResult.detected, method: "native" };
+            } catch (error) {
+              return heuristicResult;
+            }
+          }
+
+          return heuristicResult;
+        }
+
+        async function submitWithAction(action) {
           clearError();
+          if (action === "enroll" && !allowFaceEnroll) {
+            setError("Enregistrement visage refuse pendant le login.");
+            return;
+          }
           if (action === "verify" && !hasEnrolledFace) {
-            setError("Enregistrez d'abord votre visage.");
+            setError("Aucun visage admin enregistre.");
             return;
           }
           try {
             const dataUrl = captureToDataUrl();
+            note.textContent = "Detection du visage...";
+            const faceDetection = await detectFacePresence(canvas);
+            faceDetectorField.value = faceDetection.method;
+            if (!faceDetection.detected) {
+              facePresentField.value = "0";
+              note.textContent = "Aucun visage detecte. Centrez votre visage puis capturez.";
+              setError("Aucun visage detecte. Le login est bloque.");
+              return;
+            }
+
             const hash = buildClientDHash64(canvas);
             actionField.value = action;
             snapshotField.value = dataUrl;
             faceHashField.value = hash;
+            facePresentField.value = "1";
+            faceDetectorField.value = faceDetection.method;
             form.submit();
           } catch (error) {
             if (error && error.message === "CAMERA_NOT_READY") {

@@ -153,14 +153,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
       href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=Space+Grotesk:wght@500;700&display=swap"
       rel="stylesheet"
     />
-    <link rel="stylesheet" href="assets/css/style.css" />
-    <link rel="stylesheet" href="assets/css/auth.css" />
+    <link rel="stylesheet" href="assets/css/style.css?v=<?= h((string) @filemtime(__DIR__ . '/assets/css/style.css')) ?>" />
+    <link rel="stylesheet" href="assets/css/auth.css?v=<?= h((string) @filemtime(__DIR__ . '/assets/css/auth.css')) ?>" />
   </head>
   <body class="auth-screen">
     <main class="auth-stage">
       <div class="auth-theme-row">
         <button class="icon-btn auth-theme-toggle" type="button" data-theme-toggle aria-label="Changer le theme">
-          <span class="theme-glyph" data-theme-glyph aria-hidden="true">☾</span>
+          <span class="theme-glyph theme-icon-moon" data-theme-glyph aria-hidden="true"></span>
         </button>
       </div>
       <a class="auth-brand" href="index.php">
@@ -188,6 +188,21 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
           <h3 class="auth-title">Creer un compte</h3>
           <p class="auth-helper">Tous les champs ci-dessous sont obligatoires.</p>
 
+          <div class="identity-ocr-box">
+            <label class="identity-ocr-label" for="identity-ocr-file">Scanner carte d'identite ou passeport</label>
+            <div class="identity-ocr-row">
+              <input
+                class="field"
+                id="identity-ocr-file"
+                name="identity_image"
+                type="file"
+                accept=".jpg,.jpeg,.png,.webp,image/jpeg,image/png,image/webp"
+              />
+              <button class="btn btn-secondary identity-ocr-btn" id="identity-ocr-btn" type="button">Extraire</button>
+            </div>
+            <p id="identity-ocr-feedback" class="auth-feedback"></p>
+          </div>
+
           <form class="auth-form" id="register-form" action="register.php" method="post" novalidate>
             <input class="field" type="text" name="nom" value="<?= h($values['nom']) ?>" placeholder="Nom" />
             <p class="field-error" data-error-for="nom"><?= h($fieldErrors['nom']) ?></p>
@@ -197,7 +212,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             <p class="field-error" data-error-for="email"><?= h($fieldErrors['email']) ?></p>
             <input class="field" type="text" name="telephone" value="<?= h($values['telephone']) ?>" placeholder="Telephone (+216...)" />
             <p class="field-error" data-error-for="telephone"><?= h($fieldErrors['telephone']) ?></p>
-            <input class="field" type="password" name="password" placeholder="Mot de passe" />
+            <div class="password-suggestion-row">
+              <input class="field" id="register-password" type="password" name="password" placeholder="Mot de passe" autocomplete="new-password" />
+              <button class="btn btn-secondary password-suggestion-btn" id="password-suggest-btn" type="button">Proposer</button>
+            </div>
             <p class="field-error" data-error-for="password"><?= h($fieldErrors['password']) ?></p>
 
             <p id="register-feedback" class="auth-feedback <?= $feedbackType === 'error' ? 'error' : '' ?>"><?= h($feedback) ?></p>
@@ -219,7 +237,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             themeToggle.setAttribute("aria-label", theme === "light" ? "Activer le mode sombre" : "Activer le mode clair");
           }
           if (themeGlyph) {
-            themeGlyph.textContent = theme === "light" ? "☀" : "☾";
+            themeGlyph.classList.toggle("theme-icon-moon", theme === "light");
+            themeGlyph.classList.toggle("theme-icon-sun", theme !== "light");
           }
         }
 
@@ -234,6 +253,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
         const form = document.getElementById("register-form");
         const feedback = document.getElementById("register-feedback");
+        const suggestPasswordBtn = document.getElementById("password-suggest-btn");
+        const passwordField = document.getElementById("register-password");
+        const identityOcrFile = document.getElementById("identity-ocr-file");
+        const identityOcrBtn = document.getElementById("identity-ocr-btn");
+        const identityOcrFeedback = document.getElementById("identity-ocr-feedback");
         const fieldErrors = {
           nom: form ? form.querySelector('[data-error-for="nom"]') : null,
           prenom: form ? form.querySelector('[data-error-for="prenom"]') : null,
@@ -242,6 +266,34 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
           password: form ? form.querySelector('[data-error-for="password"]') : null
         };
         if (!form) return;
+
+        function setFeedback(message, isError) {
+          feedback.textContent = message;
+          feedback.classList.toggle("error", Boolean(isError));
+        }
+
+        function setOcrFeedback(message, isError) {
+          if (!identityOcrFeedback) return;
+          identityOcrFeedback.textContent = message;
+          identityOcrFeedback.classList.toggle("error", Boolean(isError));
+        }
+
+        function readFileAsDataUrl(file) {
+          return new Promise(function (resolve, reject) {
+            const reader = new FileReader();
+            reader.onload = function () {
+              if (typeof reader.result === "string") {
+                resolve(reader.result);
+              } else {
+                reject(new Error("Image OCR invalide."));
+              }
+            };
+            reader.onerror = function () {
+              reject(new Error("Impossible de lire l'image."));
+            };
+            reader.readAsDataURL(file);
+          });
+        }
 
         function clearFieldErrors() {
           Object.values(fieldErrors).forEach(function (node) {
@@ -315,11 +367,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
           if (showFeedback) {
             if (hasError) {
-              feedback.textContent = "Veuillez corriger les erreurs de saisie.";
-              feedback.classList.add("error");
+              setFeedback("Veuillez corriger les erreurs de saisie.", true);
             } else {
-              feedback.textContent = "";
-              feedback.classList.remove("error");
+              setFeedback("", false);
             }
           }
 
@@ -347,6 +397,112 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         form.password.addEventListener("input", function () {
           setFieldError("password", validatePassword());
         });
+
+        if (suggestPasswordBtn && passwordField) {
+          suggestPasswordBtn.addEventListener("click", async function () {
+            const originalText = suggestPasswordBtn.textContent;
+            suggestPasswordBtn.disabled = true;
+            suggestPasswordBtn.textContent = "Generation...";
+
+            try {
+              const response = await fetch("password-suggestion-api.php", {
+                method: "GET",
+                headers: { Accept: "application/json" },
+                cache: "no-store"
+              });
+              const data = await response.json();
+              if (!response.ok || !data || data.ok !== true || typeof data.password !== "string") {
+                throw new Error(data && data.error ? data.error : "Generation impossible.");
+              }
+
+              passwordField.type = "text";
+              passwordField.value = data.password;
+              setFieldError("password", "");
+              setFeedback("Mot de passe propose applique.", false);
+              passwordField.focus();
+              passwordField.select();
+            } catch (error) {
+              setFeedback("Impossible de generer un mot de passe pour le moment.", true);
+            } finally {
+              suggestPasswordBtn.disabled = false;
+              suggestPasswordBtn.textContent = originalText;
+            }
+          });
+        }
+
+        if (identityOcrBtn && identityOcrFile) {
+          identityOcrFile.addEventListener("change", function () {
+            const file = identityOcrFile.files && identityOcrFile.files[0] ? identityOcrFile.files[0] : null;
+            const allowedTypes = ["image/jpeg", "image/png", "image/webp"];
+            const allowedExtensions = /\.(jpe?g|png|webp)$/i;
+            if (!file) {
+              setOcrFeedback("", false);
+              return;
+            }
+            if (file.size > 4 * 1024 * 1024) {
+              setOcrFeedback("Image trop volumineuse (max 4 Mo).", true);
+              return;
+            }
+            if (!allowedTypes.includes(file.type) && !allowedExtensions.test(file.name || "")) {
+              setOcrFeedback("Format refuse. Utilisez JPG, PNG ou WEBP.", true);
+              return;
+            }
+            setOcrFeedback("Fichier pret: " + file.name + ". Cliquez sur Extraire.", false);
+          });
+
+          identityOcrBtn.addEventListener("click", async function () {
+            const file = identityOcrFile.files && identityOcrFile.files[0] ? identityOcrFile.files[0] : null;
+            const allowedTypes = ["image/jpeg", "image/png", "image/webp"];
+            const allowedExtensions = /\.(jpe?g|png|webp)$/i;
+            if (!file) {
+              setOcrFeedback("Ajoutez une image JPG, PNG ou WEBP.", true);
+              return;
+            }
+            if (file.size > 4 * 1024 * 1024) {
+              setOcrFeedback("Image trop volumineuse (max 4 Mo).", true);
+              return;
+            }
+            if (!allowedTypes.includes(file.type) && !allowedExtensions.test(file.name || "")) {
+              setOcrFeedback("Format refuse. Utilisez JPG, PNG ou WEBP.", true);
+              return;
+            }
+
+            const originalText = identityOcrBtn.textContent;
+            identityOcrBtn.disabled = true;
+            identityOcrBtn.textContent = "Analyse...";
+            setOcrFeedback("Extraction OCR en cours...", false);
+
+            try {
+              const imageData = await readFileAsDataUrl(file);
+              const response = await fetch("identity-ocr-api.php", {
+                method: "POST",
+                headers: {
+                  Accept: "application/json",
+                  "Content-Type": "application/json"
+                },
+                body: JSON.stringify({
+                  filename: file.name || "identity",
+                  image_data: imageData
+                })
+              });
+              const data = await response.json();
+              if (!response.ok || !data || data.ok !== true) {
+                throw new Error(data && data.error ? data.error : "OCR echoue.");
+              }
+
+              form.nom.value = data.nom || "";
+              form.prenom.value = data.prenom || "";
+              setFieldError("nom", validateNom());
+              setFieldError("prenom", validatePrenom());
+              setOcrFeedback("Nom et prenom extraits. Verifiez les champs avant de creer le compte.", false);
+            } catch (error) {
+              setOcrFeedback(error && error.message ? error.message : "OCR echoue. Reessayez avec une image plus nette.", true);
+            } finally {
+              identityOcrBtn.disabled = false;
+              identityOcrBtn.textContent = originalText;
+            }
+          });
+        }
       })();
     </script>
   </body>
