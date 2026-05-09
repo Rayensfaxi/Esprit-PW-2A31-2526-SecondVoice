@@ -141,11 +141,11 @@
                 <p>Deposez vos reclamations et suivez leur traitement en temps reel.</p>
                 <a class="service-link" href="service-reclamations.php">Details du service</a>
               </article>
-              <article class="service-card fade-up" data-card-link="service-evenements.php">
+              <article class="service-card fade-up" data-card-link="events.php">
                 <div class="card-icon"></div>
                 <h3>Evenements</h3>
-                <p>Consultez l'etat de vos demandes et suivez leur progression.</p>
-                <a class="service-link" href="service-evenements.php">Details du service</a>
+                <p>Consultez et inscrivez-vous aux evenements organises par SecondVoice.</p>
+                <a class="service-link" href="events.php">Voir les evenements</a>
               </article>
               <article class="service-card fade-up" data-card-link="service-support-utilisateur.php">
                 <div class="card-icon"></div>

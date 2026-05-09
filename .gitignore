@@ -4,3 +4,5 @@ Agent-key.txt
 .env.*.local
 storage/mail/outbox.log
 storage/security/*.json
+smtp_config.php
+mail_debug.log

@@ -503,6 +503,9 @@ body:not([data-page="community"]) .nav-link[href="gestion-idees.php"] {
 }
 
 .toolbar-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
   flex-wrap: wrap;
   justify-content: flex-end;
 }

@@ -12,22 +12,6 @@ if (!in_array(strtolower((string) ($_SESSION['user_role'] ?? 'client')), ['admin
     exit;
 }
 
-$allowedTabs = ['events', 'requests', 'add'];
-$activeTab = (string) ($_GET['tab'] ?? 'events');
-if (!in_array($activeTab, $allowedTabs, true)) {
-    $activeTab = 'events';
-}
-
-$allowedThemes = ['dark', 'light'];
-if (isset($_GET['theme']) && in_array((string) $_GET['theme'], $allowedThemes, true)) {
-    $_SESSION['bo_theme'] = (string) $_GET['theme'];
-}
-$activeTheme = (string) ($_SESSION['bo_theme'] ?? 'dark');
-if (!in_array($activeTheme, $allowedThemes, true)) {
-    $activeTheme = 'dark';
-}
-$themeToggleTarget = $activeTheme === 'light' ? 'dark' : 'light';
-
 require_once __DIR__ . '/../../controller/EventController.php';
 
 function h(?string $value): string
@@ -35,95 +19,109 @@ function h(?string $value): string
     return htmlspecialchars((string) $value, ENT_QUOTES, 'UTF-8');
 }
 
-$controller = new EventController();
-
-if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_GET['action'])) {
-    header('Content-Type: application/json; charset=utf-8');
-    $action = strtolower(trim((string) $_GET['action']));
-    $raw = file_get_contents('php://input');
-    $payload = json_decode((string) $raw, true);
-    if (!is_array($payload)) {
-        $payload = [];
-    }
-
-    $id = (int) ($payload['id'] ?? 0);
-    $requestId = (int) ($payload['request_id'] ?? 0);
-
-    try {
-        switch ($action) {
-            case 'create':
-                $payload['created_by'] = (int) ($_SESSION['user_id'] ?? 0);
-                echo json_encode($controller->createEvent($payload));
-                break;
-            case 'update':
-                echo json_encode($controller->updateEvent($id, $payload));
-                break;
-            case 'delete':
-                echo json_encode($controller->deleteEvent($id));
-                break;
-            case 'approve':
-                echo json_encode($controller->updateEventStatus($id, 'valide'));
-                break;
-            case 'reject':
-                echo json_encode($controller->updateEventStatus($id, 'refuse'));
-                break;
-            case 'approve_deletion':
-                echo json_encode($controller->approveDeletionRequest($requestId, (int) ($_SESSION['user_id'] ?? 0)));
-                break;
-            case 'reject_deletion':
-                echo json_encode($controller->rejectDeletionRequest($requestId, (int) ($_SESSION['user_id'] ?? 0)));
-                break;
-            case 'approve_modification':
-                echo json_encode($controller->approveModificationRequest($requestId, (int) ($_SESSION['user_id'] ?? 0)));
-                break;
-            case 'reject_modification':
-                echo json_encode($controller->rejectModificationRequest($requestId, (int) ($_SESSION['user_id'] ?? 0)));
-                break;
-            default:
-                echo json_encode(['success' => false, 'message' => 'Action invalide.']);
-                break;
-        }
-    } catch (Throwable $e) {
-        echo json_encode(['success' => false, 'message' => 'Erreur serveur: ' . $e->getMessage()]);
-    }
-    exit;
+function jsonAttr(array $value): string
+{
+    return h(json_encode($value, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) ?: '{}');
 }
 
-error_log('ADMIN: Recuperation des evenements valides...');
-$events = $controller->getValidatedEvents();
-error_log('ADMIN: Nombre d evenements valides: ' . count($events));
-error_log('ADMIN: Evenements valides: ' . json_encode($events));
+function buildAdminEventSearchText(array $event, array $resources = [], array $extra = []): string
+{
+    $parts = [
+        (string) ($event['name'] ?? ''),
+        (string) ($event['event_name'] ?? ''),
+        (string) ($event['current_name'] ?? ''),
+        (string) ($event['description'] ?? ''),
+        (string) ($event['summary'] ?? ''),
+        (string) ($event['location'] ?? ''),
+        (string) ($event['start_date'] ?? ''),
+        (string) ($event['end_date'] ?? ''),
+        (string) ($event['deadline'] ?? ''),
+        (string) ($event['status'] ?? ''),
+        (string) ($event['event_status'] ?? ''),
+        (string) ($event['requested_at'] ?? ''),
+        (string) ($event['created_at'] ?? ''),
+        (string) ($event['user_prenom'] ?? ''),
+        (string) ($event['user_nom'] ?? ''),
+        (string) ($event['user_email'] ?? ''),
+        (string) ($event['requester_prenom'] ?? ''),
+        (string) ($event['requester_name'] ?? ''),
+        (string) ($event['resources_title'] ?? ''),
+        (string) ($event['resources_description'] ?? ''),
+        (string) ($event['resources_data'] ?? ''),
+    ];
 
-error_log('ADMIN: Recuperation des demandes (statut en cours)...');
+    foreach ($extra as $value) {
+        $parts[] = (string) $value;
+    }
+
+    foreach ($resources as $resource) {
+        $parts[] = (string) ($resource['resources_title'] ?? '');
+        $parts[] = (string) ($resource['resources_description'] ?? '');
+        $parts[] = (string) ($resource['name'] ?? '');
+        $parts[] = (string) ($resource['description'] ?? '');
+        $parts[] = (string) ($resource['type'] ?? '');
+    }
+
+    return trim(preg_replace('/\s+/', ' ', implode(' ', array_filter($parts, static fn($part): bool => trim((string) $part) !== ''))) ?? '');
+}
+
+$controller = new EventController();
+$adminId = (int) ($_SESSION['user_id'] ?? 0);
+error_log('ADMIN: Récupération des événements validés...');
+$events = $controller->getValidatedEvents();
+error_log('ADMIN: Nombre d\'événements validés: ' . count($events));
+error_log('ADMIN: Événements validés: ' . json_encode($events));
+
+error_log('ADMIN: Récupération des demandes (statut en cours)...');
 $requests = $controller->getPendingEvents();
 error_log('ADMIN: Nombre de demandes: ' . count($requests));
 error_log('ADMIN: Demandes: ' . json_encode($requests));
 
-error_log('ADMIN: Recuperation des demandes de suppression...');
+error_log('ADMIN: Récupération des demandes de suppression...');
 $deletionRequests = $controller->getPendingDeletionRequests();
 error_log('ADMIN: Nombre de demandes de suppression: ' . count($deletionRequests));
 error_log('ADMIN: Demandes de suppression: ' . json_encode($deletionRequests));
 
-error_log('ADMIN: Recuperation des demandes de modification...');
+error_log('ADMIN: Récupération des demandes de modification...');
 $modificationRequests = $controller->getPendingModificationRequests();
 error_log('ADMIN: Nombre de demandes de modification: ' . count($modificationRequests));
 error_log('ADMIN: Demandes de modification: ' . json_encode($modificationRequests));
 
-// Recuperer l ID de l admin connecte
-$adminId = (int) ($_SESSION['user_id'] ?? 0);
-error_log('ADMIN: Admin connecte ID: ' . $adminId);
+error_log('ADMIN: Récupération des demandes de modification des ressources...');
+$resourceModificationRequests = $controller->getPendingResourceModificationRequests();
+error_log('ADMIN: Nombre de demandes de modification des ressources: ' . count($resourceModificationRequests));
+error_log('ADMIN: Demandes de modification des ressources: ' . json_encode($resourceModificationRequests));
+
+error_log('ADMIN: Récupération des événements de l\'admin connecté...');
+$myEvents = $controller->getEventsByCreator($adminId);
+error_log('ADMIN: Nombre d\'événements de l\'admin: ' . count($myEvents));
+
+error_log('ADMIN: Récupération des statistiques mensuelles...');
+$adminStats = $controller->getAdminMonthlyStatistics();
+error_log('ADMIN: Statistiques mensuelles: ' . json_encode($adminStats));
+
+// Handler AJAX pour les statistiques temporelles
+if (isset($_GET['action']) && $_GET['action'] === 'get_stats' && isset($_GET['period'])) {
+    header('Content-Type: application/json');
+    $period = $_GET['period'];
+    $stats = $controller->getTemporalStatistics($period);
+    echo json_encode($stats);
+    exit;
+}
+
+error_log('ADMIN: Admin connecté ID: ' . $adminId);
 ?>
 <!DOCTYPE html>
-<html lang="fr" data-theme="<?= h($activeTheme) ?>">
+<html lang="fr">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>SecondVoice | Gestion des evenements</title>
+    <title>SecondVoice | Gestion des événements</title>
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
-    <link rel="stylesheet" href="assets/style.css?v=brainstorming-submenu-v5" />
-    <link rel="stylesheet" href="assets/events-admin.css" />
+    <link rel="stylesheet" href="assets/style.css" />
+    <link rel="stylesheet" href="assets/events-admin.css?v=20260508-filters" />
   </head>
   <body data-page="events-admin">
     <div class="overlay" data-overlay></div>
@@ -140,11 +138,11 @@ error_log('ADMIN: Admin connecte ID: ' . $adminId);
               <a class="nav-link" href="index.php" data-nav="home"><span class="nav-icon icon-home"></span><span>Tableau de bord</span></a>
               <a class="nav-link" href="gestion-utilisateurs.php" data-nav="profile"><span class="nav-icon icon-profile"></span><span>Gestion des utilisateurs</span></a>
               <a class="nav-link" href="gestion-brainstormings.php" data-nav="community"><span class="nav-icon icon-community"></span><span>Gestion des brainstormings</span></a>
-              <a class="nav-link" href="gestion-rendezvous.php" data-nav="subscription"><span class="nav-icon icon-card"></span><span>Gestion des rendez-vous</span></a>
-              <a class="nav-link" href="gestion-accompagnements.php" data-nav="chatbot"><span class="nav-icon icon-chat"></span><span>Gestion des accompagnements</span></a>
-              <a class="nav-link" href="gestion-evenements.php" data-nav="events"><span class="nav-icon icon-calendar"></span><span>Gestion des evenements</span></a>
-              <a class="nav-link" href="gestion-reclamations.php" data-nav="voice"><span class="nav-icon icon-mic"></span><span>Gestion des reclamations</span></a>
-              <a class="nav-link" href="settings.php" data-nav="settings"><span class="nav-icon icon-settings"></span><span>Parametres</span></a>
+              <a class="nav-link" href="gestion-rendezvous.html" data-nav="subscription"><span class="nav-icon icon-card"></span><span>Gestion des rendez-vous</span></a>
+              <a class="nav-link" href="gestion-accompagnements.html" data-nav="chatbot"><span class="nav-icon icon-chat"></span><span>Gestion des accompagnements</span></a>
+              <a class="nav-link" href="gestion-evenements.php" data-nav="events"><span class="nav-icon icon-calendar"></span><span>Gestion des événements</span></a>
+              <a class="nav-link" href="gestion-reclamations.html" data-nav="voice"><span class="nav-icon icon-mic"></span><span>Gestion des réclamations</span></a>
+              <a class="nav-link" href="settings.html" data-nav="settings"><span class="nav-icon icon-settings"></span><span>Paramètres</span></a>
             </div>
           </div>
         </div>
@@ -154,30 +152,61 @@ error_log('ADMIN: Admin connecte ID: ' . $adminId);
         <div class="topbar">
           <div>
             <button class="mobile-toggle" data-nav-toggle aria-label="Open navigation">=</button>
-            <h1 class="page-title">Gestion des evenements</h1>
-            <div class="page-subtitle">Creez, modifiez et suivez les inscriptions des evenements SecondVoice.</div>
+            <h1 class="page-title">Gestion des événements</h1>
+            <div class="page-subtitle">Créez, modifiez et suivez les inscriptions des événements SecondVoice.</div>
           </div>
           <div class="toolbar-actions">
-            <a class="update-button" href="../frontoffice/index.php">Revenir</a>
-            <a class="icon-button icon-moon" data-theme-toggle aria-label="Switch theme" title="Switch theme" href="?tab=<?= h($activeTab) ?>&theme=<?= h($themeToggleTarget) ?>"></a>
+            <a class="update-button" href="../frontoffice/events.php">Voir la page publique</a>
+            <a class="update-button" href="../frontoffice/profile.php">Mon profil</a>
           </div>
         </div>
 
         <div class="container admin-main">
           <div id="admin-feedback" class="notice" style="display:none"></div>
 
+          <div class="admin-searchbar search">
+            <input id="admin-events-search" class="field" type="search" placeholder="Rechercher un événement, une demande, un statut ou un utilisateur..." aria-label="Rechercher dans la gestion des événements" />
+          </div>
+
+          <div class="admin-event-filters" aria-label="Filtres des evenements valides">
+            <select id="admin-filter-date" class="field admin-filter-control" aria-label="Filtrer par date">
+              <option value="">Toutes les dates</option>
+              <option value="upcoming">A venir</option>
+              <option value="past">Passes</option>
+              <option value="today">Aujourd'hui</option>
+              <option value="week">Cette semaine</option>
+              <option value="month">Ce mois</option>
+            </select>
+            <input id="admin-filter-location" class="field admin-filter-control" type="search" placeholder="Filtrer par lieu" aria-label="Filtrer par lieu" />
+            <select id="admin-filter-availability" class="field admin-filter-control" aria-label="Filtrer par disponibilite">
+              <option value="">Toutes les disponibilites</option>
+              <option value="available">Places disponibles</option>
+              <option value="full">Evenements complets</option>
+            </select>
+            <select id="admin-filter-resources" class="field admin-filter-control" aria-label="Filtrer par ressources">
+              <option value="">Toutes les ressources</option>
+              <option value="with-materials">Avec materiel</option>
+              <option value="without-materials">Sans materiel</option>
+              <option value="with-rules">Avec regles</option>
+              <option value="without-rules">Sans regles</option>
+            </select>
+            <button type="button" class="btn outline admin-filter-reset" id="admin-filter-reset">Reinitialiser</button>
+          </div>
+
           <nav class="admin-tabs" role="tablist">
-            <a class="tab <?= $activeTab === 'events' ? 'active' : '' ?>" href="?tab=events">Evenements</a>
-            <a class="tab <?= $activeTab === 'requests' ? 'active' : '' ?>" href="?tab=requests">Demandes</a>
-            <a class="tab <?= $activeTab === 'add' ? 'active' : '' ?>" href="?tab=add">Ajouter / Modifier</a>
+            <button class="tab active" type="button" data-target="#tab-events">Événements</button>
+            <button class="tab" type="button" data-target="#tab-my-events">Mes événements</button>
+            <button class="tab" type="button" data-target="#tab-requests">Demandes</button>
+            <button class="tab" type="button" data-target="#tab-stats">Statistiques</button>
+            <button class="tab" type="button" data-target="#tab-add">Ajouter / Modifier</button>
           </nav>
 
           <div class="admin-grid">
-            <section id="tab-events" class="panel tab-panel <?= $activeTab === 'events' ? 'active' : '' ?>">
-              <h3>Liste des evenements</h3>
+            <section id="tab-events" class="panel tab-panel active">
+              <h3>Liste des événements</h3>
               <div id="events-list">
                 <?php if ($events === []): ?>
-                  <div class="small">Aucun evenement enregistre.</div>
+                  <div class="small">Aucun événement enregistré.</div>
                 <?php endif; ?>
 
                 <?php foreach ($events as $event): ?>
@@ -185,14 +214,14 @@ error_log('ADMIN: Admin connecte ID: ' . $adminId);
                     $eventId = (int) $event['id'];
                     $resources = $controller->getResourcesByEvent($eventId);
                     $registrants = $controller->getRegistrantsByEvent($eventId);
-                    $materials = array_values(array_filter(array_map(static fn(array $row): ?string => ($row['type'] ?? '') === 'material' ? (string) $row['resource_name'] : null, $resources)));
-                    $rules = array_values(array_filter(array_map(static fn(array $row): ?string => ($row['type'] ?? '') === 'rule' ? (string) $row['resource_name'] : null, $resources)));
+                    $materials = array_values(array_filter(array_map(static fn(array $row): ?string => ($row['type'] ?? '') === 'materiel' ? (string) $row['name'] : null, $resources)));
+                    $rules = array_values(array_filter(array_map(static fn(array $row): ?string => ($row['type'] ?? '') === 'regle' ? (string) $row['name'] : null, $resources)));
                   ?>
                   <?php
                     $eventCreatedBy = (int) ($event['created_by'] ?? 0);
                     $isOwner = ($eventCreatedBy === $adminId);
-                    // Recuperer le nom du createur si disponible
-                    $creatorName = $eventCreatedBy > 0 ? 'Utilisateur #' . $eventCreatedBy : 'Systeme';
+                    // Récupérer le nom du créateur si disponible
+                    $creatorName = $eventCreatedBy > 0 ? 'Utilisateur #' . $eventCreatedBy : 'Système';
                   ?>
                   <div class="event-card"
                        data-id="<?= $eventId ?>"
@@ -207,18 +236,20 @@ error_log('ADMIN: Admin connecte ID: ' . $adminId);
                        data-status="<?= h((string) ($event['status'] ?? 'en cours')) ?>"
                        data-materials='<?= h(json_encode($materials, JSON_UNESCAPED_UNICODE)) ?>'
                        data-rules='<?= h(json_encode($rules, JSON_UNESCAPED_UNICODE)) ?>'
-                       data-registrants='<?= h(json_encode($registrants, JSON_UNESCAPED_UNICODE)) ?>'>
+                       data-registrants='<?= h(json_encode($registrants, JSON_UNESCAPED_UNICODE)) ?>'
+                       data-search="<?= h(buildAdminEventSearchText($event, $resources, array_merge($materials, $rules, [$creatorName, 'evenement']))) ?>">
                     <div class="row between">
                       <h4 class="evt-name"><?= h((string) ($event['name'] ?? '')) ?></h4>
                       <span class="status <?= h(strtolower((string) ($event['status'] ?? 'en cours'))) ?>"><?= h((string) ($event['status'] ?? 'en cours')) ?></span>
                     </div>
                     <p class="desc"><?= h((string) ($event['description'] ?? '')) ?></p>
-                    <div class="meta"><?= h((string) ($event['start_date'] ?? '')) ?> - <?= h((string) ($event['end_date'] ?? '')) ?> - <?= h((string) ($event['location'] ?? '')) ?></div>
+                    <div class="meta"><?= h((string) ($event['start_date'] ?? '')) ?> — <?= h((string) ($event['end_date'] ?? '')) ?> • <?= h((string) ($event['location'] ?? '')) ?></div>
                     <div class="meta small">Places : <?= (int) ($event['current'] ?? 0) ?>/<?= (int) ($event['max'] ?? 0) ?></div>
-                    <div class="small">Materiels : <?= h($materials !== [] ? implode(', ', $materials) : 'Aucun') ?></div>
-                    <div class="small">Regles : <?= h($rules !== [] ? implode(', ', $rules) : 'Aucune') ?></div>
-                    <div class="small" style="color: #666;">Cree par : <?= h($creatorName) ?></div>
+                    <div class="small">Matériels : <?= h($materials !== [] ? implode(', ', $materials) : 'Aucun') ?></div>
+                    <div class="small">Règles : <?= h($rules !== [] ? implode(', ', $rules) : 'Aucune') ?></div>
+                    <div class="small" style="color: #666;">Créé par : <?= h($creatorName) ?></div>
                     <div class="actions">
+                      <button class="btn view-qr-code" type="button" data-id="<?= $eventId ?>">QR Code</button>
                       <button class="btn view-registrants" type="button" data-id="<?= $eventId ?>">Voir les inscrits</button>
                       <?php if ($isOwner): ?>
                         <button class="btn modify" type="button" data-id="<?= $eventId ?>">Modifier</button>
@@ -230,66 +261,146 @@ error_log('ADMIN: Admin connecte ID: ' . $adminId);
               </div>
             </section>
 
-            <section id="tab-add" class="panel tab-panel <?= $activeTab === 'add' ? 'active' : '' ?>">
-              <h3>Ajouter / Modifier un evenement</h3>
-              <form id="admin-event-form" novalidate>
-                <input type="hidden" id="evt-id" />
-                <div class="form-row">
+            <section id="tab-my-events" class="panel tab-panel">
+              <h3>Mes événements</h3>
+              <div id="my-events-list">
+                <?php if ($myEvents === []): ?>
+                  <div class="small">Aucun événement créé par cet admin.</div>
+                <?php endif; ?>
+
+                <?php foreach ($myEvents as $event): ?>
+                  <?php
+                    $eventId = (int) $event['id'];
+                    $resources = $controller->getResourcesByEvent($eventId);
+                    $registrants = $controller->getRegistrantsByEvent($eventId);
+                    $materials = array_values(array_filter(array_map(static fn(array $row): ?string => ($row['type'] ?? '') === 'materiel' ? (string) $row['name'] : null, $resources)));
+                    $rules = array_values(array_filter(array_map(static fn(array $row): ?string => ($row['type'] ?? '') === 'regle' ? (string) $row['name'] : null, $resources)));
+                    $hasResources = $resources !== [];
+                    $isValidatedEvent = str_contains(strtolower((string) ($event['status'] ?? '')), 'valid');
+                  ?>
+                  <div class="event-card"
+                       data-id="<?= $eventId ?>"
+                       data-name="<?= h((string) ($event['name'] ?? '')) ?>"
+                       data-desc="<?= h((string) ($event['description'] ?? '')) ?>"
+                       data-start="<?= h((string) ($event['start_date'] ?? '')) ?>"
+                       data-end="<?= h((string) ($event['end_date'] ?? '')) ?>"
+                       data-deadline="<?= h((string) ($event['deadline'] ?? '')) ?>"
+                       data-location="<?= h((string) ($event['location'] ?? '')) ?>"
+                       data-max="<?= (int) ($event['max'] ?? 0) ?>"
+                       data-current="<?= (int) ($event['current'] ?? 0) ?>"
+                       data-status="<?= h((string) ($event['status'] ?? 'en cours')) ?>"
+                       data-materials='<?= h(json_encode($materials, JSON_UNESCAPED_UNICODE)) ?>'
+                       data-rules='<?= h(json_encode($rules, JSON_UNESCAPED_UNICODE)) ?>'
+                       data-registrants='<?= h(json_encode($registrants, JSON_UNESCAPED_UNICODE)) ?>'
+                       data-search="<?= h(buildAdminEventSearchText($event, $resources, array_merge($materials, $rules, ['mes evenements']))) ?>">
+                    <div class="row between">
+                      <h4 class="evt-name"><?= h((string) ($event['name'] ?? '')) ?></h4>
+                      <span class="status <?= h(strtolower((string) ($event['status'] ?? 'en cours'))) ?>"><?= h((string) ($event['status'] ?? 'en cours')) ?></span>
+                    </div>
+                    <p class="desc"><?= h((string) ($event['description'] ?? '')) ?></p>
+                    <div class="meta"><?= h((string) ($event['start_date'] ?? '')) ?> — <?= h((string) ($event['end_date'] ?? '')) ?> • <?= h((string) ($event['location'] ?? '')) ?></div>
+                    <div class="meta small">Places : <?= (int) ($event['current'] ?? 0) ?>/<?= (int) ($event['max'] ?? 0) ?></div>
+                    <div class="small">Matériels : <?= h($materials !== [] ? implode(', ', $materials) : 'Aucun') ?></div>
+                    <div class="small">Règles : <?= h($rules !== [] ? implode(', ', $rules) : 'Aucune') ?></div>
+                    <div class="actions">
+                      <?php if ($isValidatedEvent): ?>
+                        <button class="btn view-qr-code" type="button" data-id="<?= $eventId ?>">QR Code</button>
+                      <?php endif; ?>
+                      <button class="btn view-registrants" type="button" data-id="<?= $eventId ?>">Voir les inscrits</button>
+                      <?php if ($hasResources): ?>
+                        <a class="btn" href="../frontoffice/resources.php?event_id=<?= $eventId ?>">Modifier ressources</a>
+                      <?php else: ?>
+                        <a class="btn" href="../frontoffice/resources.php?event_id=<?= $eventId ?>">Gérer ressources</a>
+                      <?php endif; ?>
+                      <button class="btn modify" type="button" data-id="<?= $eventId ?>">Modifier</button>
+                      <button class="btn delete" type="button" data-id="<?= $eventId ?>">Supprimer</button>
+                    </div>
+                  </div>
+                <?php endforeach; ?>
+              </div>
+            </section>
+
+            <section id="tab-add" class="panel tab-panel">
+              <h3>Ajouter / Modifier un événement</h3>
+              <form id="admin-event-form" method="POST" action="../frontoffice/events.php?action=create" novalidate>
+                <input type="hidden" id="evt-id" name="id" />
+                <input type="hidden" name="action" value="create" />
+                <div class="form-row form-row-full">
                   <label for="evt-name">Nom <span style="color: red; font-weight: bold;">*</span></label>
-                  <input id="evt-name" type="text" class="field" />
+                  <input id="evt-name" name="name" type="text" class="field" />
                   <div class="error-message" id="evt-name-error"></div>
                 </div>
                 <div class="form-row">
-                  <label for="evt-start">Date debut <span style="color: red; font-weight: bold;">*</span></label>
-                  <input id="evt-start" type="datetime-local" class="field" />
+                  <label for="evt-start">Date début <span style="color: red; font-weight: bold;">*</span></label>
+                  <input id="evt-start" name="start_date" type="datetime-local" class="field" />
                   <div class="error-message" id="evt-start-error"></div>
                 </div>
                 <div class="form-row">
                   <label for="evt-end">Date fin <span style="color: red; font-weight: bold;">*</span></label>
-                  <input id="evt-end" type="datetime-local" class="field" />
+                  <input id="evt-end" name="end_date" type="datetime-local" class="field" />
                   <div class="error-message" id="evt-end-error"></div>
                 </div>
                 <div class="form-row">
                   <label for="evt-deadline">Date limite <span style="color: red; font-weight: bold;">*</span></label>
-                  <input id="evt-deadline" type="datetime-local" class="field" />
+                  <input id="evt-deadline" name="deadline" type="datetime-local" class="field" />
                   <div class="error-message" id="evt-deadline-error"></div>
                 </div>
                 <div class="form-row">
                   <label for="evt-location">Lieu <span style="color: red; font-weight: bold;">*</span></label>
-                  <input id="evt-location" type="text" class="field" />
+                  <input id="evt-location" name="location" type="text" class="field" />
                   <div class="error-message" id="evt-location-error"></div>
                 </div>
-                <div class="form-row">
+                <div class="form-row form-row-full">
                   <label for="evt-desc">Description</label>
-                  <textarea id="evt-desc" class="field"></textarea>
+                  <textarea id="evt-desc" name="description" class="field"></textarea>
                 </div>
-                <div class="form-row">
+                <div class="form-row form-row-half">
                   <label for="evt-max">Nombre max</label>
-                  <input id="evt-max" type="number" class="field" min="1" value="1" />
+                  <input id="evt-max" name="max" type="number" class="field" min="1" value="1" />
                 </div>
-                                                <div class="form-row actions">
-                  <button id="admin-save" type="button" class="btn">Enregistrer</button>
-                  <button id="admin-reset" type="button" class="btn outline">Reinitialiser</button>
+                <div class="form-row form-row-full actions form-actions">
+                  <button id="admin-save" type="submit" class="btn">Enregistrer</button>
+                  <button id="admin-reset" type="button" class="btn outline">Réinitialiser</button>
                 </div>
               </form>
             </section>
 
-            <section id="tab-requests" class="panel tab-panel <?= $activeTab === 'requests' ? 'active' : '' ?>">
-              <h3>Demandes de creation d evenements</h3>
+            <section id="tab-requests" class="panel tab-panel">
+              <h3>Demandes de création d'événements</h3>
               <div id="requests-list">
                 <?php if ($requests === []): ?>
-                  <div class="small">Aucune demande de creation en attente.</div>
+                  <div class="small">Aucune demande de création en attente.</div>
                 <?php endif; ?>
 
                 <?php foreach ($requests as $request): ?>
                   <?php
                     $requestId = (int) $request['id'];
                     $resources = $controller->getResourcesByEvent($requestId);
-                    $materials = array_values(array_filter(array_map(static fn(array $row): ?string => ($row['type'] ?? '') === 'material' ? (string) $row['resource_name'] : null, $resources)));
-                    $rules = array_values(array_filter(array_map(static fn(array $row): ?string => ($row['type'] ?? '') === 'rule' ? (string) $row['resource_name'] : null, $resources)));
+                    $materials = array_values(array_filter(array_map(static fn(array $row): ?string => ($row['type'] ?? '') === 'materiel' ? (string) $row['name'] : null, $resources)));
+                    $rules = array_values(array_filter(array_map(static fn(array $row): ?string => ($row['type'] ?? '') === 'regle' ? (string) $row['name'] : null, $resources)));
                     $requestCreatedBy = (int) ($request['created_by'] ?? 0);
                     $requestIsOwner = ($requestCreatedBy === $adminId);
-                    $requestCreatorName = $requestCreatedBy > 0 ? 'Utilisateur #' . $requestCreatedBy : 'Systeme';
+                    $requestCreatorName = trim((string) ($request['user_prenom'] ?? '') . ' ' . (string) ($request['user_nom'] ?? ''));
+                    $requestCreatorName = $requestCreatorName !== '' ? $requestCreatorName : ($requestCreatedBy > 0 ? 'Utilisateur #' . $requestCreatedBy : 'Système');
+                    $requestDetails = [
+                      'name' => (string) ($request['name'] ?? ''),
+                      'description' => (string) ($request['description'] ?? ''),
+                      'start_date' => (string) ($request['start_date'] ?? ''),
+                      'end_date' => (string) ($request['end_date'] ?? ''),
+                      'deadline' => (string) ($request['deadline'] ?? ''),
+                      'location' => (string) ($request['location'] ?? ''),
+                      'max' => (int) ($request['max'] ?? 0),
+                      'status' => (string) ($request['status'] ?? 'en cours'),
+                      'request_type' => 'ajout',
+                      'created_at' => (string) ($request['created_at'] ?? ''),
+                      'user' => [
+                        'nom' => (string) ($request['user_nom'] ?? ''),
+                        'prenom' => (string) ($request['user_prenom'] ?? ''),
+                        'email' => (string) ($request['user_email'] ?? ''),
+                        'telephone' => (string) ($request['user_telephone'] ?? ''),
+                      ],
+                      'resources' => $resources,
+                    ];
                   ?>
                   <div class="event-card"
                        data-id="<?= $requestId ?>"
@@ -303,18 +414,21 @@ error_log('ADMIN: Admin connecte ID: ' . $adminId);
                        data-current="<?= (int) ($request['current'] ?? 0) ?>"
                        data-status="<?= h((string) ($request['status'] ?? 'en cours')) ?>"
                        data-materials='<?= h(json_encode($materials, JSON_UNESCAPED_UNICODE)) ?>'
-                       data-rules='<?= h(json_encode($rules, JSON_UNESCAPED_UNICODE)) ?>'>
+                       data-rules='<?= h(json_encode($rules, JSON_UNESCAPED_UNICODE)) ?>'
+                       data-details='<?= jsonAttr($requestDetails) ?>'
+                       data-search="<?= h(buildAdminEventSearchText($request, $resources, array_merge($materials, $rules, [$requestCreatorName, 'demande ajout creation en cours']))) ?>">
                     <div class="row between">
                       <h4 class="evt-name"><?= h((string) ($request['name'] ?? '')) ?></h4>
                       <span class="status <?= h(strtolower((string) ($request['status'] ?? 'en cours'))) ?>"><?= h((string) ($request['status'] ?? 'en cours')) ?></span>
                     </div>
                     <p class="desc"><?= h((string) ($request['description'] ?? '')) ?></p>
-                    <div class="meta"><?= h((string) ($request['start_date'] ?? '')) ?> - <?= h((string) ($request['end_date'] ?? '')) ?> - <?= h((string) ($request['location'] ?? '')) ?></div>
+                    <div class="meta"><?= h((string) ($request['start_date'] ?? '')) ?> — <?= h((string) ($request['end_date'] ?? '')) ?> • <?= h((string) ($request['location'] ?? '')) ?></div>
                     <div class="meta small">Places : <?= (int) ($request['current'] ?? 0) ?>/<?= (int) ($request['max'] ?? 0) ?></div>
-                    <div class="small">Materiels : <?= h($materials !== [] ? implode(', ', $materials) : 'Aucun') ?></div>
-                    <div class="small">Regles : <?= h($rules !== [] ? implode(', ', $rules) : 'Aucune') ?></div>
-                    <div class="small" style="color: #666;">Demande par : <?= h($requestCreatorName) ?></div>
+                    <div class="small">Matériels : <?= h($materials !== [] ? implode(', ', $materials) : 'Aucun') ?></div>
+                    <div class="small">Règles : <?= h($rules !== [] ? implode(', ', $rules) : 'Aucune') ?></div>
+                    <div class="small" style="color: #666;">Demandé par : <?= h($requestCreatorName) ?></div>
                     <div class="actions">
+                      <button class="btn request-details" type="button">Voir détails</button>
                       <button class="btn view-registrants" type="button" data-id="<?= $requestId ?>">Voir les inscrits</button>
                       <?php if ($requestIsOwner): ?>
                         <button class="btn modify" type="button" data-id="<?= $requestId ?>">Modifier</button>
@@ -328,43 +442,69 @@ error_log('ADMIN: Admin connecte ID: ' . $adminId);
               </div>
 
               <!-- Section Demandes de modification -->
-              <h3 style="margin-top: 30px; padding-top: 20px; border-top: 1px solid var(--soft-border);">Demandes de modification d evenements</h3>
+              <h3 style="margin-top: 30px; padding-top: 20px; border-top: 1px solid var(--soft-border);">Demandes de modification d'événements</h3>
               <div id="modification-requests-list">
                 <?php if ($modificationRequests === []): ?>
                   <div class="small">Aucune demande de modification en attente.</div>
                 <?php endif; ?>
 
                 <?php foreach ($modificationRequests as $modRequest): ?>
+                  <?php
+                    $modEventId = (int) ($modRequest['event_id'] ?? 0);
+                    $modResources = $modEventId > 0 ? $controller->getResourcesByEvent($modEventId) : [];
+                    $modDetails = [
+                      'name' => (string) ($modRequest['new_name'] ?: ($modRequest['current_name'] ?? '')),
+                      'description' => (string) ($modRequest['new_description'] ?: ($modRequest['current_description'] ?? '')),
+                      'start_date' => (string) ($modRequest['new_start_date'] ?: ($modRequest['current_start_date'] ?? '')),
+                      'end_date' => (string) ($modRequest['new_end_date'] ?: ($modRequest['current_end_date'] ?? '')),
+                      'deadline' => (string) ($modRequest['new_deadline'] ?: ($modRequest['current_deadline'] ?? '')),
+                      'location' => (string) ($modRequest['new_location'] ?: ($modRequest['current_location'] ?? '')),
+                      'max' => (int) ($modRequest['new_max'] ?: ($modRequest['current_max'] ?? 0)),
+                      'status' => (string) ($modRequest['status'] ?? 'pending'),
+                      'request_type' => 'modification',
+                      'created_at' => (string) ($modRequest['requested_at'] ?? ''),
+                      'user' => [
+                        'nom' => (string) ($modRequest['user_nom'] ?? ''),
+                        'prenom' => (string) ($modRequest['user_prenom'] ?? ''),
+                        'email' => (string) ($modRequest['user_email'] ?? ''),
+                        'telephone' => (string) ($modRequest['user_telephone'] ?? ''),
+                      ],
+                      'resources' => $modResources,
+                    ];
+                  ?>
                   <div class="event-card modification-request"
                        data-request-id="<?= (int) $modRequest['request_id'] ?>"
-                       data-event-id="<?= (int) $modRequest['event_id'] ?>">
+                       data-event-id="<?= (int) $modRequest['event_id'] ?>"
+                       data-details='<?= jsonAttr($modDetails) ?>'
+                       data-search="<?= h(buildAdminEventSearchText($modRequest, [], ['demande modification', 'modification', 'statut pending'])) ?>">
                     <div class="row between">
                       <h4 class="evt-name"><?= h((string) ($modRequest['current_name'] ?? '')) ?></h4>
                       <span class="status pending">Demande de modification</span>
                     </div>
-                    <div class="meta">Propose par : <?= h((string) ($modRequest['user_prenom'] ?? '') . ' ' . (string) ($modRequest['user_nom'] ?? '')) ?> (<?= h((string) ($modRequest['user_email'] ?? '')) ?>)</div>
+                    <div class="meta">Proposé par : <?= h((string) ($modRequest['user_prenom'] ?? '') . ' ' . (string) ($modRequest['user_nom'] ?? '')) ?> (<?= h((string) ($modRequest['user_email'] ?? '')) ?>)</div>
                     <div class="meta">Date demande : <?= h((string) ($modRequest['requested_at'] ?? '')) ?></div>
-                    
+
                     <div style="margin: 15px 0; padding: 12px; background: rgba(255,255,255,0.05); border-radius: 8px;">
-                      <div style="font-weight: 600; margin-bottom: 8px; color: var(--text);">Modifications proposees :</div>
+                      <div style="font-weight: 600; margin-bottom: 8px; color: var(--text);">Modifications proposées :</div>
                       <?php if (!empty($modRequest['new_name']) && $modRequest['new_name'] !== $modRequest['current_name']): ?>
-                        <div class="small"><span style="color: #888;">Nom :</span> <?= h((string) $modRequest['current_name']) ?> -> <strong><?= h((string) $modRequest['new_name']) ?></strong></div>
+                        <div class="small"><span style="color: #888;">Nom :</span> <?= h((string) $modRequest['current_name']) ?> → <strong><?= h((string) $modRequest['new_name']) ?></strong></div>
                       <?php endif; ?>
                       <?php if (!empty($modRequest['new_start_date']) && $modRequest['new_start_date'] !== $modRequest['current_start_date']): ?>
-                        <div class="small"><span style="color: #888;">Debut :</span> <?= h((string) $modRequest['current_start_date']) ?> -> <strong><?= h((string) $modRequest['new_start_date']) ?></strong></div>
+                        <div class="small"><span style="color: #888;">Début :</span> <?= h((string) $modRequest['current_start_date']) ?> → <strong><?= h((string) $modRequest['new_start_date']) ?></strong></div>
                       <?php endif; ?>
                       <?php if (!empty($modRequest['new_end_date']) && $modRequest['new_end_date'] !== $modRequest['current_end_date']): ?>
-                        <div class="small"><span style="color: #888;">Fin :</span> <?= h((string) $modRequest['current_end_date']) ?> -> <strong><?= h((string) $modRequest['new_end_date']) ?></strong></div>
+                        <div class="small"><span style="color: #888;">Fin :</span> <?= h((string) $modRequest['current_end_date']) ?> → <strong><?= h((string) $modRequest['new_end_date']) ?></strong></div>
                       <?php endif; ?>
                       <?php if (!empty($modRequest['new_location']) && $modRequest['new_location'] !== $modRequest['current_location']): ?>
-                        <div class="small"><span style="color: #888;">Lieu :</span> <?= h((string) $modRequest['current_location']) ?> -> <strong><?= h((string) $modRequest['new_location']) ?></strong></div>
+                        <div class="small"><span style="color: #888;">Lieu :</span> <?= h((string) $modRequest['current_location']) ?> → <strong><?= h((string) $modRequest['new_location']) ?></strong></div>
                       <?php endif; ?>
                       <?php if (!empty($modRequest['new_max']) && $modRequest['new_max'] != $modRequest['current_max']): ?>
-                        <div class="small"><span style="color: #888;">Capacite :</span> <?= (int) $modRequest['current_max'] ?> -> <strong><?= (int) $modRequest['new_max'] ?></strong></div>
+                        <div class="small"><span style="color: #888;">Capacité :</span> <?= (int) $modRequest['current_max'] ?> → <strong><?= (int) $modRequest['new_max'] ?></strong></div>
                       <?php endif; ?>
                     </div>
-                    
+
                     <div class="actions">
+                      <button class="btn request-details" type="button">Voir détails</button>
                       <button class="btn approve-modification" type="button" data-request-id="<?= (int) $modRequest['request_id'] ?>">Approuver la modification</button>
                       <button class="btn reject-modification" type="button" data-request-id="<?= (int) $modRequest['request_id'] ?>">Refuser la modification</button>
                     </div>
@@ -373,30 +513,210 @@ error_log('ADMIN: Admin connecte ID: ' . $adminId);
               </div>
 
               <!-- Section Demandes de suppression -->
-              <h3 style="margin-top: 30px; padding-top: 20px; border-top: 1px solid var(--soft-border);">Demandes de suppression d evenements</h3>
+              <h3 style="margin-top: 30px; padding-top: 20px; border-top: 1px solid var(--soft-border);">Demandes de suppression d'événements</h3>
               <div id="deletion-requests-list">
                 <?php if ($deletionRequests === []): ?>
                   <div class="small">Aucune demande de suppression en attente.</div>
                 <?php endif; ?>
 
                 <?php foreach ($deletionRequests as $deletionRequest): ?>
+                  <?php
+                    $delEventId = (int) ($deletionRequest['event_id'] ?? 0);
+                    $delResources = $delEventId > 0 ? $controller->getResourcesByEvent($delEventId) : [];
+                    $deletionDetails = [
+                      'name' => (string) ($deletionRequest['event_name'] ?? ''),
+                      'description' => (string) ($deletionRequest['event_description'] ?? ''),
+                      'start_date' => (string) ($deletionRequest['event_start_date'] ?? ''),
+                      'end_date' => (string) ($deletionRequest['event_end_date'] ?? ''),
+                      'deadline' => (string) ($deletionRequest['event_deadline'] ?? ''),
+                      'location' => (string) ($deletionRequest['event_location'] ?? ''),
+                      'max' => (int) ($deletionRequest['event_max'] ?? 0),
+                      'status' => (string) ($deletionRequest['status'] ?? 'pending'),
+                      'request_type' => 'suppression',
+                      'created_at' => (string) ($deletionRequest['requested_at'] ?? ''),
+                      'user' => [
+                        'nom' => (string) ($deletionRequest['user_nom'] ?? ''),
+                        'prenom' => (string) ($deletionRequest['user_prenom'] ?? ''),
+                        'email' => (string) ($deletionRequest['user_email'] ?? ''),
+                        'telephone' => (string) ($deletionRequest['user_telephone'] ?? ''),
+                      ],
+                      'resources' => $delResources,
+                    ];
+                  ?>
                   <div class="event-card deletion-request"
                        data-request-id="<?= (int) $deletionRequest['request_id'] ?>"
-                       data-event-id="<?= (int) $deletionRequest['event_id'] ?>">
+                       data-event-id="<?= (int) $deletionRequest['event_id'] ?>"
+                       data-details='<?= jsonAttr($deletionDetails) ?>'
+                       data-search="<?= h(buildAdminEventSearchText($deletionRequest, [], ['demande suppression', 'suppression', 'statut pending'])) ?>">
                     <div class="row between">
                       <h4 class="evt-name"><?= h((string) ($deletionRequest['event_name'] ?? '')) ?></h4>
                       <span class="status pending">Demande de suppression</span>
                     </div>
-                    <div class="meta">Evenement ID: <?= (int) $deletionRequest['event_id'] ?></div>
-                    <div class="meta">Statut actuel: <?= h((string) ($deletionRequest['event_status'] ?? 'valide')) ?></div>
-                    <div class="small" style="color: #666;">Demande par : <?= h((string) ($deletionRequest['user_prenom'] ?? '') . ' ' . (string) ($deletionRequest['user_nom'] ?? '')) ?> (<?= h((string) ($deletionRequest['user_email'] ?? '')) ?>)</div>
+                    <div class="meta">Événement ID: <?= (int) $deletionRequest['event_id'] ?></div>
+                    <div class="meta">Statut actuel: <?= h((string) ($deletionRequest['event_status'] ?? 'validé')) ?></div>
+                    <div class="small" style="color: #666;">Demandé par : <?= h((string) ($deletionRequest['user_prenom'] ?? '') . ' ' . (string) ($deletionRequest['user_nom'] ?? '')) ?> (<?= h((string) ($deletionRequest['user_email'] ?? '')) ?>)</div>
                     <div class="small" style="color: #666;">Date de la demande : <?= h((string) ($deletionRequest['requested_at'] ?? '')) ?></div>
                     <div class="actions">
+                      <button class="btn request-details" type="button">Voir détails</button>
                       <button class="btn approve-deletion" type="button" data-request-id="<?= (int) $deletionRequest['request_id'] ?>">Approuver la suppression</button>
                       <button class="btn reject-deletion" type="button" data-request-id="<?= (int) $deletionRequest['request_id'] ?>">Refuser la suppression</button>
                     </div>
                   </div>
                 <?php endforeach; ?>
+              </div>
+
+              <!-- Section Demandes de modification des ressources -->
+              <h3 style="margin-top: 30px; padding-top: 20px; border-top: 1px solid var(--soft-border);">Demandes de modification des ressources</h3>
+              <div id="resource-modification-requests-list">
+                <?php if ($resourceModificationRequests === []): ?>
+                  <div class="small">Aucune demande de modification des ressources en attente.</div>
+                <?php endif; ?>
+
+                <?php foreach ($resourceModificationRequests as $resRequest): ?>
+                  <?php
+                    $resRequestId = (int) $resRequest['id'];
+                    $resEventId = (int) $resRequest['event_id'];
+                    $newResources = json_decode((string) ($resRequest['resources_data'] ?? '[]'), true);
+                    $newResources = is_array($newResources) ? $newResources : [];
+                    $resMaterials = array_filter($newResources, fn($r) => ($r['type'] ?? '') === 'materiel');
+                    $resRules = array_filter($newResources, fn($r) => ($r['type'] ?? '') === 'regle');
+                    $isResourceDeletionRequest = trim((string) ($resRequest['request_type'] ?? '')) === 'suppression ressources'
+                      || ($newResources === []
+                      && trim((string) ($resRequest['resources_title'] ?? '')) === ''
+                      && trim((string) ($resRequest['resources_description'] ?? '')) === '');
+                    $resourceRequestTypeLabel = $isResourceDeletionRequest ? 'Suppression ressources' : 'Modification ressources';
+                    $resourceDetails = [
+                      'name' => (string) ($resRequest['event_name'] ?? ''),
+                      'description' => (string) ($resRequest['event_description'] ?? ''),
+                      'start_date' => (string) ($resRequest['event_start_date'] ?? ''),
+                      'end_date' => (string) ($resRequest['event_end_date'] ?? ''),
+                      'deadline' => (string) ($resRequest['event_deadline'] ?? ''),
+                      'location' => (string) ($resRequest['event_location'] ?? ''),
+                      'max' => (int) ($resRequest['event_max'] ?? 0),
+                      'status' => (string) ($resRequest['status'] ?? 'pending'),
+                      'request_type' => $isResourceDeletionRequest ? 'suppression' : 'modification',
+                      'created_at' => (string) ($resRequest['created_at'] ?? ''),
+                      'user' => [
+                        'nom' => (string) ($resRequest['requester_name'] ?? ''),
+                        'prenom' => (string) ($resRequest['requester_prenom'] ?? ''),
+                        'email' => (string) ($resRequest['requester_email'] ?? ''),
+                        'telephone' => (string) ($resRequest['requester_telephone'] ?? ''),
+                      ],
+                      'resources' => $newResources,
+                    ];
+                  ?>
+                  <div class="event-card"
+                       data-request-id="<?= $resRequestId ?>"
+                       data-event-id="<?= $resEventId ?>"
+                       data-request-type="<?= h($isResourceDeletionRequest ? 'delete' : 'modify') ?>"
+                       data-details='<?= jsonAttr($resourceDetails) ?>'
+                       data-search="<?= h(buildAdminEventSearchText($resRequest, $newResources, [$resourceRequestTypeLabel, 'demande ressources', 'statut pending'])) ?>">
+                    <div class="row between">
+                      <h4 class="evt-name"><?= h((string) ($resRequest['event_name'] ?? '')) ?></h4>
+                      <span class="status pending"><?= h($resourceRequestTypeLabel) ?></span>
+                    </div>
+                    <div class="meta">Événement ID: <?= $resEventId ?></div>
+                    <div class="meta">Demandé par : <?= h((string) ($resRequest['requester_prenom'] ?? '') . ' ' . (string) ($resRequest['requester_name'] ?? '')) ?></div>
+                    <div class="meta">Date demande : <?= h((string) ($resRequest['created_at'] ?? '')) ?></div>
+
+                    <div style="margin: 15px 0; padding: 12px; background: rgba(255,255,255,0.05); border-radius: 8px;">
+                      <?php if ($isResourceDeletionRequest): ?>
+                        <div style="font-weight: 600; margin-bottom: 8px; color: var(--text);">Suppression demandée :</div>
+                        <div class="small">Supprimer tous les matériels, règles, titre général et description des ressources.</div>
+                      <?php else: ?>
+                        <div style="font-weight: 600; margin-bottom: 8px; color: var(--text);">Nouvelles ressources proposées :</div>
+                        <?php if (!empty($resRequest['resources_title'])): ?>
+                          <div class="small" style="margin-bottom: 4px;"><strong>Titre :</strong> <?= h((string) $resRequest['resources_title']) ?></div>
+                        <?php endif; ?>
+                        <?php if (!empty($resRequest['resources_description'])): ?>
+                          <div class="small" style="margin-bottom: 4px;"><strong>Description :</strong> <?= h((string) $resRequest['resources_description']) ?></div>
+                        <?php endif; ?>
+                        <?php if ($resMaterials !== []): ?>
+                          <div class="small" style="margin-bottom: 4px;"><strong>Matériels :</strong> <?= h(implode(', ', array_column($resMaterials, 'name'))) ?></div>
+                        <?php endif; ?>
+                        <?php if ($resRules !== []): ?>
+                          <div class="small"><strong>Règles :</strong> <?= h(implode(', ', array_column($resRules, 'name'))) ?></div>
+                        <?php endif; ?>
+                        <?php if ($resMaterials === [] && $resRules === []): ?>
+                          <div class="small">Aucune ressource proposée.</div>
+                        <?php endif; ?>
+                      <?php endif; ?>
+                    </div>
+
+                    <div class="actions">
+                      <button class="btn request-details" type="button">Voir détails</button>
+                      <button class="btn approve-resource-mod" type="button" data-request-id="<?= $resRequestId ?>" data-request-type="<?= h($isResourceDeletionRequest ? 'delete' : 'modify') ?>">Approuver</button>
+                      <button class="btn reject-resource-mod" type="button" data-request-id="<?= $resRequestId ?>" data-request-type="<?= h($isResourceDeletionRequest ? 'delete' : 'modify') ?>">Refuser</button>
+                    </div>
+                  </div>
+                <?php endforeach; ?>
+              </div>
+            </section>
+
+            <!-- Tab: Admin Statistics -->
+            <section id="tab-stats" class="panel tab-panel">
+              <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+                <h3 style="margin: 0;">Statistiques événements</h3>
+
+                <!-- Filtres temporels -->
+                <div style="display: flex; gap: 8px;">
+                  <button type="button" class="btn period-filter" data-period="day" style="padding: 8px 16px; font-size: 13px;">Jour</button>
+                  <button type="button" class="btn period-filter" data-period="week" style="padding: 8px 16px; font-size: 13px;">Semaine</button>
+                  <button type="button" class="btn period-filter active" data-period="month" style="padding: 8px 16px; font-size: 13px; background: #6366f1; color: white;">Mois</button>
+                  <button type="button" class="btn period-filter" data-period="year" style="padding: 8px 16px; font-size: 13px;">Année</button>
+                </div>
+              </div>
+
+              <div id="stats-container">
+                <?php if (isset($adminStats['success']) && $adminStats['success']): ?>
+                  <!-- Cartes récapitulatives -->
+                  <div id="stats-cards" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 16px; margin-bottom: 30px; margin-top: 20px;">
+
+                    <div style="background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%); border-radius: 16px; padding: 20px; color: white; box-shadow: 0 4px 15px rgba(99, 102, 241, 0.3);">
+                      <div style="font-size: 13px; opacity: 0.9; margin-bottom: 8px;">Total événements</div>
+                      <div id="stat-total-events" style="font-size: 32px; font-weight: 700;"><?= $adminStats['totaux']['total_events'] ?? 0 ?></div>
+                    </div>
+
+                    <div style="background: linear-gradient(135deg, #10b981 0%, #34d399 100%); border-radius: 16px; padding: 20px; color: white; box-shadow: 0 4px 15px rgba(16, 185, 129, 0.3);">
+                      <div style="font-size: 13px; opacity: 0.9; margin-bottom: 8px;">Validés</div>
+                      <div id="stat-total-valides" style="font-size: 32px; font-weight: 700;"><?= $adminStats['totaux']['total_valides'] ?? 0 ?></div>
+                    </div>
+
+                    <div style="background: linear-gradient(135deg, #3b82f6 0%, #60a5fa 100%); border-radius: 16px; padding: 20px; color: white; box-shadow: 0 4px 15px rgba(59, 130, 246, 0.3);">
+                      <div style="font-size: 13px; opacity: 0.9; margin-bottom: 8px;">En cours</div>
+                      <div id="stat-total-en-cours" style="font-size: 32px; font-weight: 700;"><?= $adminStats['totaux']['total_en_cours'] ?? 0 ?></div>
+                    </div>
+
+                    <div style="background: linear-gradient(135deg, #ef4444 0%, #f87171 100%); border-radius: 16px; padding: 20px; color: white; box-shadow: 0 4px 15px rgba(239, 68, 68, 0.3);">
+                      <div style="font-size: 13px; opacity: 0.9; margin-bottom: 8px;">Refusés</div>
+                      <div id="stat-total-refuses" style="font-size: 32px; font-weight: 700;"><?= $adminStats['totaux']['total_refuses'] ?? 0 ?></div>
+                    </div>
+
+                    <div style="background: linear-gradient(135deg, #f59e0b 0%, #fbbf24 100%); border-radius: 16px; padding: 20px; color: white; box-shadow: 0 4px 15px rgba(245, 158, 11, 0.3);">
+                      <div style="font-size: 13px; opacity: 0.9; margin-bottom: 8px;">Total inscriptions</div>
+                      <div id="stat-total-inscriptions" style="font-size: 32px; font-weight: 700;"><?= $adminStats['totaux']['total_inscriptions'] ?? 0 ?></div>
+                    </div>
+
+                  </div>
+
+                  <!-- Graphique Chart.js -->
+                  <div style="background: white; border-radius: 16px; padding: 24px; box-shadow: 0 2px 10px rgba(0,0,0,0.08); margin-top: 20px;">
+                    <h4 id="chart-title" style="margin-bottom: 20px; color: #1f2937;">Évolution mensuelle</h4>
+                    <div style="position: relative; height: 400px;">
+                      <canvas id="adminStatsChart"></canvas>
+                    </div>
+                  </div>
+
+                  <!-- Données JSON pour le graphique -->
+                  <script id="stats-data" type="application/json">
+                    <?= json_encode($adminStats['monthly']) ?>
+                  </script>
+
+                <?php else: ?>
+                  <div class="notice error">
+                    <?= $adminStats['message'] ?? 'Erreur lors de la récupération des statistiques' ?>
+                  </div>
+                <?php endif; ?>
               </div>
             </section>
           </div>
@@ -406,54 +726,261 @@ error_log('ADMIN: Admin connecte ID: ' . $adminId);
 
     <div id="registrants-modal" class="modal" aria-hidden="true">
       <div class="modal-content">
-        <button class="modal-close" type="button">x</button>
+        <button class="modal-close" type="button">&times;</button>
         <h3>Inscrits</h3>
+        <div class="registrants-modal-actions">
+          <button id="export-registrants-pdf" class="btn export-pdf-btn" type="button" data-event-id="">Exporter PDF</button>
+        </div>
         <div id="registrants-list"></div>
       </div>
     </div>
 
+    <div id="qr-modal" class="modal" aria-hidden="true">
+      <div class="modal-content qr-modal-content">
+        <button class="modal-close qr-modal-close" type="button">&times;</button>
+        <h3>QR Code evenement</h3>
+        <div class="qr-event-name" id="qr-event-name"></div>
+        <div class="qr-event-meta" id="qr-event-meta"></div>
+        <div class="qr-image-wrap">
+          <img id="qr-code-image" src="" alt="QR Code de l'evenement" />
+        </div>
+        <div class="qr-encoded-text" id="qr-encoded-text"></div>
+        <div class="qr-actions">
+          <a id="qr-download-link" class="btn" href="#">Telecharger le QR Code</a>
+        </div>
+      </div>
+    </div>
+
+    <div id="request-details-modal" class="modal" aria-hidden="true">
+      <div class="modal-content request-details-modal-content">
+        <button class="modal-close request-details-close" type="button">&times;</button>
+        <h3>Détails de la demande</h3>
+        <div id="request-details-content"></div>
+      </div>
+    </div>
+
+    <script src="assets/app.js"></script>
+    <script src="assets/events-admin.js?v=20260508-filters"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
     <script>
-      try { localStorage.setItem("intellectai-theme", "<?= h($activeTheme) ?>"); } catch (e) {}
-    </script>
-    <script src="assets/app.js?v=brainstorming-submenu-v5"></script>
-    <script src="assets/events-admin.js"></script>
-    <script>
-      function switchAdminTab(tabButton) {
-        if (!tabButton) return;
-        var selector = tabButton.getAttribute("data-target");
-        if (!selector) return;
-        var tabs = document.querySelectorAll(".admin-tabs .tab");
-        var panels = document.querySelectorAll(".tab-panel");
-        tabs.forEach(function (t) { t.classList.remove("active"); });
-        panels.forEach(function (p) { p.classList.remove("active"); });
-        tabButton.classList.add("active");
-        var target = document.querySelector(selector);
-        if (target) target.classList.add("active");
-      }
+    document.addEventListener('DOMContentLoaded', function() {
+      // Gestion des statistiques avec filtres temporels
+      const statsDataElement = document.getElementById('stats-data');
+      const chartCanvas = document.getElementById('adminStatsChart');
+      let adminChart = null;
 
-      function toggleThemeLocal() {
-        var html = document.documentElement;
-        var next = html.dataset.theme === "light" ? "dark" : "light";
-        html.dataset.theme = next;
-        try { localStorage.setItem("intellectai-theme", next); } catch (e) {}
-      }
+      // Labels pour les périodes
+      const periodLabels = {
+        'day': 'Évolution quotidienne (30 derniers jours)',
+        'week': 'Évolution hebdomadaire (12 dernières semaines)',
+        'month': 'Évolution mensuelle (12 derniers mois)',
+        'year': 'Évolution annuelle (5 dernières années)'
+      };
 
-      document.addEventListener("DOMContentLoaded", function () {
-        var allTabs = document.querySelectorAll(".admin-tabs .tab");
-        allTabs.forEach(function (tab) {
-          tab.addEventListener("click", function () {
-            switchAdminTab(tab);
-          });
-        });
+      // Fonction pour créer/mettre à jour le graphique
+      function createOrUpdateChart(data, period) {
+        const labels = data.map(d => d.label || d.month);
+        const eventsCreated = data.map(d => d.events_crees);
+        const eventsValides = data.map(d => d.events_valides);
+        const eventsEnCours = data.map(d => d.events_en_cours);
+        const eventsRefuses = data.map(d => d.events_refuses);
+        const inscriptions = data.map(d => d.inscriptions);
 
-        var themeBtn = document.querySelector("[data-theme-toggle]");
-        if (themeBtn) {
-          themeBtn.addEventListener("click", function () {
-            toggleThemeLocal();
+        const chartData = {
+          labels: labels,
+          datasets: [
+            {
+              label: 'Événements créés',
+              data: eventsCreated,
+              backgroundColor: 'rgba(99, 102, 241, 0.8)',
+              borderColor: 'rgba(99, 102, 241, 1)',
+              borderWidth: 1,
+              borderRadius: 4
+            },
+            {
+              label: 'Validés',
+              data: eventsValides,
+              backgroundColor: 'rgba(16, 185, 129, 0.8)',
+              borderColor: 'rgba(16, 185, 129, 1)',
+              borderWidth: 1,
+              borderRadius: 4
+            },
+            {
+              label: 'En cours',
+              data: eventsEnCours,
+              backgroundColor: 'rgba(59, 130, 246, 0.8)',
+              borderColor: 'rgba(59, 130, 246, 1)',
+              borderWidth: 1,
+              borderRadius: 4
+            },
+            {
+              label: 'Refusés',
+              data: eventsRefuses,
+              backgroundColor: 'rgba(239, 68, 68, 0.8)',
+              borderColor: 'rgba(239, 68, 68, 1)',
+              borderWidth: 1,
+              borderRadius: 4
+            },
+            {
+              label: 'Inscriptions',
+              data: inscriptions,
+              backgroundColor: 'rgba(245, 158, 11, 0.8)',
+              borderColor: 'rgba(245, 158, 11, 1)',
+              borderWidth: 1,
+              borderRadius: 4
+            }
+          ]
+        };
+
+        if (adminChart) {
+          adminChart.data = chartData;
+          adminChart.update('active');
+        } else if (chartCanvas && typeof Chart !== 'undefined') {
+          adminChart = new Chart(chartCanvas, {
+            type: 'bar',
+            data: chartData,
+            options: {
+              responsive: true,
+              maintainAspectRatio: false,
+              plugins: {
+                legend: {
+                  position: 'top',
+                  labels: {
+                    usePointStyle: true,
+                    padding: 20,
+                    font: {
+                      size: 12,
+                      family: "'Outfit', sans-serif"
+                    }
+                  }
+                },
+                tooltip: {
+                  backgroundColor: 'rgba(31, 41, 55, 0.9)',
+                  padding: 12,
+                  cornerRadius: 8,
+                  titleFont: {
+                    size: 13,
+                    family: "'Outfit', sans-serif"
+                  },
+                  bodyFont: {
+                    size: 12,
+                    family: "'Outfit', sans-serif"
+                  }
+                }
+              },
+              scales: {
+                y: {
+                  beginAtZero: true,
+                  grid: {
+                    color: 'rgba(0, 0, 0, 0.05)',
+                    drawBorder: false
+                  },
+                  ticks: {
+                    font: {
+                      size: 11,
+                      family: "'Outfit', sans-serif"
+                    },
+                    color: '#6b7280'
+                  }
+                },
+                x: {
+                  grid: {
+                    display: false
+                  },
+                  ticks: {
+                    font: {
+                      size: 11,
+                      family: "'Outfit', sans-serif"
+                    },
+                    color: '#6b7280'
+                  }
+                }
+              }
+            }
           });
         }
+      }
+
+      // Fonction pour mettre à jour les cartes de statistiques
+      function updateStatsCards(totaux) {
+        document.getElementById('stat-total-events').textContent = totaux.total_events || 0;
+        document.getElementById('stat-total-valides').textContent = totaux.total_valides || 0;
+        document.getElementById('stat-total-en-cours').textContent = totaux.total_en_cours || 0;
+        document.getElementById('stat-total-refuses').textContent = totaux.total_refuses || 0;
+        document.getElementById('stat-total-inscriptions').textContent = totaux.total_inscriptions || 0;
+      }
+
+      // Chargement initial
+      if (statsDataElement && chartCanvas) {
+        try {
+          const initialData = JSON.parse(statsDataElement.textContent);
+          createOrUpdateChart(initialData, 'month');
+        } catch (e) {
+          console.error('Erreur lors du chargement initial:', e);
+        }
+      }
+
+      // Gestion des filtres temporels
+      document.querySelectorAll('.period-filter').forEach(button => {
+        button.addEventListener('click', async function() {
+          const period = this.dataset.period;
+
+          // Mettre à jour l'état actif
+          document.querySelectorAll('.period-filter').forEach(btn => {
+            btn.classList.remove('active');
+            btn.style.background = '';
+            btn.style.color = '';
+          });
+          this.classList.add('active');
+          this.style.background = '#6366f1';
+          this.style.color = 'white';
+
+          // Mettre à jour le titre
+          const chartTitle = document.getElementById('chart-title');
+          if (chartTitle) {
+            chartTitle.textContent = periodLabels[period] || 'Évolution';
+          }
+
+          // Afficher un indicateur de chargement
+          const container = document.getElementById('stats-container');
+          if (container) {
+            container.style.opacity = '0.6';
+          }
+
+          try {
+            // Appel AJAX pour récupérer les nouvelles données
+            const response = await fetch(`gestion-evenements.php?action=get_stats&period=${period}`, {
+              method: 'GET',
+              headers: {
+                'X-Requested-With': 'XMLHttpRequest'
+              }
+            });
+
+            if (!response.ok) {
+              throw new Error('Erreur réseau');
+            }
+
+            const result = await response.json();
+
+            if (result.success) {
+              // Mettre à jour le graphique
+              createOrUpdateChart(result.data, period);
+              // Mettre à jour les cartes
+              updateStatsCards(result.totaux);
+            } else {
+              console.error('Erreur lors de la récupération des données:', result.message);
+            }
+          } catch (error) {
+            console.error('Erreur AJAX:', error);
+          } finally {
+            // Rétablir l'opacité
+            if (container) {
+              container.style.opacity = '1';
+            }
+          }
+        });
       });
+    });
     </script>
   </body>
 </html>
-

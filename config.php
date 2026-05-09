@@ -1,86 +1,192 @@
 <?php
-// ➡️ On déclare une classe appelée config.
-// Elle va gérer la connexion à la base de données
+declare(strict_types=1);
+
+define('DB_DRIVER', getenv('DB_DRIVER') ?: 'mysql');
+define('DB_NAME', getenv('DB_NAME') ?: 'secondvoice');
+define('DB_USER', getenv('DB_USER') ?: 'root');
+define('DB_PASS', getenv('DB_PASS') !== false ? (string) getenv('DB_PASS') : '');
+define('DB_CHARSET', getenv('DB_CHARSET') ?: 'utf8mb4');
+define('DB_SQLITE_PATH', getenv('DB_SQLITE_PATH') ?: ':memory:');
+
+$smtpLocalConfig = [];
+if (is_file(__DIR__ . '/smtp_config.php')) {
+    $smtpLocalConfig = require __DIR__ . '/smtp_config.php';
+    if (!is_array($smtpLocalConfig)) {
+        $smtpLocalConfig = [];
+    }
+}
+
+define('SMTP_HOST', getenv('SMTP_HOST') ?: (string) ($smtpLocalConfig['host'] ?? ''));
+define('SMTP_USERNAME', getenv('SMTP_USERNAME') ?: (string) ($smtpLocalConfig['username'] ?? ''));
+define('SMTP_PASSWORD', getenv('SMTP_PASSWORD') ?: (string) ($smtpLocalConfig['password'] ?? ''));
+define('SMTP_PORT', (int) (getenv('SMTP_PORT') ?: ($smtpLocalConfig['port'] ?? 587)));
+define('SMTP_ENCRYPTION', getenv('SMTP_ENCRYPTION') ?: (string) ($smtpLocalConfig['encryption'] ?? 'tls'));
+define('SMTP_FROM_EMAIL', getenv('SMTP_FROM_EMAIL') ?: (string) ($smtpLocalConfig['from_email'] ?? (SMTP_USERNAME ?: 'no-reply@secondvoice.local')));
+define('SMTP_FROM_NAME', getenv('SMTP_FROM_NAME') ?: (string) ($smtpLocalConfig['from_name'] ?? 'SecondVoice'));
+define('SMTP_DEBUG', (int) (getenv('SMTP_DEBUG') ?: ($smtpLocalConfig['debug'] ?? 0)));
+
 class Config
 {
+    private static ?PDO $pdo = null;
+    private static array $triedConfigs = [];
 
-
-    // private → accessible uniquement dans la classe.
-    // static → appartient à la classe, pas aux objets.
-    // $pdo → variable qui va contenir la connexion.
-    // = null → au début, il n’y a pas de connexion. Cette variable va stocker l’objet PDO une seule fois.
-    private static $pdo = null;
     private static array $mailManual = [
-        // Provider: 'brevo', 'smtp', ou 'auto' (brevo puis smtp)
         'provider' => 'brevo'
     ];
+
     private static array $brevoManual = [
-        // REMPLIS CES VALEURS POUR BREVO API
         'api_key' => '',
         'from_email' => 'sfrayen54@gmail.com',
         'from_name' => 'SecondVoice',
         'timeout' => 20
     ];
+
     private static array $smtpManual = [
-        // REMPLIS CES VALEURS POUR UN ENVOI REEL GMAIL SMTP
         'host' => 'smtp.gmail.com',
         'port' => 465,
-        'encryption' => 'ssl', // ssl (465) ou tls (587)
-        'username' => '', // ex: votreadresse@gmail.com
-        'password' => '', // App Password Gmail (16 caracteres)
-        'from_email' => '', // laisser vide pour reprendre username
+        'encryption' => 'ssl',
+        'username' => '',
+        'password' => '',
+        'from_email' => '',
         'from_name' => 'SecondVoice',
         'timeout' => 20
     ];
+
     private static array $recaptchaManual = [
-        // REMPLIS CES VALEURS POUR GOOGLE reCAPTCHA v2 Checkbox
         'enabled' => true,
         'site_key' => '',
         'secret_key' => ''
     ];
+
     private static array $appManual = [
-        // URL publique de frontoffice pour le QR mobile (sans slash final)
-        // Exemple LAN: http://192.168.1.5/Second%20voice/view/frontoffice
         'public_base_url' => '',
-        // Code requis pour initialiser une empreinte faciale admin quand aucun visage n'existe.
         'face_enroll_code' => 'SV-ADMIN-2026'
     ];
 
-    public static function getConnexion()
+    private static function tryConnection(string $host, int $port, string $dbName): ?PDO
     {
-        //         public → accessible partout.
+        $dsn = sprintf('mysql:host=%s;port=%d;dbname=%s;charset=%s', $host, $port, $dbName, DB_CHARSET);
 
-        // static → on peut appeler la méthode sans créer d’objet.
+        try {
+            $pdo = new PDO($dsn, DB_USER, DB_PASS, [
+                PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
+                PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
+                PDO::ATTR_TIMEOUT => 3,
+            ]);
 
-        // getConnexion() → méthode pour récupérer la connexion.
-        if (!isset(self::$pdo)) {
-            // self::$pdo → on accède à la variable statique.
-            // isset() → vérifie si elle existe.
-            // ! → signifie "si elle n'existe pas".
-            $servername = "localhost";
-            $username = "root";
-            $password = "";
-            $dbname = "secondvoice";
-            try {
-                // On crée une nouvelle connexion PDO et on la stocke dans $pdo.
-                self::$pdo = new PDO(
-                    // DSN (Data Source Name)
-                    // Indique :
-                    // type = mysql
-                    // host = localhost
-                    // base = secondvoice
-                    "mysql:host=$servername;dbname=$dbname",
-                    $username,
-                    $password
+            return $pdo;
+        } catch (PDOException $e) {
+            self::$triedConfigs[] = [
+                'dsn' => $dsn,
+                'error' => $e->getMessage()
+            ];
+            return null;
+        }
+    }
 
-                );
-                self::$pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
-                self::$pdo->setAttribute(PDO::ATTR_DEFAULT_FETCH_MODE, PDO::FETCH_ASSOC);
-            } catch (Exception $e) {
-                die('Erreur: ' . $e->getMessage());
+    private static function detectMySQLConnection(): ?PDO
+    {
+        $configs = [
+            ['host' => '127.0.0.1', 'port' => 3306, 'db' => DB_NAME],
+            ['host' => 'localhost', 'port' => 3306, 'db' => DB_NAME],
+            ['host' => '127.0.0.1', 'port' => 3307, 'db' => DB_NAME],
+            ['host' => 'localhost', 'port' => 3307, 'db' => DB_NAME],
+            ['host' => '127.0.0.1', 'port' => 3308, 'db' => DB_NAME],
+        ];
+
+        if (getenv('DB_HOST') && getenv('DB_PORT')) {
+            array_unshift($configs, [
+                'host' => (string) getenv('DB_HOST'),
+                'port' => (int) getenv('DB_PORT'),
+                'db' => DB_NAME
+            ]);
+        }
+
+        foreach ($configs as $config) {
+            $pdo = self::tryConnection($config['host'], $config['port'], $config['db']);
+            if ($pdo !== null) {
+                return $pdo;
             }
         }
+
+        return null;
+    }
+
+    private static function generateErrorMessage(): string
+    {
+        $message = "ERREUR DE CONNEXION MYSQL - DIAGNOSTIC\n";
+        $message .= str_repeat('=', 50) . "\n\n";
+
+        $mysqlRunning = false;
+        foreach ([3306, 3307, 3308] as $port) {
+            $connection = @fsockopen('127.0.0.1', $port, $errno, $errstr, 1);
+            if ($connection) {
+                fclose($connection);
+                $mysqlRunning = true;
+                $message .= "MySQL detecte sur le port {$port}\n";
+            }
+        }
+
+        if (!$mysqlRunning) {
+            $message .= "MySQL ne semble pas demarre. Verifiez XAMPP Control Panel.\n\n";
+        }
+
+        $message .= "Configurations testees :\n";
+        foreach (self::$triedConfigs as $i => $config) {
+            $message .= '  ' . ($i + 1) . ') ' . $config['dsn'] . "\n";
+            $message .= '     Erreur : ' . $config['error'] . "\n\n";
+        }
+
+        $message .= "Solutions possibles : demarrer MySQL, verifier le port, verifier la base '" . DB_NAME . "'.\n";
+
+        return $message;
+    }
+
+    public static function getConnexion(): PDO
+    {
+        if (self::$pdo instanceof PDO) {
+            return self::$pdo;
+        }
+
+        if (strtolower((string) DB_DRIVER) === 'sqlite') {
+            try {
+                self::$pdo = new PDO('sqlite:' . DB_SQLITE_PATH);
+                self::$pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
+                self::$pdo->setAttribute(PDO::ATTR_DEFAULT_FETCH_MODE, PDO::FETCH_ASSOC);
+                self::$pdo->exec('PRAGMA foreign_keys = ON');
+                return self::$pdo;
+            } catch (PDOException $e) {
+                throw new RuntimeException('Erreur de connexion SQLite : ' . $e->getMessage(), 0, $e);
+            }
+        }
+
+        self::$pdo = self::detectMySQLConnection();
+        if (self::$pdo === null) {
+            $errorMessage = self::generateErrorMessage();
+            error_log($errorMessage);
+            throw new RuntimeException('Impossible de se connecter a MySQL. Voir les logs pour plus de details.');
+        }
+
         return self::$pdo;
+    }
+
+    public static function testConnection(): array
+    {
+        try {
+            $pdo = self::getConnexion();
+            $version = $pdo->query('SELECT VERSION()')->fetchColumn();
+            return [
+                'success' => true,
+                'message' => 'Connexion reussie',
+                'mysql_version' => $version
+            ];
+        } catch (Throwable $e) {
+            return [
+                'success' => false,
+                'message' => $e->getMessage(),
+                'details' => self::$triedConfigs
+            ];
+        }
     }
 
     public static function getSmtpConfig(): array
@@ -94,24 +200,17 @@ class Config
         $fromName = getenv('SECONDVOICE_MAIL_FROM_NAME') ?: getenv('MAIL_FROM_NAME');
 
         $manual = self::$smtpManual;
-        $defaultHost = (string) ($manual['host'] ?? 'smtp.gmail.com');
-        $defaultPort = (int) ($manual['port'] ?? 465);
-        $defaultEncryption = strtolower((string) ($manual['encryption'] ?? 'ssl'));
         $defaultUsername = (string) ($manual['username'] ?? '');
-        $defaultPassword = (string) ($manual['password'] ?? '');
-        $defaultFromEmail = (string) ($manual['from_email'] ?? '');
-        $defaultFromName = (string) ($manual['from_name'] ?? 'SecondVoice');
-        $defaultTimeout = (int) ($manual['timeout'] ?? 20);
 
         return [
-            'host' => $host !== false && $host !== '' ? $host : $defaultHost,
-            'port' => $port !== false && $port !== '' ? (int) $port : $defaultPort,
-            'encryption' => $encryption !== false && $encryption !== '' ? strtolower($encryption) : $defaultEncryption,
+            'host' => $host !== false && $host !== '' ? $host : (string) ($manual['host'] ?? 'smtp.gmail.com'),
+            'port' => $port !== false && $port !== '' ? (int) $port : (int) ($manual['port'] ?? 465),
+            'encryption' => $encryption !== false && $encryption !== '' ? strtolower((string) $encryption) : strtolower((string) ($manual['encryption'] ?? 'ssl')),
             'username' => $username !== false && $username !== '' ? $username : $defaultUsername,
-            'password' => $password !== false && $password !== '' ? $password : $defaultPassword,
-            'from_email' => $fromEmail !== false && $fromEmail !== '' ? $fromEmail : ($defaultFromEmail !== '' ? $defaultFromEmail : ($username !== false && $username !== '' ? $username : $defaultUsername)),
-            'from_name' => $fromName !== false && $fromName !== '' ? $fromName : $defaultFromName,
-            'timeout' => $defaultTimeout
+            'password' => $password !== false && $password !== '' ? $password : (string) ($manual['password'] ?? ''),
+            'from_email' => $fromEmail !== false && $fromEmail !== '' ? $fromEmail : (string) (($manual['from_email'] ?? '') ?: (($username !== false && $username !== '') ? $username : $defaultUsername)),
+            'from_name' => $fromName !== false && $fromName !== '' ? $fromName : (string) ($manual['from_name'] ?? 'SecondVoice'),
+            'timeout' => (int) ($manual['timeout'] ?? 20)
         ];
     }
 
@@ -119,7 +218,7 @@ class Config
     {
         $env = getenv('SECONDVOICE_MAIL_PROVIDER') ?: getenv('MAIL_PROVIDER');
         if ($env !== false && $env !== '') {
-            $provider = strtolower(trim($env));
+            $provider = strtolower(trim((string) $env));
             if (in_array($provider, ['brevo', 'smtp', 'auto'], true)) {
                 return $provider;
             }
@@ -136,24 +235,18 @@ class Config
         $smtpUser = getenv('SECONDVOICE_SMTP_USER') ?: getenv('SMTP_USER');
 
         $manual = self::$brevoManual;
-        $defaultApiKey = (string) ($manual['api_key'] ?? '');
-        $defaultFromEmail = (string) ($manual['from_email'] ?? '');
-        $defaultFromName = (string) ($manual['from_name'] ?? 'SecondVoice');
-        $defaultTimeout = (int) ($manual['timeout'] ?? 20);
-
-        $resolvedFromEmail = $defaultFromEmail !== '' ? $defaultFromEmail : (string) $smtpUser;
+        $resolvedFromEmail = (string) ($manual['from_email'] ?? '');
         if ($fromEmail !== false && $fromEmail !== '' && filter_var($fromEmail, FILTER_VALIDATE_EMAIL)) {
-            $resolvedFromEmail = $fromEmail;
-        }
-        if (!filter_var($resolvedFromEmail, FILTER_VALIDATE_EMAIL)) {
-            $resolvedFromEmail = $defaultFromEmail;
+            $resolvedFromEmail = (string) $fromEmail;
+        } elseif ($resolvedFromEmail === '' && $smtpUser !== false) {
+            $resolvedFromEmail = (string) $smtpUser;
         }
 
         return [
-            'api_key' => $apiKey !== false && trim((string) $apiKey) !== '' ? trim((string) $apiKey) : $defaultApiKey,
+            'api_key' => $apiKey !== false && trim((string) $apiKey) !== '' ? trim((string) $apiKey) : (string) ($manual['api_key'] ?? ''),
             'from_email' => $resolvedFromEmail,
-            'from_name' => $fromName !== false && trim((string) $fromName) !== '' ? trim((string) $fromName) : $defaultFromName,
-            'timeout' => $defaultTimeout
+            'from_name' => $fromName !== false && trim((string) $fromName) !== '' ? trim((string) $fromName) : (string) ($manual['from_name'] ?? 'SecondVoice'),
+            'timeout' => (int) ($manual['timeout'] ?? 20)
         ];
     }
 
@@ -164,28 +257,23 @@ class Config
         $secretKey = getenv('SECONDVOICE_RECAPTCHA_SECRET_KEY') ?: getenv('RECAPTCHA_SECRET_KEY');
 
         $manual = self::$recaptchaManual;
-        $manualEnabled = (bool) ($manual['enabled'] ?? true);
-        $manualSiteKey = trim((string) ($manual['site_key'] ?? ''));
-        $manualSecretKey = trim((string) ($manual['secret_key'] ?? ''));
-
-        $enabledValue = $manualEnabled;
+        $enabledValue = (bool) ($manual['enabled'] ?? true);
         if ($enabled !== false && $enabled !== '') {
-            $normalized = strtolower(trim($enabled));
-            $enabledValue = !in_array($normalized, ['0', 'false', 'off', 'no'], true);
+            $enabledValue = !in_array(strtolower(trim((string) $enabled)), ['0', 'false', 'off', 'no'], true);
         }
 
         return [
             'enabled' => $enabledValue,
-            'site_key' => $siteKey !== false && trim($siteKey) !== '' ? trim($siteKey) : $manualSiteKey,
-            'secret_key' => $secretKey !== false && trim($secretKey) !== '' ? trim($secretKey) : $manualSecretKey
+            'site_key' => $siteKey !== false && trim((string) $siteKey) !== '' ? trim((string) $siteKey) : trim((string) ($manual['site_key'] ?? '')),
+            'secret_key' => $secretKey !== false && trim((string) $secretKey) !== '' ? trim((string) $secretKey) : trim((string) ($manual['secret_key'] ?? ''))
         ];
     }
 
     public static function getPublicBaseUrl(): string
     {
         $env = getenv('SECONDVOICE_PUBLIC_BASE_URL') ?: getenv('PUBLIC_BASE_URL');
-        if ($env !== false && trim($env) !== '') {
-            return rtrim(trim($env), '/');
+        if ($env !== false && trim((string) $env) !== '') {
+            return rtrim(trim((string) $env), '/');
         }
 
         return rtrim((string) (self::$appManual['public_base_url'] ?? ''), '/');
@@ -194,11 +282,10 @@ class Config
     public static function getFaceEnrollCode(): string
     {
         $env = getenv('SECONDVOICE_FACE_ENROLL_CODE') ?: getenv('FACE_ENROLL_CODE');
-        if ($env !== false && trim($env) !== '') {
-            return trim($env);
+        if ($env !== false && trim((string) $env) !== '') {
+            return trim((string) $env);
         }
 
         return trim((string) (self::$appManual['face_enroll_code'] ?? ''));
     }
 }
-Config::getConnexion();
