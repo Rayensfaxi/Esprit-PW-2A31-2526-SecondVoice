@@ -15,19 +15,19 @@
       <aside class="sidebar">
         <div class="sidebar-panel">
           <div class="brand-row">
-            <a class="brand" href="../index.html"><img class="brand-logo" src="../assets/media/secondvoice-logo.png" alt="SecondVoice logo" /></a>
+            <a class="brand" href="../index.php"><img class="brand-logo" src="../assets/media/secondvoice-logo.png" alt="SecondVoice logo" /></a>
           </div>
           <div class="sidebar-scroll">
             <div class="nav-section">
               <div class="nav-title">Gestion</div>
-              <a class="nav-link" href="../index.html" data-nav="home"><span class="nav-icon icon-home"></span><span>Tableau de bord</span></a>
-              <a class="nav-link" href="../gestion-utilisateurs.html" data-nav="profile"><span class="nav-icon icon-profile"></span><span>Gestion des utilisateurs</span></a>
+              <a class="nav-link" href="../index.php" data-nav="home"><span class="nav-icon icon-home"></span><span>Tableau de bord</span></a>
+              <a class="nav-link" href="../gestion-utilisateurs.php" data-nav="profile"><span class="nav-icon icon-profile"></span><span>Gestion des utilisateurs</span></a>
               <a class="nav-link" href="HomeService.php" data-nav="services" style="background: var(--nav-active); color: var(--nav-active-text);"><span class="nav-icon icon-card"></span><span>Gestion des services</span></a>
               <a class="nav-link" href="../Rendezvous/HomeRendezvous.php" data-nav="subscription"><span class="nav-icon icon-card"></span><span>Gestion des rendez-vous</span></a>
-              <a class="nav-link" href="../gestion-accompagnements.html" data-nav="chatbot"><span class="nav-icon icon-chat"></span><span>Gestion des accompagnements</span></a>
-              <a class="nav-link" href="../gestion-documents.html" data-nav="images"><span class="nav-icon icon-image"></span><span>Gestion des documents</span></a>
-              <a class="nav-link" href="../gestion-reclamations.html" data-nav="voice"><span class="nav-icon icon-mic"></span><span>Gestion des reclamations</span></a>
-              <a class="nav-link" href="../settings.html" data-nav="settings"><span class="nav-icon icon-settings"></span><span>Parametres</span></a>
+              <a class="nav-link" href="../gestion-accompagnements.php" data-nav="chatbot"><span class="nav-icon icon-chat"></span><span>Gestion des accompagnements</span></a>
+              <a class="nav-link" href="../gestion-documents.php" data-nav="images"><span class="nav-icon icon-image"></span><span>Gestion des documents</span></a>
+              <a class="nav-link" href="../gestion-reclamations.php" data-nav="voice"><span class="nav-icon icon-mic"></span><span>Gestion des reclamations</span></a>
+              <a class="nav-link" href="../settings.php" data-nav="settings"><span class="nav-icon icon-settings"></span><span>Parametres</span></a>
             </div>
           </div>
         </div>
@@ -41,7 +41,7 @@
             <div class="page-subtitle">Créez et gérez les services proposés aux citoyens.</div>
           </div>
           <div class="toolbar-actions">
-            <a class="update-button" href="../../frontend/index.html">Revenir</a>
+            <a class="update-button" href="../../frontend/index.php">Revenir</a>
             <button class="icon-button icon-moon" data-theme-toggle aria-label="Switch theme"></button>
           </div>
         </div>

@@ -31,19 +31,19 @@ $listeServices = $serviceC->listServices();
     <div class="page-shell">
       <header class="site-header">
         <div class="container nav-inner">
-          <a class="brand" href="index.html"><img class="brand-logo" src="assets/media/secondvoice-logo.png" alt="SecondVoice logo" /></a>
+          <a class="brand" href="index.php"><img class="brand-logo" src="assets/media/secondvoice-logo.png" alt="SecondVoice logo" /></a>
           <button class="menu-toggle" type="button" data-menu-toggle aria-label="Ouvrir le menu">
             <span class="icon-lines"></span>
           </button>
           <div class="nav" data-nav>
             <nav>
               <ul class="nav-links">
-                <li><a href="index.html">Accueil</a></li>
-                <li><a href="about.html">A propos</a></li>
+                <li><a href="index.php">Accueil</a></li>
+                <li><a href="about.php">A propos</a></li>
                 <li><a class="is-active" href="services.php">Services</a></li>
                 <li><a href="Rendezvous/mes_rendezvous.php">Mes RDV</a></li>
-                <li><a href="blog.html">Blog</a></li>
-                <li><a href="contact.html">Contact</a></li>
+                <li><a href="blog.php">Blog</a></li>
+                <li><a href="contact.php">Contact</a></li>
               </ul>
             </nav>
             <div class="header-actions">
@@ -51,7 +51,7 @@ $listeServices = $serviceC->listServices();
                 <span class="theme-toggle-label" data-theme-label>Clair</span>
               </button>
               <div class="user-shell" data-user-shell>
-                <a class="icon-btn user-trigger" href="login.html" aria-label="Ouvrir la page de connexion"><span>Profil</span></a>
+                <a class="icon-btn user-trigger" href="login.php" aria-label="Ouvrir la page de connexion"><span>Profil</span></a>
               </div>
               <a class="btn btn-primary" href="service-prise-rendezvous.php">Prendre RDV</a>
             </div>
@@ -112,7 +112,7 @@ $listeServices = $serviceC->listServices();
               <div class="sidebar-card fade-up">
                 <h3>Besoin d'aide pour vos demarches ?</h3>
                 <p>Notre equipe est la pour vous accompagner.</p>
-                <a class="btn btn-primary" href="contact.html">Demander de l'aide</a>
+                <a class="btn btn-primary" href="contact.php">Demander de l'aide</a>
               </div>
             </aside>
           </div>
