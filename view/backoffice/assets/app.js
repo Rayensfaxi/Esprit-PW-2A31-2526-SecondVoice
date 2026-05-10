@@ -5,7 +5,7 @@ const integrationKeys = {
   apiBaseUrl: "intellectai-api-base-url"
 };
 const integrationRoutes = {
-  frontOfficeLogin: "../frontoffice/index.php"
+  frontOfficeLogin: "../backoffice/index.php"
 };
 const root = document.documentElement;
 
@@ -122,8 +122,7 @@ function syncThemeToggle() {
 function updateIdentityUI(profile) {
   const displayName = profile.fullName;
   const displayEmail = profile.email;
-  const normalizedRole = String(profile.role || "client").toLowerCase();
-  const displayRole = normalizedRole === "admin" ? "Admin" : (normalizedRole === "agent" ? "Agent" : "Client");
+  const displayRole = profile.role === "admin" ? "Admin" : "Client";
   const initials = createInitials(profile);
 
   document.querySelectorAll(".avatar").forEach((node) => {

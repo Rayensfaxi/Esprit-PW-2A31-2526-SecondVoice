@@ -24,7 +24,7 @@ $isAdmin = $roleSession === 'admin';
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
-    <link rel="stylesheet" href="assets/style.css?v=brainstorming-submenu-v5" />
+    <link rel="stylesheet" href="assets/style.css" />
   </head>
   <body data-page="chatbot">
     <div class="overlay" data-overlay></div>
@@ -198,7 +198,7 @@ $isAdmin = $roleSession === 'admin';
       </main>
     </div>
 
-    <script src="assets/app.js?v=brainstorming-submenu-v5"></script>
+    <script src="assets/app.js"></script>
   </body>
 </html>
 
