@@ -1,4 +1,4 @@
 <?php
-header('Location: Rendezvous/HomeRendezvous.php');
+header('Location: service-rendezvous.php');
 exit;
 ?>
