@@ -62,6 +62,11 @@
 
 html {
   scroll-behavior: smooth;
+  color-scheme: dark;
+}
+
+:root[data-theme="light"] {
+  color-scheme: light;
 }
 
 body {
@@ -95,8 +100,34 @@ img {
 
 button,
 input,
+select,
 textarea {
   font: inherit;
+}
+
+select {
+  color-scheme: dark;
+}
+
+:root[data-theme="light"] select {
+  color-scheme: light;
+}
+
+select option,
+select optgroup {
+  background: var(--surface-strong);
+  color: var(--text);
+}
+
+select option:checked {
+  background: var(--primary);
+  color: #ffffff;
+}
+
+:root[data-theme="light"] select option,
+:root[data-theme="light"] select optgroup {
+  background: #ffffff;
+  color: #1a1630;
 }
 
 .page-shell {
@@ -455,6 +486,17 @@ textarea {
   color: white;
   border: 1px solid rgba(255, 255, 255, 0.14);
   background: rgba(255, 255, 255, 0.06);
+}
+
+:root[data-theme="light"] .btn-secondary {
+  color: var(--text);
+  border-color: rgba(83, 61, 158, 0.18);
+  background: rgba(127, 61, 255, 0.08);
+}
+
+:root[data-theme="light"] .btn-secondary:hover {
+  background: rgba(127, 61, 255, 0.14);
+  box-shadow: 0 12px 30px rgba(88, 65, 154, 0.12);
 }
 
 .icon-btn,
@@ -1299,6 +1341,28 @@ body.menu-open .icon-lines::after {
   border: 1px solid var(--input-border);
 }
 
+.field:-webkit-autofill,
+.field:-webkit-autofill:hover,
+.field:-webkit-autofill:focus,
+.search-form input:-webkit-autofill,
+.newsletter-form input:-webkit-autofill {
+  -webkit-text-fill-color: var(--text);
+  caret-color: var(--text);
+  box-shadow: 0 0 0 1000px #12092f inset;
+  border-color: var(--input-border);
+  transition: background-color 9999s ease-out;
+}
+
+:root[data-theme="light"] .field:-webkit-autofill,
+:root[data-theme="light"] .field:-webkit-autofill:hover,
+:root[data-theme="light"] .field:-webkit-autofill:focus,
+:root[data-theme="light"] .search-form input:-webkit-autofill,
+:root[data-theme="light"] .newsletter-form input:-webkit-autofill {
+  -webkit-text-fill-color: var(--text);
+  caret-color: var(--text);
+  box-shadow: 0 0 0 1000px #efe9ff inset;
+}
+
 textarea.field {
   min-height: 160px;
   padding: 18px;
@@ -1475,6 +1539,19 @@ textarea.field {
     linear-gradient(180deg, rgba(255, 255, 255, 0.96), rgba(244, 240, 255, 0.92)),
     rgba(255, 255, 255, 0.95);
   border-color: rgba(83, 61, 158, 0.12);
+}
+
+:root[data-theme="light"] .profile-photo-actions .btn.btn-secondary,
+:root[data-theme="light"] .sidebar-card .btn.btn-secondary {
+  color: #1a1630;
+  border-color: rgba(83, 61, 158, 0.22);
+  background: rgba(127, 61, 255, 0.1);
+  box-shadow: none;
+}
+
+:root[data-theme="light"] .profile-photo-actions .btn.btn-secondary:hover,
+:root[data-theme="light"] .sidebar-card .btn.btn-secondary:hover {
+  background: rgba(127, 61, 255, 0.16);
 }
 
 :root[data-theme="light"] .post-banner,

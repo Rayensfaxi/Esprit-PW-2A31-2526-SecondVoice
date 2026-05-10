@@ -316,14 +316,87 @@ bindProfileSave(profile);
 bindLogout();
 
 const currentPage = document.body.dataset.page;
-for (const link of document.querySelectorAll("[data-nav]")) {
-  if (link.dataset.nav === currentPage) {
+const currentFile = window.location.pathname.split("/").pop();
+const navLinks = document.querySelectorAll("[data-nav]");
+const brainstormingNavFiles = new Set([
+  "gestion-brainstormings.php",
+  "statistiques-brainstormings.php",
+  "gestion-idees.php"
+]);
+const brainstormingMenuStorageKey = "secondvoice-brainstorming-submenu-next";
+
+function getNavLinkFile(link) {
+  const href = link.getAttribute("href");
+  if (!href) return "";
+  return new URL(href, window.location.href).pathname.split("/").pop();
+}
+
+const brainstormingParentLink = Array.from(navLinks).find((link) => getNavLinkFile(link) === "gestion-brainstormings.php");
+const brainstormingSubLinks = Array.from(navLinks).filter((link) => {
+  const linkFile = getNavLinkFile(link);
+  return linkFile === "statistiques-brainstormings.php" || linkFile === "gestion-idees.php";
+});
+
+if (!brainstormingNavFiles.has(currentFile)) {
+  for (const link of brainstormingSubLinks) {
+    link.remove();
+  }
+}
+
+function setBrainstormingMenuOpen(isOpen) {
+  document.body.classList.toggle("brainstorming-menu-open", isOpen);
+
+  if (brainstormingParentLink) {
+    brainstormingParentLink.classList.add("nav-parent-link");
+    brainstormingParentLink.setAttribute("aria-expanded", isOpen ? "true" : "false");
+  }
+
+  for (const link of brainstormingSubLinks) {
+    link.classList.add("nav-sub-link");
+    link.hidden = !isOpen;
+  }
+}
+
+const shouldOpenBrainstormingMenu = brainstormingNavFiles.has(currentFile) && getStorageItem(brainstormingMenuStorageKey) === "1";
+removeStorageItem(brainstormingMenuStorageKey);
+setBrainstormingMenuOpen(shouldOpenBrainstormingMenu);
+
+const hasExactNavMatch = Array.from(navLinks).some((link) => {
+  return getNavLinkFile(link) === currentFile;
+});
+
+for (const link of navLinks) {
+  const linkFile = getNavLinkFile(link);
+  if ((hasExactNavMatch && linkFile === currentFile) || (!hasExactNavMatch && link.dataset.nav === currentPage)) {
     link.classList.add("active");
   }
 
-  link.addEventListener("click", () => {
+  link.addEventListener("click", (event) => {
+    if (link === brainstormingParentLink) {
+      if (currentFile === "gestion-brainstormings.php") {
+        event.preventDefault();
+        setBrainstormingMenuOpen(!document.body.classList.contains("brainstorming-menu-open"));
+        document.body.classList.remove("nav-open");
+        return;
+      }
+
+      setStorageItem(brainstormingMenuStorageKey, "1");
+      document.body.classList.remove("nav-open");
+      return;
+    } else if (brainstormingNavFiles.has(linkFile)) {
+      setStorageItem(brainstormingMenuStorageKey, "1");
+      setBrainstormingMenuOpen(true);
+    } else {
+      removeStorageItem(brainstormingMenuStorageKey);
+      setBrainstormingMenuOpen(false);
+    }
+
     document.body.classList.remove("nav-open");
   });
+}
+
+if (brainstormingParentLink && brainstormingNavFiles.has(currentFile) && currentFile !== "gestion-brainstormings.php") {
+  brainstormingParentLink.classList.add("active-parent");
 }
 
 const navToggle = document.querySelector("[data-nav-toggle]");
