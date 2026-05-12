@@ -88,6 +88,7 @@ function readAgentServerKey(): string
     if ($pathFromEnv !== '') {
         $candidatePaths[] = $pathFromEnv;
     }
+    $candidatePaths[] = __DIR__ . '/../../storage/security/Agent-key.txt';
     $candidatePaths[] = __DIR__ . '/../../Agent-key.txt';
 
     foreach ($candidatePaths as $path) {

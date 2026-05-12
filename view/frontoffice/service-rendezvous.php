@@ -1,5 +1,5 @@
 <?php
-require_once '../../controller/ServiceC.php';
+require_once __DIR__ . '/../../controller/ServiceC.php';
 $serviceC = new ServiceC();
 $listeServices = $serviceC->listServices();
 ?>

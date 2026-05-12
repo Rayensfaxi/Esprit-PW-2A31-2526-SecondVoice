@@ -45,6 +45,7 @@
           <img id="det-qrcode" src="" alt="QR Code" style="width: 150px; height: 150px; display: block;">
         </div>
         <div style="display: flex; gap: 10px; justify-content: center;">
+            <a id="btn-open-qr" href="" target="_blank" rel="noopener" class="action-button" style="background: var(--primary); color: white; padding: 6px 12px; font-size: 0.8rem; border: none;">Ouvrir</a>
             <a id="btn-download-qr" href="" download="rendezvous_qrcode.svg" class="action-button" style="background: var(--purple); color: white; padding: 6px 12px; font-size: 0.8rem; border: none;">Télécharger</a>
         </div>
       </div>

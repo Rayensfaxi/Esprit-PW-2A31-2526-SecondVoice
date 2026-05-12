@@ -24,7 +24,7 @@
           <div class="input-row" style="display: flex; gap: 1.5rem; flex-wrap: wrap; margin-bottom: 2rem;">
             <div style="flex: 1; min-width: 250px;">
               <label style="display: block; margin-bottom: 0.75rem; font-weight: 600; color: var(--text); opacity: 0.9;">Service souhaité</label>
-              <select id="service_id" name="service_id" class="field" style="width: 100%;" onchange="document.getElementById('service_name').value = this.options[this.selectedIndex].text" required <?php echo ($selectedServiceId && !$rdvToEdit) ? 'disabled' : ''; ?>>
+              <select id="service_id" name="service_id" class="field" style="width: 100%;" onchange="document.getElementById('service_name').value = this.options[this.selectedIndex].text" required>
                 <option value="" disabled selected hidden>Choisir un service...</option>
                 <?php 
                 foreach($listeServices as $s) {
@@ -34,9 +34,6 @@
                 }
                 ?>
               </select>
-              <?php if ($selectedServiceId && !$rdvToEdit): ?>
-                <input type="hidden" name="service_id" value="<?php echo $selectedServiceId; ?>">
-              <?php endif; ?>
               <div id="service_id-error" class="js-error">Veuillez choisir un service.</div>
             </div>
             <!-- On garde un champ caché pour le nom du service si nécessaire pour compatibilité descendante -->

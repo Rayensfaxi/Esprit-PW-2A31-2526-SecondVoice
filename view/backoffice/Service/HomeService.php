@@ -7,7 +7,7 @@
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
-    <link rel="stylesheet" href="../assets/style.css" />
+    <link rel="stylesheet" href="../assets/style.css?v=20260510-actions" />
   </head>
   <body data-page="services">
     <div class="overlay" data-overlay></div>
@@ -41,7 +41,7 @@
             <div class="page-subtitle">Créez et gérez les services proposés aux citoyens.</div>
           </div>
           <div class="toolbar-actions">
-            <a class="update-button" href="../../frontend/index.php">Revenir</a>
+            <a class="update-button" href="../index.php">Revenir</a>
             <button class="icon-button icon-moon" data-theme-toggle aria-label="Switch theme"></button>
           </div>
         </div>

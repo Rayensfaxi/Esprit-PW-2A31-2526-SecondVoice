@@ -1,5 +1,5 @@
 <?php
-require_once '../../../controller/RendezvousC.php';
+require_once __DIR__ . '/../../../controller/RendezvousC.php';
 $rendezvousC = new RendezvousC();
 
 if (isset($_GET['cancel'])) {

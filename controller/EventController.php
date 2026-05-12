@@ -2,7 +2,7 @@
 declare(strict_types=1);
 
 require_once __DIR__ . '/../config.php';
-require_once __DIR__ . '/../mailer.php';
+require_once __DIR__ . '/Mailer.php';
 require_once __DIR__ . '/../model/SimpleQrCode.php';
 
 class EventController
@@ -102,13 +102,33 @@ class EventController
             return null;
         }
 
-        return $this->getEventQrUrl($eventId);
+        return $this->buildAbsoluteAppUrl('/q.php', [
+            'e' => $eventId,
+            't' => $this->getEventQrToken($eventId),
+        ]);
     }
 
     public function getEventQrSvg(int $eventId): ?string
     {
         $payload = $this->getEventQrPayload($eventId);
-        return $payload !== null ? SimpleQrCode::svg($payload) : null;
+        if ($payload === null) {
+            return null;
+        }
+
+        $libPath = dirname(__DIR__) . '/lib/phpqrcode/qrlib.php';
+        if (is_file($libPath)) {
+            require_once $libPath;
+            if (class_exists('QRcode') && defined('QR_ECLEVEL_L')) {
+                ob_start();
+                QRcode::svg($payload, false, QR_ECLEVEL_L, 6, 4);
+                $svg = (string) ob_get_clean();
+                if ($svg !== '') {
+                    return $svg;
+                }
+            }
+        }
+
+        return SimpleQrCode::svg($payload);
     }
 
     public function getEventRegistrationsQrPayload(int $eventId): ?string
@@ -139,9 +159,24 @@ class EventController
         $host = $this->getQrPublicHost();
         $basePath = $this->getProjectBasePath();
         $path = rtrim($basePath, '/') . '/' . ltrim($appPath, '/');
+        $path = $this->encodeUrlPath($path);
         $queryString = $query !== [] ? '?' . http_build_query($query) : '';
 
         return $scheme . '://' . $host . $path . $queryString;
+    }
+
+    private function encodeUrlPath(string $path): string
+    {
+        $segments = explode('/', $path);
+        $encoded = array_map(
+            static function (string $segment): string {
+                return $segment === '' ? '' : rawurlencode($segment);
+            },
+            $segments
+        );
+
+        $result = implode('/', $encoded);
+        return str_starts_with($result, '/') ? $result : '/' . ltrim($result, '/');
     }
 
     private function getProjectBasePath(): string
@@ -271,7 +306,14 @@ class EventController
 
     private function getQrSecret(): string
     {
-        return DB_NAME . '|' . DB_USER . '|secondvoice-event-qr';
+        $dbName = defined('DB_NAME') ? (string) constant('DB_NAME') : '';
+        $dbUser = defined('DB_USER') ? (string) constant('DB_USER') : '';
+
+        if ($dbName !== '' || $dbUser !== '') {
+            return $dbName . '|' . $dbUser . '|secondvoice-event-qr';
+        }
+
+        return 'secondvoice-event-qr-fallback-secret';
     }
 
     private function isValidatedStatus(string $status): bool
@@ -282,9 +324,59 @@ class EventController
 
     public function getResourcesByEvent(int $eventId): array
     {
-        $stmt = $this->conn->prepare('SELECT id, event_id, resources_title, resources_description, name, description, quantity, type FROM event_resources WHERE event_id = ? ORDER BY type ASC, id ASC');
+        $nameColumn = $this->eventResourcesNameColumn();
+        $descriptionColumn = $this->tableHasColumn('event_resources', 'description') ? 'description' : null;
+        $quantityColumn = $this->tableHasColumn('event_resources', 'quantity') ? 'quantity' : null;
+        $typeColumn = $this->tableHasColumn('event_resources', 'type') ? 'type' : null;
+
+        $select = [
+            'id',
+            'event_id',
+            $this->tableHasColumn('event_resources', 'resources_title') ? 'resources_title' : "'' AS resources_title",
+            $this->tableHasColumn('event_resources', 'resources_description') ? 'resources_description' : "'' AS resources_description",
+            $nameColumn !== null ? ($nameColumn . ' AS name') : "'' AS name",
+            $descriptionColumn !== null ? ($descriptionColumn . ' AS description') : "'' AS description",
+            $quantityColumn !== null ? $quantityColumn : 'NULL AS quantity',
+            $typeColumn !== null ? $typeColumn : "'materiel' AS type",
+        ];
+
+        $orderByType = $typeColumn !== null ? $typeColumn : 'id';
+        $sql = 'SELECT ' . implode(', ', $select) . ' FROM event_resources WHERE event_id = ? ORDER BY ' . $orderByType . ' ASC, id ASC';
+        $stmt = $this->conn->prepare($sql);
         $stmt->execute([$eventId]);
         return $stmt->fetchAll(PDO::FETCH_ASSOC) ?: [];
+    }
+
+    private function eventResourcesNameColumn(): ?string
+    {
+        if ($this->tableHasColumn('event_resources', 'name')) {
+            return 'name';
+        }
+
+        if ($this->tableHasColumn('event_resources', 'resource_name')) {
+            return 'resource_name';
+        }
+
+        return null;
+    }
+
+    private function tableHasColumn(string $table, string $column): bool
+    {
+        static $cache = [];
+        $key = strtolower($table . '.' . $column);
+        if (array_key_exists($key, $cache)) {
+            return $cache[$key];
+        }
+
+        try {
+            $stmt = $this->conn->prepare("SHOW COLUMNS FROM {$table} LIKE ?");
+            $stmt->execute([$column]);
+            $cache[$key] = (bool) $stmt->fetch(PDO::FETCH_ASSOC);
+        } catch (Throwable) {
+            $cache[$key] = false;
+        }
+
+        return $cache[$key];
     }
 
     public function getImportableResourceEventsForUser(int $userId, int $excludeEventId = 0): array
@@ -596,6 +688,45 @@ class EventController
         return $exists;
     }
 
+    private function resourceRequestTitleColumnExists(): bool
+    {
+        return $this->tableHasColumn('resource_modification_requests', 'resources_title');
+    }
+
+    private function resourceRequestDescriptionColumnExists(): bool
+    {
+        return $this->tableHasColumn('resource_modification_requests', 'resources_description');
+    }
+
+    private function eventDeletionRequestedAtColumnExists(): bool
+    {
+        return $this->tableHasColumn('event_deletion_requests', 'requested_at');
+    }
+
+    private function eventDeletionCreatedAtColumnExists(): bool
+    {
+        return $this->tableHasColumn('event_deletion_requests', 'created_at');
+    }
+
+    private function tableExists(string $table): bool
+    {
+        static $cache = [];
+        $key = strtolower($table);
+        if (array_key_exists($key, $cache)) {
+            return $cache[$key];
+        }
+
+        try {
+            $stmt = $this->conn->prepare("SHOW TABLES LIKE ?");
+            $stmt->execute([$table]);
+            $cache[$key] = (bool) $stmt->fetch(PDO::FETCH_NUM);
+        } catch (Throwable) {
+            $cache[$key] = false;
+        }
+
+        return $cache[$key];
+    }
+
     private function mapRequestStatusToDisplay(?string $status): string
     {
         $normalized = strtolower(trim((string) $status));
@@ -725,12 +856,16 @@ class EventController
             ];
         }
 
+        if ($this->tableExists('event_modification_requests')) {
+        $modRequestedAtExpr = $this->tableHasColumn('event_modification_requests', 'requested_at')
+            ? 'emr.requested_at'
+            : ($this->tableHasColumn('event_modification_requests', 'created_at') ? 'emr.created_at' : 'NOW()');
         $modificationStmt = $this->conn->prepare("
             SELECT
                 emr.id,
                 emr.event_id,
                 emr.status,
-                emr.requested_at,
+                {$modRequestedAtExpr} AS requested_at,
                 emr.processed_at,
                 emr.new_name,
                 emr.new_description,
@@ -750,7 +885,7 @@ class EventController
             FROM event_modification_requests emr
             LEFT JOIN events e ON e.id = emr.event_id
             WHERE emr.requested_by = ?
-            ORDER BY emr.requested_at DESC, emr.id DESC
+            ORDER BY {$modRequestedAtExpr} DESC, emr.id DESC
         ");
         $modificationStmt->execute([$userId]);
         foreach ($modificationStmt->fetchAll(PDO::FETCH_ASSOC) ?: [] as $row) {
@@ -767,23 +902,32 @@ class EventController
                 'processed_at' => (string) ($row['processed_at'] ?? ''),
             ];
         }
+        }
 
+        $deletionRequestedAtExpr = $this->eventDeletionRequestedAtColumnExists()
+            ? 'edr.requested_at'
+            : ($this->eventDeletionCreatedAtColumnExists() ? 'edr.created_at' : 'NOW()');
+        $snapNameExpr = $this->tableHasColumn('event_deletion_requests', 'event_name_snapshot') ? 'edr.event_name_snapshot' : "''";
+        $snapDescriptionExpr = $this->tableHasColumn('event_deletion_requests', 'event_description_snapshot') ? 'edr.event_description_snapshot' : "''";
+        $snapStartExpr = $this->tableHasColumn('event_deletion_requests', 'event_start_date_snapshot') ? 'edr.event_start_date_snapshot' : 'NULL';
+        $snapEndExpr = $this->tableHasColumn('event_deletion_requests', 'event_end_date_snapshot') ? 'edr.event_end_date_snapshot' : 'NULL';
+        $snapLocationExpr = $this->tableHasColumn('event_deletion_requests', 'event_location_snapshot') ? 'edr.event_location_snapshot' : "''";
         $deletionStmt = $this->conn->prepare("
             SELECT
                 edr.id,
                 edr.event_id,
                 edr.status,
-                COALESCE(edr.requested_at, edr.created_at) AS request_date,
+                {$deletionRequestedAtExpr} AS request_date,
                 edr.processed_at,
-                COALESCE(e.name, edr.event_name_snapshot, 'Événement supprimé') AS event_name,
-                COALESCE(e.description, edr.event_description_snapshot, '') AS event_description,
-                COALESCE(e.start_date, edr.event_start_date_snapshot) AS event_start_date,
-                COALESCE(e.end_date, edr.event_end_date_snapshot) AS event_end_date,
-                COALESCE(e.location, edr.event_location_snapshot, '') AS event_location
+                COALESCE(e.name, {$snapNameExpr}, 'Événement supprimé') AS event_name,
+                COALESCE(e.description, {$snapDescriptionExpr}, '') AS event_description,
+                COALESCE(e.start_date, {$snapStartExpr}) AS event_start_date,
+                COALESCE(e.end_date, {$snapEndExpr}) AS event_end_date,
+                COALESCE(e.location, {$snapLocationExpr}, '') AS event_location
             FROM event_deletion_requests edr
             LEFT JOIN events e ON e.id = edr.event_id
             WHERE edr.user_id = ?
-            ORDER BY COALESCE(edr.requested_at, edr.created_at) DESC, edr.id DESC
+            ORDER BY {$deletionRequestedAtExpr} DESC, edr.id DESC
         ");
         $deletionStmt->execute([$userId]);
         foreach ($deletionStmt->fetchAll(PDO::FETCH_ASSOC) ?: [] as $row) {
@@ -801,36 +945,40 @@ class EventController
             ];
         }
 
-        $resourceStmt = $this->conn->prepare("
-            SELECT
-                rmr.id,
-                rmr.event_id,
-                rmr.status,
-                rmr.created_at,
-                rmr.processed_at,
-                rmr.resources_title,
-                rmr.resources_description,
-                rmr.resources_data,
-                e.name AS event_name
-            FROM resource_modification_requests rmr
-            LEFT JOIN events e ON e.id = rmr.event_id
-            WHERE rmr.requested_by = ?
-            ORDER BY rmr.created_at DESC, rmr.id DESC
-        ");
-        $resourceStmt->execute([$userId]);
-        foreach ($resourceStmt->fetchAll(PDO::FETCH_ASSOC) ?: [] as $row) {
-            $requests[] = [
-                'request_key' => 'res-' . (int) $row['id'],
-                'request_id' => (int) $row['id'],
-                'event_id' => isset($row['event_id']) ? (int) $row['event_id'] : 0,
-                'event_name' => (string) ($row['event_name'] ?? 'Event'),
-                'request_type' => 'ressources',
-                'status' => $this->mapRequestStatusToDisplay((string) ($row['status'] ?? 'pending')),
-                'request_date' => (string) ($row['created_at'] ?? ''),
-                'summary' => $this->buildResourceModificationSummary($row),
-                'source_status' => (string) ($row['status'] ?? 'pending'),
-                'processed_at' => (string) ($row['processed_at'] ?? ''),
-            ];
+        if ($this->tableExists('resource_modification_requests')) {
+            $resourceTitleSelect = $this->resourceRequestTitleColumnExists() ? 'rmr.resources_title' : "'' AS resources_title";
+            $resourceDescriptionSelect = $this->resourceRequestDescriptionColumnExists() ? 'rmr.resources_description' : "'' AS resources_description";
+            $resourceStmt = $this->conn->prepare("
+                SELECT
+                    rmr.id,
+                    rmr.event_id,
+                    rmr.status,
+                    rmr.created_at,
+                    rmr.processed_at,
+                    {$resourceTitleSelect},
+                    {$resourceDescriptionSelect},
+                    rmr.resources_data,
+                    e.name AS event_name
+                FROM resource_modification_requests rmr
+                LEFT JOIN events e ON e.id = rmr.event_id
+                WHERE rmr.requested_by = ?
+                ORDER BY rmr.created_at DESC, rmr.id DESC
+            ");
+            $resourceStmt->execute([$userId]);
+            foreach ($resourceStmt->fetchAll(PDO::FETCH_ASSOC) ?: [] as $row) {
+                $requests[] = [
+                    'request_key' => 'res-' . (int) $row['id'],
+                    'request_id' => (int) $row['id'],
+                    'event_id' => isset($row['event_id']) ? (int) $row['event_id'] : 0,
+                    'event_name' => (string) ($row['event_name'] ?? 'Event'),
+                    'request_type' => 'ressources',
+                    'status' => $this->mapRequestStatusToDisplay((string) ($row['status'] ?? 'pending')),
+                    'request_date' => (string) ($row['created_at'] ?? ''),
+                    'summary' => $this->buildResourceModificationSummary($row),
+                    'source_status' => (string) ($row['status'] ?? 'pending'),
+                    'processed_at' => (string) ($row['processed_at'] ?? ''),
+                ];
+            }
         }
 
         usort($requests, static function (array $a, array $b): int {
@@ -989,11 +1137,11 @@ class EventController
     {
         try {
             error_log('CONTROLLER: Début création événement avec données: ' . json_encode($data));
-
+            
             // Admin/agent: validation directe. Utilisateur front: demande en cours.
             $isAdminCreation = in_array(strtolower((string) ($_SESSION['user_role'] ?? 'client')), ['admin', 'agent'], true);
             $data['status'] = $isAdminCreation ? 'validé' : 'en cours';
-
+            
             $payload = $this->normalizeEventPayload($data, false);
             error_log('CONTROLLER: Payload normalisé: ' . json_encode($payload));
 
@@ -1014,7 +1162,7 @@ class EventController
                 $payload['status'],
                 $createdBy,
             ]);
-
+            
             error_log('CONTROLLER: Insertion résultat: ' . ($result ? 'SUCCESS' : 'FAILED'));
 
             $eventId = (int) $this->conn->lastInsertId();
@@ -1026,7 +1174,7 @@ class EventController
 
             $this->conn->commit();
             error_log('CONTROLLER: Transaction validée');
-
+            
             if (!$isAdminCreation && $eventId > 0) {
                 $this->sendAdminRequestEmails('Ajout', (int) $createdBy, (string) $payload['name']);
             }
@@ -1053,7 +1201,7 @@ class EventController
         try {
             // Forcer automatiquement le statut 'validé' pour les événements modifiés par admin
             $data['status'] = 'validé';
-
+            
             $payload = $this->normalizeEventPayload($data, true);
             $existing = $this->getEventById($id);
             if (!$existing) {
@@ -1370,6 +1518,13 @@ class EventController
 
             $sentIds = [];
 
+            $hasMetaTitle = $this->tableHasColumn('event_resources', 'resources_title');
+            $hasMetaDescription = $this->tableHasColumn('event_resources', 'resources_description');
+            $nameColumn = $this->eventResourcesNameColumn();
+            $descriptionColumn = $this->tableHasColumn('event_resources', 'description') ? 'description' : null;
+            $quantityColumn = $this->tableHasColumn('event_resources', 'quantity') ? 'quantity' : null;
+            $typeColumn = $this->tableHasColumn('event_resources', 'type') ? 'type' : null;
+
             foreach ($normalizedResources as $resource) {
                 $id = (int) ($resource['id'] ?? 0);
                 $name = trim((string) ($resource['name']));
@@ -1379,13 +1534,76 @@ class EventController
 
                 if ($id > 0 && in_array($id, $existingIds, true)) {
                     // UPDATE ressource existante
-                    $stmt = $this->conn->prepare('UPDATE event_resources SET resources_title = ?, resources_description = ?, name = ?, description = ?, quantity = ?, type = ? WHERE id = ? AND event_id = ?');
-                    $stmt->execute([$normalizedTitle, $normalizedDescription, $name, $description, $quantity, $type, $id, $eventId]);
+                    $setParts = [];
+                    $params = [];
+
+                    if ($hasMetaTitle) {
+                        $setParts[] = 'resources_title = ?';
+                        $params[] = $normalizedTitle;
+                    }
+                    if ($hasMetaDescription) {
+                        $setParts[] = 'resources_description = ?';
+                        $params[] = $normalizedDescription;
+                    }
+                    if ($nameColumn !== null) {
+                        $setParts[] = $nameColumn . ' = ?';
+                        $params[] = $name;
+                    }
+                    if ($descriptionColumn !== null) {
+                        $setParts[] = $descriptionColumn . ' = ?';
+                        $params[] = $description;
+                    }
+                    if ($quantityColumn !== null) {
+                        $setParts[] = $quantityColumn . ' = ?';
+                        $params[] = $quantity;
+                    }
+                    if ($typeColumn !== null) {
+                        $setParts[] = $typeColumn . ' = ?';
+                        $params[] = $type;
+                    }
+
+                    if ($setParts !== []) {
+                        $sql = 'UPDATE event_resources SET ' . implode(', ', $setParts) . ' WHERE id = ? AND event_id = ?';
+                        $params[] = $id;
+                        $params[] = $eventId;
+                        $stmt = $this->conn->prepare($sql);
+                        $stmt->execute($params);
+                    }
                     $sentIds[] = $id;
                 } else {
                     // INSERT nouvelle ressource
-                    $stmt = $this->conn->prepare('INSERT INTO event_resources (event_id, resources_title, resources_description, name, description, quantity, type) VALUES (?, ?, ?, ?, ?, ?, ?)');
-                    $stmt->execute([$eventId, $normalizedTitle, $normalizedDescription, $name, $description, $quantity, $type]);
+                    $columns = ['event_id'];
+                    $values = [$eventId];
+
+                    if ($hasMetaTitle) {
+                        $columns[] = 'resources_title';
+                        $values[] = $normalizedTitle;
+                    }
+                    if ($hasMetaDescription) {
+                        $columns[] = 'resources_description';
+                        $values[] = $normalizedDescription;
+                    }
+                    if ($nameColumn !== null) {
+                        $columns[] = $nameColumn;
+                        $values[] = $name;
+                    }
+                    if ($descriptionColumn !== null) {
+                        $columns[] = $descriptionColumn;
+                        $values[] = $description;
+                    }
+                    if ($quantityColumn !== null) {
+                        $columns[] = $quantityColumn;
+                        $values[] = $quantity;
+                    }
+                    if ($typeColumn !== null) {
+                        $columns[] = $typeColumn;
+                        $values[] = $type;
+                    }
+
+                    $placeholders = implode(', ', array_fill(0, count($columns), '?'));
+                    $sql = 'INSERT INTO event_resources (' . implode(', ', $columns) . ') VALUES (' . $placeholders . ')';
+                    $stmt = $this->conn->prepare($sql);
+                    $stmt->execute($values);
                     $sentIds[] = (int) $this->conn->lastInsertId();
                 }
             }
@@ -1485,12 +1703,24 @@ class EventController
         }
 
         try {
+            $hasTitle = $this->resourceRequestTitleColumnExists();
+            $hasDescription = $this->resourceRequestDescriptionColumnExists();
             if ($this->resourceRequestTypeColumnExists()) {
-                $stmt = $this->conn->prepare('INSERT INTO resource_modification_requests (event_id, requested_by, request_type, resources_title, resources_description, resources_data, status, created_at) VALUES (?, ?, ?, NULL, NULL, ?, ?, NOW())');
-                $stmt->execute([$eventId, $userId, 'suppression ressources', '[]', 'pending']);
+                if ($hasTitle && $hasDescription) {
+                    $stmt = $this->conn->prepare('INSERT INTO resource_modification_requests (event_id, requested_by, request_type, resources_title, resources_description, resources_data, status, created_at) VALUES (?, ?, ?, NULL, NULL, ?, ?, NOW())');
+                    $stmt->execute([$eventId, $userId, 'suppression ressources', '[]', 'pending']);
+                } else {
+                    $stmt = $this->conn->prepare('INSERT INTO resource_modification_requests (event_id, requested_by, request_type, resources_data, status, created_at) VALUES (?, ?, ?, ?, ?, NOW())');
+                    $stmt->execute([$eventId, $userId, 'suppression ressources', '[]', 'pending']);
+                }
             } else {
-                $stmt = $this->conn->prepare('INSERT INTO resource_modification_requests (event_id, requested_by, resources_title, resources_description, resources_data, status, created_at) VALUES (?, ?, NULL, NULL, ?, ?, NOW())');
-                $stmt->execute([$eventId, $userId, '[]', 'pending']);
+                if ($hasTitle && $hasDescription) {
+                    $stmt = $this->conn->prepare('INSERT INTO resource_modification_requests (event_id, requested_by, resources_title, resources_description, resources_data, status, created_at) VALUES (?, ?, NULL, NULL, ?, ?, NOW())');
+                    $stmt->execute([$eventId, $userId, '[]', 'pending']);
+                } else {
+                    $stmt = $this->conn->prepare('INSERT INTO resource_modification_requests (event_id, requested_by, resources_data, status, created_at) VALUES (?, ?, ?, ?, NOW())');
+                    $stmt->execute([$eventId, $userId, '[]', 'pending']);
+                }
             }
 
             $this->sendAdminRequestEmails('Suppression ressources', $userId, (string) ($event['name'] ?? 'Événement'));
@@ -1558,30 +1788,54 @@ class EventController
             $stmt = $this->conn->prepare("SELECT id FROM resource_modification_requests WHERE event_id = ? AND requested_by = ? AND status = 'pending' ORDER BY created_at DESC LIMIT 1");
             $stmt->execute([$eventId, $userId]);
             $pendingRequest = $stmt->fetch(PDO::FETCH_ASSOC);
+            $hasTitle = $this->resourceRequestTitleColumnExists();
+            $hasDescription = $this->resourceRequestDescriptionColumnExists();
 
             if ($pendingRequest) {
-                $stmt = $this->conn->prepare("
-                    UPDATE resource_modification_requests
-                    SET resources_title = ?, resources_description = ?, resources_data = ?, status = 'pending', created_at = NOW(), processed_at = NULL, processed_by = NULL
-                    WHERE id = ?
-                ");
-                $stmt->execute([
-                    $normalizedPayload['resources_title'],
-                    $normalizedPayload['resources_description'],
-                    $encodedResources['json'],
-                    (int) $pendingRequest['id'],
-                ]);
+                if ($hasTitle && $hasDescription) {
+                    $stmt = $this->conn->prepare("
+                        UPDATE resource_modification_requests
+                        SET resources_title = ?, resources_description = ?, resources_data = ?, status = 'pending', created_at = NOW(), processed_at = NULL, processed_by = NULL
+                        WHERE id = ?
+                    ");
+                    $stmt->execute([
+                        $normalizedPayload['resources_title'],
+                        $normalizedPayload['resources_description'],
+                        $encodedResources['json'],
+                        (int) $pendingRequest['id'],
+                    ]);
+                } else {
+                    $stmt = $this->conn->prepare("
+                        UPDATE resource_modification_requests
+                        SET resources_data = ?, status = 'pending', created_at = NOW(), processed_at = NULL, processed_by = NULL
+                        WHERE id = ?
+                    ");
+                    $stmt->execute([
+                        $encodedResources['json'],
+                        (int) $pendingRequest['id'],
+                    ]);
+                }
                 $message = 'La demande de modification des ressources en cours a ete remplacee par la plus recente.';
             } else {
-                $stmt = $this->conn->prepare('INSERT INTO resource_modification_requests (event_id, requested_by, resources_title, resources_description, resources_data, status, created_at) VALUES (?, ?, ?, ?, ?, ?, NOW())');
-                $stmt->execute([
-                    $eventId,
-                    $userId,
-                    $normalizedPayload['resources_title'],
-                    $normalizedPayload['resources_description'],
-                    $encodedResources['json'],
-                    'pending'
-                ]);
+                if ($hasTitle && $hasDescription) {
+                    $stmt = $this->conn->prepare('INSERT INTO resource_modification_requests (event_id, requested_by, resources_title, resources_description, resources_data, status, created_at) VALUES (?, ?, ?, ?, ?, ?, NOW())');
+                    $stmt->execute([
+                        $eventId,
+                        $userId,
+                        $normalizedPayload['resources_title'],
+                        $normalizedPayload['resources_description'],
+                        $encodedResources['json'],
+                        'pending'
+                    ]);
+                } else {
+                    $stmt = $this->conn->prepare('INSERT INTO resource_modification_requests (event_id, requested_by, resources_data, status, created_at) VALUES (?, ?, ?, ?, NOW())');
+                    $stmt->execute([
+                        $eventId,
+                        $userId,
+                        $encodedResources['json'],
+                        'pending'
+                    ]);
+                }
                 $message = 'Demande de modification des ressources creee avec succes. L\'administrateur va examiner votre demande.';
             }
 
@@ -1642,15 +1896,25 @@ class EventController
 
         $stmt = null;
         try {
-            $stmt = $this->conn->prepare('INSERT INTO resource_modification_requests (event_id, requested_by, resources_title, resources_description, resources_data, status, created_at) VALUES (?, ?, ?, ?, ?, ?, NOW())');
-            $stmt->execute([
-                $eventId,
-                $userId,
-                $normalizedPayload['resources_title'],
-                $normalizedPayload['resources_description'],
-                $encodedResources['json'],
-                'pending'
-            ]);
+            if ($this->resourceRequestTitleColumnExists() && $this->resourceRequestDescriptionColumnExists()) {
+                $stmt = $this->conn->prepare('INSERT INTO resource_modification_requests (event_id, requested_by, resources_title, resources_description, resources_data, status, created_at) VALUES (?, ?, ?, ?, ?, ?, NOW())');
+                $stmt->execute([
+                    $eventId,
+                    $userId,
+                    $normalizedPayload['resources_title'],
+                    $normalizedPayload['resources_description'],
+                    $encodedResources['json'],
+                    'pending'
+                ]);
+            } else {
+                $stmt = $this->conn->prepare('INSERT INTO resource_modification_requests (event_id, requested_by, resources_data, status, created_at) VALUES (?, ?, ?, ?, NOW())');
+                $stmt->execute([
+                    $eventId,
+                    $userId,
+                    $encodedResources['json'],
+                    'pending'
+                ]);
+            }
 
             $this->sendAdminRequestEmails('Modification ressources', $userId, (string) ($event['name'] ?? 'Événement'));
 
@@ -1667,6 +1931,10 @@ class EventController
      */
     public function getPendingResourceModificationRequests(): array
     {
+        if (!$this->tableExists('resource_modification_requests')) {
+            return [];
+        }
+
         $stmt = $this->conn->prepare("
             SELECT
                 rmr.*,
@@ -1744,17 +2012,46 @@ class EventController
 
             // Insérer les nouvelles ressources
             if ($newResources !== []) {
-                $insStmt = $this->conn->prepare('INSERT INTO event_resources (event_id, resources_title, resources_description, name, description, quantity, type) VALUES (?, ?, ?, ?, ?, ?, ?)');
+                $hasMetaTitle = $this->tableHasColumn('event_resources', 'resources_title');
+                $hasMetaDescription = $this->tableHasColumn('event_resources', 'resources_description');
+                $nameColumn = $this->eventResourcesNameColumn();
+                $descriptionColumn = $this->tableHasColumn('event_resources', 'description') ? 'description' : null;
+                $quantityColumn = $this->tableHasColumn('event_resources', 'quantity') ? 'quantity' : null;
+                $typeColumn = $this->tableHasColumn('event_resources', 'type') ? 'type' : null;
+
                 foreach ($newResources as $resource) {
-                    $insStmt->execute([
-                        $eventId,
-                        $resourcesTitle,
-                        $resourcesDescription,
-                        trim((string) ($resource['name'] ?? '')),
-                        trim((string) ($resource['description'] ?? '')),
-                        isset($resource['quantity']) ? (int) $resource['quantity'] : null,
-                        trim((string) ($resource['type'] ?? 'materiel'))
-                    ]);
+                    $columns = ['event_id'];
+                    $values = [$eventId];
+
+                    if ($hasMetaTitle) {
+                        $columns[] = 'resources_title';
+                        $values[] = $resourcesTitle;
+                    }
+                    if ($hasMetaDescription) {
+                        $columns[] = 'resources_description';
+                        $values[] = $resourcesDescription;
+                    }
+                    if ($nameColumn !== null) {
+                        $columns[] = $nameColumn;
+                        $values[] = trim((string) ($resource['name'] ?? ''));
+                    }
+                    if ($descriptionColumn !== null) {
+                        $columns[] = $descriptionColumn;
+                        $values[] = trim((string) ($resource['description'] ?? ''));
+                    }
+                    if ($quantityColumn !== null) {
+                        $columns[] = $quantityColumn;
+                        $values[] = isset($resource['quantity']) ? (int) $resource['quantity'] : null;
+                    }
+                    if ($typeColumn !== null) {
+                        $columns[] = $typeColumn;
+                        $values[] = trim((string) ($resource['type'] ?? 'materiel'));
+                    }
+
+                    $placeholders = implode(', ', array_fill(0, count($columns), '?'));
+                    $sql = 'INSERT INTO event_resources (' . implode(', ', $columns) . ') VALUES (' . $placeholders . ')';
+                    $insStmt = $this->conn->prepare($sql);
+                    $insStmt->execute($values);
                 }
             }
 
@@ -1837,6 +2134,9 @@ class EventController
     public function hasPendingResourceModificationRequest(int $eventId): bool
     {
         if ($eventId <= 0) return false;
+        if (!$this->tableExists('resource_modification_requests')) {
+            return false;
+        }
         $stmt = $this->conn->prepare("SELECT id FROM resource_modification_requests WHERE event_id = ? AND status = 'pending'");
         $stmt->execute([$eventId]);
         return (bool) $stmt->fetch(PDO::FETCH_ASSOC);
@@ -1870,18 +2170,42 @@ class EventController
         }
 
         // Créer la demande de suppression
-        $stmt = $this->conn->prepare('INSERT INTO event_deletion_requests (event_id, user_id, status, requested_at, event_name_snapshot, event_description_snapshot, event_start_date_snapshot, event_end_date_snapshot, event_location_snapshot, event_status_snapshot) VALUES (?, ?, ?, NOW(), ?, ?, ?, ?, ?, ?)');
-        $stmt->execute([
-            $eventId,
-            $userId,
-            'pending',
-            $event['name'] ?? null,
-            $event['description'] ?? null,
-            $event['start_date'] ?? null,
-            $event['end_date'] ?? null,
-            $event['location'] ?? null,
-            $event['status'] ?? null,
-        ]);
+        $baseColumns = ['event_id', 'user_id', 'status'];
+        $baseValues = [$eventId, $userId, 'pending'];
+
+        if ($this->eventDeletionRequestedAtColumnExists()) {
+            $baseColumns[] = 'requested_at';
+            $baseValues[] = date('Y-m-d H:i:s');
+        }
+
+        if ($this->tableHasColumn('event_deletion_requests', 'event_name_snapshot')) {
+            $baseColumns[] = 'event_name_snapshot';
+            $baseValues[] = $event['name'] ?? null;
+        }
+        if ($this->tableHasColumn('event_deletion_requests', 'event_description_snapshot')) {
+            $baseColumns[] = 'event_description_snapshot';
+            $baseValues[] = $event['description'] ?? null;
+        }
+        if ($this->tableHasColumn('event_deletion_requests', 'event_start_date_snapshot')) {
+            $baseColumns[] = 'event_start_date_snapshot';
+            $baseValues[] = $event['start_date'] ?? null;
+        }
+        if ($this->tableHasColumn('event_deletion_requests', 'event_end_date_snapshot')) {
+            $baseColumns[] = 'event_end_date_snapshot';
+            $baseValues[] = $event['end_date'] ?? null;
+        }
+        if ($this->tableHasColumn('event_deletion_requests', 'event_location_snapshot')) {
+            $baseColumns[] = 'event_location_snapshot';
+            $baseValues[] = $event['location'] ?? null;
+        }
+        if ($this->tableHasColumn('event_deletion_requests', 'event_status_snapshot')) {
+            $baseColumns[] = 'event_status_snapshot';
+            $baseValues[] = $event['status'] ?? null;
+        }
+
+        $insertSql = 'INSERT INTO event_deletion_requests (' . implode(', ', $baseColumns) . ') VALUES (' . implode(', ', array_fill(0, count($baseColumns), '?')) . ')';
+        $stmt = $this->conn->prepare($insertSql);
+        $stmt->execute($baseValues);
 
         $this->sendAdminRequestEmails('Suppression', $userId, (string) ($event['name'] ?? 'Événement'));
 
@@ -1893,21 +2217,30 @@ class EventController
      */
     public function getPendingDeletionRequests(): array
     {
+        $deletionRequestedAtExpr = $this->eventDeletionRequestedAtColumnExists()
+            ? 'edr.requested_at'
+            : ($this->eventDeletionCreatedAtColumnExists() ? 'edr.created_at' : 'NOW()');
+        $snapNameExpr = $this->tableHasColumn('event_deletion_requests', 'event_name_snapshot') ? 'edr.event_name_snapshot' : "''";
+        $snapDescriptionExpr = $this->tableHasColumn('event_deletion_requests', 'event_description_snapshot') ? 'edr.event_description_snapshot' : "''";
+        $snapStartExpr = $this->tableHasColumn('event_deletion_requests', 'event_start_date_snapshot') ? 'edr.event_start_date_snapshot' : 'NULL';
+        $snapEndExpr = $this->tableHasColumn('event_deletion_requests', 'event_end_date_snapshot') ? 'edr.event_end_date_snapshot' : 'NULL';
+        $snapLocationExpr = $this->tableHasColumn('event_deletion_requests', 'event_location_snapshot') ? 'edr.event_location_snapshot' : "''";
+        $snapStatusExpr = $this->tableHasColumn('event_deletion_requests', 'event_status_snapshot') ? 'edr.event_status_snapshot' : "''";
         $stmt = $this->conn->prepare("
-            SELECT
+            SELECT 
                 edr.id as request_id,
                 edr.event_id,
                 edr.user_id,
                 edr.status,
-                edr.requested_at,
-                COALESCE(e.name, edr.event_name_snapshot, 'Événement supprimé') as event_name,
-                COALESCE(e.description, edr.event_description_snapshot, '') as event_description,
-                COALESCE(e.start_date, edr.event_start_date_snapshot) as event_start_date,
-                COALESCE(e.end_date, edr.event_end_date_snapshot) as event_end_date,
+                {$deletionRequestedAtExpr} as requested_at,
+                COALESCE(e.name, {$snapNameExpr}, 'Événement supprimé') as event_name,
+                COALESCE(e.description, {$snapDescriptionExpr}, '') as event_description,
+                COALESCE(e.start_date, {$snapStartExpr}) as event_start_date,
+                COALESCE(e.end_date, {$snapEndExpr}) as event_end_date,
                 e.deadline as event_deadline,
-                COALESCE(e.location, edr.event_location_snapshot, '') as event_location,
+                COALESCE(e.location, {$snapLocationExpr}, '') as event_location,
                 e.max as event_max,
-                COALESCE(e.status, edr.event_status_snapshot, 'annulé') as event_status,
+                COALESCE(e.status, {$snapStatusExpr}, 'annulé') as event_status,
                 e.created_by as event_creator_id,
                 u.nom as user_nom,
                 u.prenom as user_prenom,
@@ -1917,7 +2250,7 @@ class EventController
             LEFT JOIN events e ON edr.event_id = e.id
             JOIN utilisateur u ON edr.user_id = u.id
             WHERE edr.status = 'pending'
-            ORDER BY edr.requested_at DESC
+            ORDER BY {$deletionRequestedAtExpr} DESC
         ");
         $stmt->execute();
         return $stmt->fetchAll(PDO::FETCH_ASSOC) ?: [];
@@ -1934,7 +2267,7 @@ class EventController
 
         // Récupérer la demande
         $stmt = $this->conn->prepare("
-            SELECT edr.event_id, edr.user_id, COALESCE(e.name, edr.event_name_snapshot, 'Événement') AS event_name
+            SELECT edr.event_id, edr.user_id, COALESCE(e.name, {$snapNameExpr}, 'Événement') AS event_name
             FROM event_deletion_requests edr
             LEFT JOIN events e ON e.id = edr.event_id
             WHERE edr.id = ? AND edr.status = 'pending'
@@ -1983,8 +2316,9 @@ class EventController
             return ['success' => false, 'message' => 'Paramètres invalides.'];
         }
 
+        $snapNameExpr = $this->tableHasColumn('event_deletion_requests', 'event_name_snapshot') ? 'edr.event_name_snapshot' : "''";
         $requestStmt = $this->conn->prepare("
-            SELECT edr.user_id, COALESCE(e.name, edr.event_name_snapshot, 'Événement') AS event_name
+            SELECT edr.user_id, COALESCE(e.name, {$snapNameExpr}, 'Événement') AS event_name
             FROM event_deletion_requests edr
             LEFT JOIN events e ON e.id = edr.event_id
             WHERE edr.id = ? AND edr.status = 'pending'
@@ -2042,11 +2376,11 @@ class EventController
 
         // Créer la demande de modification
         $stmt = $this->conn->prepare('
-            INSERT INTO event_modification_requests
-            (event_id, requested_by, status, new_name, new_description, new_start_date, new_end_date, new_deadline, new_location, new_max, requested_at)
+            INSERT INTO event_modification_requests 
+            (event_id, requested_by, status, new_name, new_description, new_start_date, new_end_date, new_deadline, new_location, new_max, requested_at) 
             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())
         ');
-
+        
         $stmt->execute([
             $eventId,
             $userId,
@@ -2070,13 +2404,20 @@ class EventController
      */
     public function getPendingModificationRequests(): array
     {
+        if (!$this->tableExists('event_modification_requests')) {
+            return [];
+        }
+
+        $modRequestedAtExpr = $this->tableHasColumn('event_modification_requests', 'requested_at')
+            ? 'emr.requested_at'
+            : ($this->tableHasColumn('event_modification_requests', 'created_at') ? 'emr.created_at' : 'NOW()');
         $stmt = $this->conn->prepare("
-            SELECT
+            SELECT 
                 emr.id as request_id,
                 emr.event_id,
                 emr.requested_by,
                 emr.status,
-                emr.requested_at,
+                {$modRequestedAtExpr} as requested_at,
                 emr.new_name,
                 emr.new_description,
                 emr.new_start_date,
@@ -2100,7 +2441,7 @@ class EventController
             JOIN events e ON emr.event_id = e.id
             JOIN utilisateur u ON emr.requested_by = u.id
             WHERE emr.status = 'pending'
-            ORDER BY emr.requested_at DESC
+            ORDER BY {$modRequestedAtExpr} DESC
         ");
         $stmt->execute();
         return $stmt->fetchAll(PDO::FETCH_ASSOC) ?: [];
@@ -2216,7 +2557,7 @@ class EventController
 
             // Appliquer les modifications à l'événement
             $stmt = $this->conn->prepare("
-                UPDATE events
+                UPDATE events 
                 SET name = ?, description = ?, start_date = ?, end_date = ?, deadline = ?, location = ?, max = ?
                 WHERE id = ?
             ");
@@ -2233,8 +2574,8 @@ class EventController
 
             // Mettre à jour la demande
             $stmt = $this->conn->prepare("
-                UPDATE event_modification_requests
-                SET status = 'approved', processed_at = NOW(), processed_by = ?
+                UPDATE event_modification_requests 
+                SET status = 'approved', processed_at = NOW(), processed_by = ? 
                 WHERE id = ?
             ");
             $stmt->execute([$adminId, $requestId]);
@@ -2277,8 +2618,8 @@ class EventController
         }
 
         $stmt = $this->conn->prepare("
-            UPDATE event_modification_requests
-            SET status = 'rejected', processed_at = NOW(), processed_by = ?
+            UPDATE event_modification_requests 
+            SET status = 'rejected', processed_at = NOW(), processed_by = ? 
             WHERE id = ? AND status = 'pending'
         ");
         $stmt->execute([$adminId, $requestId]);
@@ -2311,7 +2652,7 @@ class EventController
         if ($name === '') {
             throw new InvalidArgumentException('Le nom de l\'événement est obligatoire.');
         }
-
+        
         if ($this->textLength($name) < 6) {
             throw new InvalidArgumentException('Le titre doit contenir au moins 6 caractères');
         }
@@ -2446,12 +2787,22 @@ class EventController
             $inscriptions = (int) $stmt->fetchColumn();
 
             // Nombre de demandes envoyées (suppression + modification événements + modification ressources)
-            $stmt = $this->conn->prepare("SELECT
-                (SELECT COUNT(*) FROM event_deletion_requests WHERE user_id = ?) +
-                (SELECT COUNT(*) FROM event_modification_requests WHERE requested_by = ?) +
-                (SELECT COUNT(*) FROM resource_modification_requests WHERE requested_by = ?) as total_demandes");
-            $stmt->execute([$userId, $userId, $userId]);
-            $demandes = $stmt->fetch(PDO::FETCH_ASSOC)['total_demandes'] ?? 0;
+            $demandes = 0;
+            if ($this->tableExists('event_deletion_requests')) {
+                $stmt = $this->conn->prepare('SELECT COUNT(*) FROM event_deletion_requests WHERE user_id = ?');
+                $stmt->execute([$userId]);
+                $demandes += (int) $stmt->fetchColumn();
+            }
+            if ($this->tableExists('event_modification_requests')) {
+                $stmt = $this->conn->prepare('SELECT COUNT(*) FROM event_modification_requests WHERE requested_by = ?');
+                $stmt->execute([$userId]);
+                $demandes += (int) $stmt->fetchColumn();
+            }
+            if ($this->tableExists('resource_modification_requests')) {
+                $stmt = $this->conn->prepare('SELECT COUNT(*) FROM resource_modification_requests WHERE requested_by = ?');
+                $stmt->execute([$userId]);
+                $demandes += (int) $stmt->fetchColumn();
+            }
 
             return [
                 'success' => true,
@@ -2477,21 +2828,21 @@ class EventController
     {
         try {
             $stats = [];
-
+            
             // Générer les 12 derniers mois
             for ($i = 11; $i >= 0; $i--) {
                 $month = date('Y-m', strtotime("-$i months"));
                 $monthLabel = date('M Y', strtotime("-$i months"));
                 $startDate = $month . '-01';
                 $endDate = date('Y-m-t', strtotime($startDate));
-
+                
                 // Événements créés ce mois
-                $stmt = $this->conn->prepare("SELECT
+                $stmt = $this->conn->prepare("SELECT 
                     COUNT(*) as total,
                     SUM(CASE WHEN status = 'valide' THEN 1 ELSE 0 END) as valides,
                     SUM(CASE WHEN status = 'en cours' THEN 1 ELSE 0 END) as en_cours,
                     SUM(CASE WHEN status = 'refusé' THEN 1 ELSE 0 END) as refuses
-                    FROM events
+                    FROM events 
                     WHERE DATE(created_at) BETWEEN ? AND ?");
                 $stmt->execute([$startDate, $endDate]);
                 $eventStats = $stmt->fetch(PDO::FETCH_ASSOC);
@@ -2513,7 +2864,7 @@ class EventController
             }
 
             // Totaux généraux
-            $stmt = $this->conn->query("SELECT
+            $stmt = $this->conn->query("SELECT 
                 COUNT(*) as total_events,
                 SUM(CASE WHEN status = 'valide' THEN 1 ELSE 0 END) as total_valides,
                 SUM(CASE WHEN status = 'en cours' THEN 1 ELSE 0 END) as total_en_cours,
@@ -2561,8 +2912,8 @@ class EventController
                     for ($i = 29; $i >= 0; $i--) {
                         $date = date('Y-m-d', strtotime("-$i days"));
                         $label = date('d/m', strtotime("-$i days"));
-
-                        $stmt = $this->conn->prepare("SELECT
+                        
+                        $stmt = $this->conn->prepare("SELECT 
                             COUNT(*) as total,
                             SUM(CASE WHEN status = 'valide' THEN 1 ELSE 0 END) as valides,
                             SUM(CASE WHEN status = 'en cours' THEN 1 ELSE 0 END) as en_cours,
@@ -2593,8 +2944,8 @@ class EventController
                         $startDate = date('Y-m-d', strtotime($yearWeek . ' monday'));
                         $endDate = date('Y-m-d', strtotime($yearWeek . ' sunday'));
                         $label = 'S' . date('W', strtotime("-$i weeks"));
-
-                        $stmt = $this->conn->prepare("SELECT
+                        
+                        $stmt = $this->conn->prepare("SELECT 
                             COUNT(*) as total,
                             SUM(CASE WHEN status = 'valide' THEN 1 ELSE 0 END) as valides,
                             SUM(CASE WHEN status = 'en cours' THEN 1 ELSE 0 END) as en_cours,
@@ -2629,8 +2980,8 @@ class EventController
                         $year = $currentYear - $i;
                         $startDate = $year . '-01-01';
                         $endDate = $year . '-12-31';
-
-                        $stmt = $this->conn->prepare("SELECT
+                        
+                        $stmt = $this->conn->prepare("SELECT 
                             COUNT(*) as total,
                             SUM(CASE WHEN status = 'valide' THEN 1 ELSE 0 END) as valides,
                             SUM(CASE WHEN status = 'en cours' THEN 1 ELSE 0 END) as en_cours,
@@ -2665,8 +3016,8 @@ class EventController
             ];
 
             // Calculer le taux de validation
-            $totaux['taux_validation'] = $totaux['total_events'] > 0
-                ? round(($totaux['total_valides'] / $totaux['total_events']) * 100, 1)
+            $totaux['taux_validation'] = $totaux['total_events'] > 0 
+                ? round(($totaux['total_valides'] / $totaux['total_events']) * 100, 1) 
                 : 0;
 
             return [

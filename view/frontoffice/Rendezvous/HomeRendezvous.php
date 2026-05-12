@@ -1,6 +1,6 @@
 <?php
-require_once '../../../controller/RendezvousC.php';
-require_once '../../../controller/ServiceC.php';
+require_once __DIR__ . '/../../../controller/RendezvousC.php';
+require_once __DIR__ . '/../../../controller/ServiceC.php';
 
 $rendezvousC = new RendezvousC();
 $serviceC = new ServiceC();

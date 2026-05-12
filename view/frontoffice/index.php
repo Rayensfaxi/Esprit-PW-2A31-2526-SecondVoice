@@ -4,7 +4,7 @@ session_start();
 
 $role = strtolower((string) ($_SESSION['user_role'] ?? 'client'));
 $canAccessDashboard = isset($_SESSION['user_id']) && in_array($role, ['admin', 'agent'], true);
-$dashboardUrl = $role === 'agent' ? '../backoffice/gestion-accompagnements.php' : '../backoffice/index.php';
+$dashboardUrl = $role === 'agent' ? 'assistant-accompagnements.php' : '../backoffice/index.php';
 
 function h($value): string
 {
@@ -37,8 +37,9 @@ function h($value): string
       rel="stylesheet"
     />
     <link rel="stylesheet" href="assets/css/style.css" />
+    <link rel="stylesheet" href="assets/css/home.css" />
   </head>
-  <body>
+  <body class="home-page">
     <div class="logo-splash" id="logo-splash" aria-hidden="true">
       <div class="logo-splash-inner">
         <img src="assets/media/logo white.png" alt="SecondVoice" />
@@ -122,267 +123,62 @@ function h($value): string
           </div>
         </div>
       </header>
-
       <main>
-        <section class="hero">
-          <div class="container hero-grid">
-            <div class="fade-up">
-              <div class="eyebrow">
+        <section class="sv-home-hero">
+          <div class="container sv-hero-grid">
+            <div class="sv-hero-copy fade-up">
+              <div class="eyebrow sv-eyebrow">
                 <span class="eyebrow-dot"></span>
-                <span>Plateforme d'assistance vocale et administrative</span>
+                <span>Plateforme d&rsquo;assistance vocale et administrative</span>
               </div>
-              <h1>SecondVoice simplifie vos demarches du quotidien.</h1>
-              <p class="hero-copy">
-                Une plateforme digitale qui vous aide a envoyer vos demandes administratives, prendre des rendez-vous,
-                deposer des documents et obtenir de l'accompagnement facilement.
-              </p>
-              <div class="hero-actions">
-                <a class="btn btn-primary" href="services.php">Voir les services</a>
-                <a class="btn btn-secondary" href="contact.php">Contacter l'equipe</a>
+              <h1>Simplifiez vos d&eacute;marches administratives avec <span>SecondVoice.</span></h1>
+              <p>Envoyez vos demandes, prenez rendez-vous, d&eacute;posez vos documents et b&eacute;n&eacute;ficiez d&rsquo;un accompagnement personnalis&eacute; en quelques clics.</p>
+              <div class="sv-hero-actions">
+                <a class="sv-primary-btn" href="services.php">Commencer maintenant <span>&rarr;</span></a>
+                <a class="sv-secondary-btn" href="services.php">D&eacute;couvrir les services <span>&rsaquo;</span></a>
+                <a class="sv-secondary-btn sv-smart-btn" href="smart-guide.php">Smart Guide <span>➜</span></a>
               </div>
-              <div class="hero-metrics">
-                <article class="metric-card">
-                  <strong>+100</strong>
-                  <span>utilisateurs actifs</span>
-                </article>
-                <article class="metric-card">
-                  <strong>+50</strong>
-                  <span>demandes traitees</span>
-                </article>
-                <article class="metric-card">
-                  <strong>24/7</strong>
-                  <span>support disponible</span>
-                </article>
+              <div class="sv-metrics">
+                <article><div class="sv-metric-icon metric-users"></div><strong>+100</strong><span>utilisateurs accompagnes</span></article>
+                <article><div class="sv-metric-icon metric-docs"></div><strong>+50</strong><span>demandes administratives traitees</span></article>
+                <article><div class="sv-metric-icon metric-clock"></div><strong>Assistance<br>24/7</strong></article>
               </div>
             </div>
-
-            <div class="hero-visual fade-up">
-              <img class="hero-icon" src="assets/media/icone.png" alt="Icone SecondVoice" />
+            <div class="sv-dashboard-wrap fade-up" aria-label="Apercu de l'assistant SecondVoice">
+              <img class="sv-dashboard-image" src="assets/media/hero-right-home.png" alt="Interface de l'assistant SecondVoice" />
             </div>
-          </div>
-
-          <div class="container panel-grid fade-up">
-            <article class="glass-card">
-              <h3>Notre impact en chiffres</h3>
-              <p>Lancements de plateformes, programmes de securite et automatisations IA avec un ROI mesurable.</p>
-            </article>
-            <article class="glass-card">
-              <h3>Solutions innovantes pour la croissance des entreprises modernes</h3>
-              <p>Nous combinons vision produit, rigueur technique et modeles operationnels clairs.</p>
-            </article>
-            <article class="glass-card">
-              <h3>Systemes centres utilisateur avec resilence niveau entreprise</h3>
-              <p>Langage visuel, infrastructure fiable et modeles de support adaptes a la croissance.</p>
-            </article>
           </div>
         </section>
-
-        <section class="section">
+        <section class="sv-assistance">
           <div class="container">
-            <div class="section-header fade-up">
-              <div>
-                <div class="section-kicker">Presentation du projet</div>
-                <h2>Un assistant digital pense pour les citoyens et les equipes de support.</h2>
-              </div>
-              <p class="section-copy">
-                SecondVoice a pour objectif de reduire la complexite des procedures et de fournir
-                des reponses plus rapides, plus claires et plus accessibles.
-              </p>
+            <div class="sv-section-title fade-up">
+              <h2>Une assistance pensee pour vous simplifier la vie</h2>
+              <p>Des services intelligents, humains et securises pour toutes vos demarches.</p>
             </div>
-            <div class="grid-2">
-              <article class="image-card fade-up">
-                <div class="image-card-content">
-                  <div class="eyebrow">20+ ans d'experience en conseil et produit</div>
-                  <h3>Concu pour la rapidite de lancement, la gouvernance et la maintenabilite long terme.</h3>
-                  <ul class="feature-list">
-                    <li>Copilotes IA et automatisation des workflows</li>
-                    <li>Portails clients et plateformes de service</li>
-                    <li>Modeles de livraison cloud avec observabilite</li>
-                  </ul>
-                </div>
+            <div class="sv-feature-grid">
+              <article class="sv-feature-card fade-up">
+                <div><span class="sv-feature-icon purple"></span><h3>Gain de temps</h3><p>Confiez vos demarches a SecondVoice et concentrez-vous sur l'essentiel.</p></div>
+                <div class="sv-mini-calendar"><strong>Prise de rendez-vous</strong><small>RDV confirme</small><div class="sv-days"><span>L</span><span>M</span><span>M</span><span>J</span><span>V</span><b>24</b></div></div>
+              </article>
+              <article class="sv-feature-card fade-up">
+                <div><span class="sv-feature-icon blue"></span><h3>Accompagnement personnalise</h3><p>Un assistant dedie vous guide et repond a chacune de vos demandes.</p></div>
+                <div class="sv-chat-preview"><small>Assistant SecondVoice</small><p>Comment puis-je vous aider ?</p><b>Je souhaite refaire ma carte d'identite.</b></div>
+              </article>
+              <article class="sv-feature-card fade-up">
+                <div><span class="sv-feature-icon green"></span><h3>Suivi simplifie</h3><p>Suivez l'avancement de vos demandes en temps reel, en toute transparence.</p></div>
+                <div class="sv-progress-preview"><span class="done">Demande envoyee</span><span class="current">En cours de traitement</span><span>Terminee</span></div>
               </article>
             </div>
-          </div>
-        </section>
-
-        <section class="section">
-          <div class="container">
-            <div class="section-header fade-up">
-              <div>
-                <div class="section-kicker">Nos services</div>
-                <h2>Nos services</h2>
-              </div>
-              <a class="btn btn-secondary" href="services.php">Explorer tous les services</a>
-            </div>
-            <div class="grid-4">
-              <article class="stat-card fade-up">
-                <strong>01</strong>
-                <h3>Brainstorming</h3>
-                <p class="meta">Soumettre des idees, collaborer et suivre les propositions.</p>
-              </article>
-              <article class="stat-card fade-up">
-                <strong>02</strong>
-                <h3>Prise de rendez-vous</h3>
-                <p class="meta">Planifier et recevoir des rappels automatiques.</p>
-              </article>
-              <article class="stat-card fade-up">
-                <strong>03</strong>
-                <h3>Accompagnement</h3>
-                <p class="meta">Guidage pas a pas pour chaque demarche.</p>
-              </article>
-              <article class="stat-card fade-up">
-                <strong>04</strong>
-                <h3>Reclamations</h3>
-                <p class="meta">Depot, suivi et reponse centralisee.</p>
-              </article>
-            </div>
-          </div>
-        </section>
-
-        <section class="section">
-          <div class="container">
-            <div class="section-header fade-up">
-              <div>
-                <div class="section-kicker">Comment ca marche ?</div>
-                <h2>Comment ca marche ?</h2>
-              </div>
-              <p class="section-copy">
-                Un parcours simple pour realiser vos demarches en ligne.
-              </p>
-            </div>
-            <div class="grid-4">
-              <article class="stat-card fade-up">
-                <strong>01</strong>
-                <h3>Creer un compte</h3>
-                <p class="meta">Accedez a votre espace personnel.</p>
-              </article>
-              <article class="stat-card fade-up">
-                <strong>02</strong>
-                <h3>Envoyer une demande</h3>
-                <p class="meta">Remplissez votre formulaire en ligne.</p>
-              </article>
-              <article class="stat-card fade-up">
-                <strong>03</strong>
-                <h3>Suivre le traitement</h3>
-                <p class="meta">Recevez les mises a jour en temps reel.</p>
-              </article>
-              <article class="stat-card fade-up">
-                <strong>04</strong>
-                <h3>Recevoir une reponse</h3>
-                <p class="meta">Consultez vos documents et decisions.</p>
-              </article>
-            </div>
-          </div>
-        </section>
-
-        <section class="section">
-          <div class="container grid-2">
-            <div class="fade-up">
-              <div class="section-kicker">Notre objectif</div>
-              <h2>Notre objectif</h2>
-              <p class="section-copy">
-                Faciliter l'acces aux services administratifs et reduire la complexite des demarches pour tous les utilisateurs.
-              </p>
-              <a class="btn btn-primary" href="about.php">En savoir plus</a>
-            </div>
-            <div class="timeline">
-              <article class="timeline-item fade-up">
-                <div class="timeline-step">01</div>
-                <h3>Simple</h3>
-                <p>Des demarches claires et faciles a comprendre.</p>
-              </article>
-              <article class="timeline-item fade-up">
-                <div class="timeline-step">02</div>
-                <h3>Accessible</h3>
-                <p>Un service disponible pour tous, sur web et mobile.</p>
-              </article>
-              <article class="timeline-item fade-up">
-                <div class="timeline-step">03</div>
-                <h3>Utile</h3>
-                <p>Un suivi precis et des reponses rapides.</p>
-              </article>
-            </div>
-          </div>
-        </section>
-
-        <section class="section">
-          <div class="container">
-            <div class="section-header fade-up">
-              <div>
-                <div class="section-kicker">Temoignages</div>
-                <h2>Retours clients qui renforcent la confiance.</h2>
-              </div>
-            </div>
-            <div class="grid-3">
-              <article class="testimonial fade-up">
-                <p class="quote">"Plateforme simple et rapide pour mes demarches administratives."</p>
-                <div class="post-meta">
-                  <span class="tag">Utilisateur</span>
-                  <span>SecondVoice</span>
-                </div>
-              </article>
-            </div>
-          </div>
-        </section>
-
-        <section class="section">
-          <div class="container achievement fade-up">
-            <div class="grid-4">
-              <div>
-                <strong class="price">1400+</strong>
-                <div class="meta">Projets realises en conception et technologies</div>
-              </div>
-              <div>
-                <strong class="price">8M</strong>
-                <div class="meta">Interactions clients optimisees grace a l'automatisation</div>
-              </div>
-              <div>
-                <strong class="price">3K</strong>
-                <div class="meta">Heures operationnelles recuperees via la refonte des workflows</div>
-              </div>
-              <div>
-                <strong class="price">20+</strong>
-                <div class="meta">Annees d'experience cumulee en conseil numerique</div>
-              </div>
-            </div>
-          </div>
-        </section>
-
-        <section class="section">
-          <div class="container grid-2">
-            <div class="fade-up">
-              <div class="section-kicker">FAQ</div>
-              <h2>Questions frequentes</h2>
-              <p class="section-copy">
-                Retrouvez ici les reponses aux questions les plus courantes.
-              </p>
-            </div>
-            <div class="faq-list">
-              <details class="faq-item fade-up" open>
-                <summary>
-                  Comment envoyer une demande ?
-                  <span class="faq-icon">+</span>
-                </summary>
-                <p>Rendez-vous dans Mes demandes, remplissez le formulaire et validez l'envoi.</p>
-              </details>
-              <details class="faq-item fade-up">
-                <summary>
-                  Comment suivre mon dossier ?
-                  <span class="faq-icon">+</span>
-                </summary>
-                <p>Votre espace affiche l'etat et l'historique de chaque demande.</p>
-              </details>
-              <details class="faq-item fade-up">
-                <summary>
-                  Comment prendre un rendez-vous ?
-                  <span class="faq-icon">+</span>
-                </summary>
-                <p>Choisissez un motif, une date et recevez une confirmation automatique.</p>
-              </details>
+            <div class="sv-security-bar fade-up">
+              <span>SECURISE ET CONFIDENTIEL</span>
+              <p>Vos donnees sont protegees et ne sont jamais partagees.</p>
+              <span>HEBERGEMENT SECURISE<br><small>Certifie ISO 27001</small></span>
+              <span>CONFORME RGPD<br><small>Donnees protegees</small></span>
             </div>
           </div>
         </section>
       </main>
+
 
       <footer class="footer">
         <div class="container">
@@ -400,6 +196,8 @@ function h($value): string
     <script src="assets/js/main.js"></script>
   </body>
 </html>
+
+
 
 
 

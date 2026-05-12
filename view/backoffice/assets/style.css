@@ -1402,6 +1402,162 @@ html[data-theme="light"] .icon-button.icon-moon::before {
   line-height: 1.2;
 }
 
+/* Generic icon action button used in Service/Rendezvous tables */
+.view-btn {
+  min-width: 36px;
+  height: 36px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: var(--panel-2);
+  color: var(--text);
+  cursor: pointer;
+  transition: background 0.2s ease, border-color 0.2s ease, transform 0.2s ease;
+  gap: 6px;
+  padding: 0 10px;
+}
+
+.view-btn:hover {
+  border-color: rgba(99, 91, 255, 0.5);
+  background: rgba(99, 91, 255, 0.12);
+  transform: translateY(-1px);
+}
+
+.view-btn svg {
+  width: 18px;
+  height: 18px;
+  display: block;
+  flex: 0 0 18px;
+}
+
+.rendezvous-table-card .card-header.rendezvous-table-header {
+  margin-bottom: 0;
+  padding: 1.5rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.rendezvous-toolbar {
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  gap: 0.85rem;
+  flex-wrap: wrap;
+}
+
+.rdv-search-wrap {
+  min-width: 320px;
+  width: min(460px, 100%);
+  height: 54px;
+  border-radius: 18px;
+  border: 1px solid var(--input-border);
+  background: var(--input-bg);
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  padding: 0 16px;
+}
+
+.rdv-search-wrap svg {
+  width: 20px;
+  height: 20px;
+  color: var(--muted-2);
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2;
+  flex: 0 0 20px;
+}
+
+.rdv-search-wrap input {
+  border: 0;
+  outline: 0;
+  width: 100%;
+  color: var(--text);
+  background: transparent;
+  padding: 0;
+}
+
+.rdv-select-filter {
+  height: 54px;
+  min-width: 180px;
+  padding: 0 14px;
+  border-radius: 16px;
+  border: 1px solid var(--input-border);
+  background: var(--input-bg);
+  color: var(--text);
+}
+
+.rdv-export-button {
+  height: 54px;
+  padding: 0 26px;
+  border-radius: 18px;
+  border: 1px solid #2ac77e;
+  background: #2ac77e;
+  box-shadow: none;
+}
+
+.rdv-sort-mark {
+  font-size: 0.74rem;
+  margin-left: 4px;
+  opacity: 0.82;
+}
+
+.rdv-assistant-label {
+  display: block;
+  margin-top: 2px;
+  letter-spacing: 0.18em;
+}
+
+.rdv-time-label {
+  display: block;
+  margin-top: 2px;
+}
+
+.rdv-mode-pill {
+  background: rgba(179, 153, 255, 0.22);
+  color: #cab7ff;
+  border: 1px solid rgba(179, 153, 255, 0.3);
+  text-transform: none;
+}
+
+.rdv-action-wrap {
+  flex-wrap: nowrap;
+}
+
+.rdv-view-btn {
+  min-width: 90px;
+  border-radius: 999px;
+  padding: 0 16px;
+}
+
+.rdv-icon-btn {
+  width: 48px;
+  min-width: 48px;
+  padding: 0;
+  border-radius: 16px;
+}
+
+.rdv-edit-btn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+  transform: none;
+}
+
+.rdv-delete-btn {
+  border-color: rgba(239, 68, 68, 0.8);
+  color: #ef4444;
+  background: rgba(239, 68, 68, 0.04);
+}
+
+html[data-theme="light"] .rdv-delete-btn {
+  background: rgba(239, 68, 68, 0.05);
+}
+
 .table-actions input[type="datetime-local"] {
   width: 170px;
   padding: 6px 8px;
@@ -1556,6 +1712,16 @@ html[data-theme="light"] .icon-button.icon-moon::before {
   .users-filters {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
+
+  .rendezvous-toolbar {
+    width: 100%;
+    justify-content: flex-start;
+  }
+
+  .rdv-search-wrap {
+    width: 100%;
+    max-width: none;
+  }
 }
 
 @media (max-width: 760px) {
@@ -1565,6 +1731,15 @@ html[data-theme="light"] .icon-button.icon-moon::before {
 
   .users-table {
     font-size: 0.9rem;
+  }
+
+  .rdv-select-filter,
+  .rdv-export-button {
+    width: 100%;
+  }
+
+  .rdv-action-wrap {
+    flex-wrap: wrap;
   }
 }
 

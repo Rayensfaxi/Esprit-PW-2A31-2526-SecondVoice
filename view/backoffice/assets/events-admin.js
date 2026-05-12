@@ -17,6 +17,12 @@ document.addEventListener('DOMContentLoaded', function () {
   const qrDownloadLink = $('#qr-download-link');
   const qrEncodedText = $('#qr-encoded-text');
 
+  function syncModalScrollLock() {
+    const hasOpenModal = Boolean($('.modal.open'));
+    document.body.classList.toggle('modal-open', hasOpenModal);
+    document.body.style.overflow = hasOpenModal ? 'hidden' : '';
+  }
+
   // Popup system for confirmation and success messages
   function showPopup(message, type = 'success', onConfirm = null, onCancel = null) {
     const existingPopup = document.getElementById('custom-popup');
@@ -209,21 +215,25 @@ document.addEventListener('DOMContentLoaded', function () {
   function openModal() {
     modal?.setAttribute('aria-hidden', 'false');
     modal?.classList.add('open');
+    syncModalScrollLock();
   }
 
   function closeModal() {
     modal?.setAttribute('aria-hidden', 'true');
     modal?.classList.remove('open');
+    syncModalScrollLock();
   }
 
   function openRequestDetailsModal() {
     requestDetailsModal?.setAttribute('aria-hidden', 'false');
     requestDetailsModal?.classList.add('open');
+    syncModalScrollLock();
   }
 
   function closeRequestDetailsModal() {
     requestDetailsModal?.setAttribute('aria-hidden', 'true');
     requestDetailsModal?.classList.remove('open');
+    syncModalScrollLock();
   }
 
   async function openQrModal(card, eventId) {
@@ -255,6 +265,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
     qrModal.setAttribute('aria-hidden', 'false');
     qrModal.classList.add('open');
+    syncModalScrollLock();
   }
 
   function closeQrModal() {
@@ -262,6 +273,7 @@ document.addEventListener('DOMContentLoaded', function () {
     qrModal?.classList.remove('open');
     if (qrImage) qrImage.src = '';
     if (qrEncodedText) qrEncodedText.textContent = '';
+    syncModalScrollLock();
   }
 
   function escapeHtml(value) {

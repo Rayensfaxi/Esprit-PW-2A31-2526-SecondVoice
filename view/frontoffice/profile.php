@@ -333,7 +333,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $prenom = trim((string) ($_POST['prenom'] ?? ''));
         $email = trim((string) ($_POST['email'] ?? ''));
         $telephone = trim((string) ($_POST['telephone'] ?? ''));
-        $password = trim((string) ($_POST['mot_de_passe'] ?? ''));
         $removePhoto = ((string) ($_POST['remove_photo'] ?? '0')) === '1';
 
         try {
@@ -378,7 +377,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $email,
                 $telephone,
                 (string) ($user['role'] ?? 'client'),
-                $password !== '' ? $password : null
+                null
             );
 
             if ($removePhoto) {
@@ -407,8 +406,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 (string) ($oldUser['nom'] ?? '') !== (string) ($user['nom'] ?? '') ||
                 (string) ($oldUser['prenom'] ?? '') !== (string) ($user['prenom'] ?? '') ||
                 (string) ($oldUser['email'] ?? '') !== (string) ($user['email'] ?? '') ||
-                (string) ($oldUser['telephone'] ?? '') !== (string) ($user['telephone'] ?? '') ||
-                $password !== ''
+                (string) ($oldUser['telephone'] ?? '') !== (string) ($user['telephone'] ?? '')
             );
 
             if ($profileChanged) {
@@ -480,36 +478,148 @@ $lastSeenLabel = $lastActivity ? formatTimeAgo((string) ($lastActivity['at'] ?? 
     />
     <link rel="stylesheet" href="assets/css/style.css?v=<?= h((string) @filemtime(__DIR__ . '/assets/css/style.css')) ?>" />
     <style>
-      .profile-showcase { padding: 24px 0 52px; }
-      .profile-header-box { border: 1px solid rgba(164,111,255,.4); border-radius: 24px; padding: 26px 30px; background: radial-gradient(circle at 80% 20%, rgba(140,76,255,.2), transparent 45%), #0b0d28; margin-bottom: 18px; }
-      .profile-header-box h1 { margin: 6px 0 10px; font-size: clamp(2rem, 4vw, 3.7rem); line-height: 1.05; }
-      .profile-layout { display: grid; grid-template-columns: 320px minmax(0,1fr); gap: 18px; }
-      .panel { border: 1px solid rgba(164,111,255,.34); border-radius: 22px; background: linear-gradient(160deg, rgba(29,22,72,.88), rgba(13,13,33,.92)); padding: 22px; }
+      .profile-showcase { padding: 24px 0 52px; color: #f7f8ff; }
+      .profile-showcase .container { max-width: 1120px; }
+      .profile-showcase h1,
+      .profile-showcase h2,
+      .profile-showcase h3,
+      .profile-showcase strong,
+      .profile-showcase label,
+      .profile-showcase small { color: #f8f7ff; }
+      .profile-showcase p,
+      .profile-showcase span { color: #d9ddff; }
+      .profile-header-box { color: #f7f8ff; border: 1px solid rgba(164,111,255,.48); border-radius: 24px; padding: 28px 30px; background: radial-gradient(circle at 82% 18%, rgba(140,76,255,.24), transparent 44%), linear-gradient(145deg, #181044, #0b0d28); margin-bottom: 18px; box-shadow: 0 18px 46px rgba(2, 4, 18, .22); }
+      .profile-header-box h1 { margin: 6px 0 10px; font-size: clamp(2.25rem, 4vw, 3.8rem); line-height: 1.04; color: #fff; }
+      .profile-header-box p { color: #eef0ff; }
+      .profile-header-box .breadcrumbs,
+      .profile-header-box .breadcrumbs span { color: #bfc5ff; }
+      .profile-layout { display: grid; grid-template-columns: 320px minmax(0,1fr); gap: 18px; align-items: start; }
+      .panel { border: 1px solid rgba(164,111,255,.42); border-radius: 22px; background: linear-gradient(160deg, rgba(36,29,82,.96), rgba(14,14,36,.98)); padding: 22px; color: #f7f8ff; box-shadow: 0 16px 36px rgba(3, 4, 22, .18); }
+      .panel:target { border-color: rgba(237,89,185,.72); box-shadow: 0 0 0 1px rgba(237,89,185,.18); }
       .left-stack, .right-stack { display: grid; gap: 16px; }
-      .profile-avatar-big { width: 142px; height: 142px; border-radius: 50%; border: 3px solid #9d63ff; margin: 2px auto 14px; }
+      .profile-avatar-big { width: 142px; height: 142px; border-radius: 50%; border: 3px solid #9d63ff; margin: 2px auto 14px; background: linear-gradient(135deg, rgba(107,92,255,.38), rgba(237,89,185,.28)); }
       .profile-avatar-big.has-image { background-size: cover; background-position: center; }
-      .profile-avatar-big span { display: grid; place-items: center; height: 100%; font-weight: 800; font-size: 2rem; }
+      .profile-avatar-big span { display: grid; place-items: center; height: 100%; font-weight: 800; font-size: 2rem; color: #fff; }
       .name-center { text-align: center; }
-      .badge-role { display: inline-flex; align-items: center; justify-content: center; border-radius: 999px; padding: 7px 14px; background: linear-gradient(90deg, #6b5cff, #ed59b9); font-weight: 700; }
+      .name-center h3 { color: #fff; }
+      .name-center p { color: #d8dcff; }
+      .badge-role { display: inline-flex; align-items: center; justify-content: center; border-radius: 999px; padding: 7px 14px; background: linear-gradient(90deg, #6b5cff, #ed59b9); font-weight: 700; color: #fff; }
       .dot-ok { width: 9px; height: 9px; border-radius: 50%; background: #42e888; display: inline-block; margin-right: 8px; }
       .left-menu { margin-top: 20px; border-top: 1px solid rgba(255,255,255,.08); padding-top: 14px; display: grid; gap: 8px; }
-      .left-menu a { border: 1px solid rgba(255,255,255,.14); border-radius: 12px; padding: 11px 12px; color: #f3f5ff; }
-      .left-menu a.active { background: linear-gradient(90deg, #6b5cff, #ed59b9); border-color: transparent; }
+      .left-menu a { border: 1px solid rgba(255,255,255,.16); border-radius: 12px; padding: 11px 12px; color: #f3f5ff; background: rgba(255,255,255,.025); font-weight: 700; }
+      .left-menu a.active { background: linear-gradient(90deg, #6b5cff, #ed59b9); border-color: transparent; color: #fff; }
+      #profile-info-card, #preferences-card, #security-card, #historique-card { scroll-margin-top: 96px; }
       .pref-row { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 7px 0; }
+      .pref-row span { color: #dde1ff; }
+      .pref-row strong { color: #fff; text-align: right; }
       .panel-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px; }
       .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
       .field-label { display: block; margin: 0 0 6px; color: #d8dcff; font-weight: 600; }
-      .profile-input { width: 100%; height: 50px; border-radius: 12px; border: 1px solid rgba(255,255,255,.17); background: rgba(255,255,255,.03); color: #f7f8ff; padding: 0 14px; }
-      .profile-input.readonly { opacity: .82; }
+      .profile-input { width: 100%; height: 50px; border-radius: 12px; border: 1px solid rgba(255,255,255,.18); background: rgba(255,255,255,.055); color: #f7f8ff; padding: 0 14px; font-weight: 650; }
+      .profile-input:focus { outline: none; border-color: rgba(237,89,185,.7); box-shadow: 0 0 0 3px rgba(237,89,185,.13); }
+      .profile-input.readonly { opacity: 1; background: rgba(255,255,255,.035); color: #dfe3ff; }
       .save-btn { margin-top: 14px; width: 100%; height: 52px; border-radius: 12px; border: 0; font-weight: 800; font-size: 1.12rem; color: #fff; background: linear-gradient(90deg, #6b5cff, #ed59b9); }
       .duo-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
       .activity-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 10px; }
       .activity-list li { display: flex; justify-content: space-between; gap: 12px; }
       .activity-list li::before { content: ""; width: 8px; height: 8px; border-radius: 50%; background: #a86dff; margin-top: 8px; margin-right: 8px; flex: 0 0 auto; }
-      .activity-line { display: flex; justify-content: space-between; width: 100%; border-bottom: 1px solid rgba(255,255,255,.08); padding-bottom: 6px; }
-      .stats-grid { display: grid; grid-template-columns: repeat(4, minmax(0,1fr)); gap: 12px; }
-      .stat-item { border: 1px solid rgba(255,255,255,.15); border-radius: 16px; padding: 18px 10px; text-align: center; }
-      .stat-item strong { display: block; font-size: 2rem; margin: 8px 0 2px; }
+      .activity-line { display: flex; justify-content: space-between; align-items: flex-start; width: 100%; border-bottom: 1px solid rgba(255,255,255,.08); padding-bottom: 6px; gap: 14px; }
+      .activity-line span:first-child { flex: 1; color: #f1f3ff; line-height: 1.35; }
+      .activity-line span:last-child { flex: 0 0 auto; color: #d1d6ff; font-weight: 800; text-align: right; }
+      .profile-help,
+      .profile-feedback { color: #cfd4ff; }
+      .profile-feedback.success { color: #57f49e; }
+      .profile-feedback.error { color: #ff7f9d; }
+      .profile-showcase .btn.btn-secondary { border: 1px solid rgba(255,255,255,.17); background: rgba(255,255,255,.07); color: #fff; }
+      .profile-showcase .btn.btn-secondary:hover { border-color: rgba(237,89,185,.5); background: rgba(237,89,185,.16); }
+      .profile-showcase .btn.btn-primary { color: #fff; }
+      .stats-panel { padding: 24px; }
+      .stats-head { display: flex; align-items: flex-end; justify-content: space-between; gap: 14px; margin-bottom: 18px; }
+      .stats-head h3 { margin: 0; }
+      .stats-head span { color: #b9bee6; font-weight: 700; }
+      .stats-grid { display: grid; grid-template-columns: repeat(4, minmax(0,1fr)); gap: 14px; }
+      .stat-item { position: relative; overflow: hidden; min-height: 136px; border: 1px solid rgba(255,255,255,.13); border-radius: 18px; padding: 18px; background: linear-gradient(150deg, rgba(255,255,255,.08), rgba(255,255,255,.025)); box-shadow: inset 0 1px 0 rgba(255,255,255,.08); }
+      .stat-item::before { content: ""; position: absolute; inset: 0 auto 0 0; width: 4px; background: var(--stat-accent, #7c6bff); }
+      .stat-item::after { content: ""; position: absolute; top: -34px; right: -34px; width: 92px; height: 92px; border-radius: 50%; background: color-mix(in srgb, var(--stat-accent, #7c6bff) 24%, transparent); }
+      .stat-icon { display: inline-grid; place-items: center; width: 38px; height: 38px; border-radius: 12px; color: #fff; background: color-mix(in srgb, var(--stat-accent, #7c6bff) 28%, transparent); border: 1px solid color-mix(in srgb, var(--stat-accent, #7c6bff) 44%, transparent); font-weight: 900; margin-bottom: 12px; }
+      .stat-item small { display: block; color: #d8dcff; font-weight: 800; letter-spacing: 0; }
+      .stat-item strong { display: block; font-size: 2.35rem; line-height: 1; margin: 12px 0 5px; color: #fff; }
+      .stat-item span:not(.stat-icon) { color: #c6caee; font-weight: 700; }
+      :root[data-theme="light"] .profile-showcase { color: #221a3d; }
+      :root[data-theme="light"] .profile-header-box {
+        color: #221a3d;
+        border-color: rgba(103, 74, 190, .22);
+        background: linear-gradient(145deg, #ffffff, #f3f1ff);
+        box-shadow: 0 18px 42px rgba(51, 38, 118, .12);
+      }
+      :root[data-theme="light"] .panel {
+        color: #221a3d;
+        border-color: rgba(103, 74, 190, .22);
+        background: linear-gradient(160deg, #ffffff, #f7f5ff);
+        box-shadow: 0 16px 36px rgba(50, 40, 110, .1);
+      }
+      :root[data-theme="light"] .profile-showcase h1,
+      :root[data-theme="light"] .profile-showcase h2,
+      :root[data-theme="light"] .profile-showcase h3,
+      :root[data-theme="light"] .profile-showcase strong,
+      :root[data-theme="light"] .profile-showcase label,
+      :root[data-theme="light"] .profile-showcase small { color: #221a3d; }
+      :root[data-theme="light"] .profile-showcase p,
+      :root[data-theme="light"] .profile-showcase span { color: #5b5574; }
+      :root[data-theme="light"] .profile-header-box h1,
+      :root[data-theme="light"] .profile-header-box h3 { color: #211943; }
+      :root[data-theme="light"] .profile-header-box p,
+      :root[data-theme="light"] .profile-header-box .breadcrumbs,
+      :root[data-theme="light"] .profile-header-box .breadcrumbs span { color: #67617c; }
+      :root[data-theme="light"] .name-center h3 { color: #211943; }
+      :root[data-theme="light"] .name-center p { color: #625b78; }
+      :root[data-theme="light"] .badge-role,
+      :root[data-theme="light"] .left-menu a.active,
+      :root[data-theme="light"] .profile-avatar-big span,
+      :root[data-theme="light"] .stat-icon { color: #fff; }
+      :root[data-theme="light"] .left-menu { border-top-color: rgba(37, 27, 78, .1); }
+      :root[data-theme="light"] .left-menu a {
+        color: #312852;
+        border-color: rgba(80, 62, 145, .18);
+        background: #fbfaff;
+      }
+      :root[data-theme="light"] .pref-row span { color: #5b5574; }
+      :root[data-theme="light"] .pref-row strong { color: #221a3d; }
+      :root[data-theme="light"] .field-label { color: #3b315f; }
+      :root[data-theme="light"] .profile-input,
+      :root[data-theme="light"] #profile-form .profile-input {
+        color: #211943;
+        border-color: rgba(72, 56, 128, .18);
+        background: #ffffff;
+      }
+      :root[data-theme="light"] .profile-input.readonly,
+      :root[data-theme="light"] #profile-form .profile-input.readonly {
+        color: #5d5675;
+        background: #f4f2fb;
+      }
+      :root[data-theme="light"] .activity-line {
+        border-bottom-color: rgba(37, 27, 78, .1);
+      }
+      :root[data-theme="light"] .activity-line span:first-child { color: #2b2348; }
+      :root[data-theme="light"] .activity-line span:last-child { color: #5d5675; }
+      :root[data-theme="light"] .profile-help,
+      :root[data-theme="light"] .profile-feedback { color: #5e5875; }
+      :root[data-theme="light"] .profile-feedback.success { color: #0b8f50; }
+      :root[data-theme="light"] .profile-feedback.error { color: #b4234c; }
+      :root[data-theme="light"] .profile-showcase .btn.btn-secondary {
+        color: #2b2348;
+        border-color: rgba(80, 62, 145, .18);
+        background: #f4f1ff;
+      }
+      :root[data-theme="light"] .stat-item {
+        border-color: rgba(80, 62, 145, .14);
+        background: linear-gradient(150deg, #ffffff, #f5f2ff);
+        box-shadow: inset 0 1px 0 rgba(255,255,255,.9);
+      }
+      :root[data-theme="light"] .stats-head span,
+      :root[data-theme="light"] .stat-item span:not(.stat-icon) { color: #5d5675; }
+      :root[data-theme="light"] .stat-item small { color: #3b315f; }
+      :root[data-theme="light"] .stat-item strong { color: #211943; }
       @media (max-width: 1080px) { .profile-layout, .duo-grid, .form-grid, .stats-grid { grid-template-columns: 1fr; } }
 
       /* Legacy profile layout remap to match the requested mockup */
@@ -636,10 +746,10 @@ $lastSeenLabel = $lastActivity ? formatTimeAgo((string) ($lastActivity['at'] ?? 
                   <p style="margin-top:12px;"><span class="dot-ok"></span>Compte <?= h(strtolower($statusLabel)) ?></p>
                 </div>
                 <div class="left-menu">
-                  <a class="active" href="#">Mon profil</a>
-                  <a href="settings.php">Parametres</a>
-                  <a href="#activity-card">Notifications</a>
-                  <a href="#security-card">Securite</a>
+                  <a class="active" href="#profile-info-card" data-profile-nav>Mon profil</a>
+                  <a href="#preferences-card" data-profile-nav>Parametres</a>
+                  <a href="#historique-card" data-profile-nav>Historique</a>
+                  <a href="#security-card" data-profile-nav>Securite</a>
                   <form method="post" action="profile.php" style="margin-top:4px;">
                     <input type="hidden" name="action" value="logout" />
                     <button class="btn btn-primary" type="submit" style="width:100%;">Deconnexion</button>
@@ -647,26 +757,28 @@ $lastSeenLabel = $lastActivity ? formatTimeAgo((string) ($lastActivity['at'] ?? 
                 </div>
               </div>
 
-              <div class="panel fade-up">
-                <h3>Preferences</h3>
+              <div class="panel fade-up" id="preferences-card">
+                <h3>Parametres</h3>
                 <div class="pref-row"><span>Theme</span><strong>Sombre</strong></div>
                 <div class="pref-row"><span>Langue</span><strong>Francais</strong></div>
-                <div class="pref-row"><span>Notifications</span><strong>Activees</strong></div>
+                <div class="pref-row"><span>Historique</span><strong>Actif</strong></div>
               </div>
 
               <div class="panel fade-up">
                 <h3>Acces mobile</h3>
                 <p class="profile-help">Scannez ce QR code pour ouvrir le site sur votre telephone.</p>
                 <?php if ($mobileUrlIsLocal): ?>
-                  <p class="profile-help" style="color:#d64b6a;">URL locale detectee (<?= h($mobileHost) ?>). Configurez SECONDVOICE_PUBLIC_BASE_URL avec l'IP LAN de votre PC.</p>
+                  <p class="profile-help" style="color:#d64b6a;">Configuration reseau requise pour un acces mobile depuis un autre appareil.</p>
                 <?php endif; ?>
                 <img src="<?= h($qrCodeUrl) ?>" alt="QR code vers le site SecondVoice" style="width: 100%; max-width: 220px; border-radius: 12px; border: 1px solid rgba(255,255,255,0.15); margin: 10px 0;" />
-                <p class="profile-help" style="word-break: break-all;"><?= h($mobileOpenUrl) ?></p>
+                <?php if (!$mobileUrlIsLocal): ?>
+                  <p class="profile-help" style="word-break: break-all;"><?= h($mobileOpenUrl) ?></p>
+                <?php endif; ?>
               </div>
             </aside>
 
             <div class="right-stack">
-              <section class="panel fade-up">
+              <section class="panel fade-up" id="profile-info-card">
                 <div class="panel-head"><h3 style="margin:0;">Informations personnelles</h3></div>
                 <form id="profile-form" method="post" action="profile.php" enctype="multipart/form-data" novalidate>
                   <input type="hidden" name="action" value="update" />
@@ -689,7 +801,6 @@ $lastSeenLabel = $lastActivity ? formatTimeAgo((string) ($lastActivity['at'] ?? 
                     <div><label class="field-label">Derniere connexion</label><input class="profile-input readonly" type="text" value="<?= h($lastSeenLabel) ?>" readonly /></div>
                   </div>
 
-                  <div style="margin-top:12px;"><label class="field-label">Nouveau mot de passe (optionnel)</label><input id="new-password-input" class="profile-input" type="password" name="mot_de_passe" /></div>
                   <p id="profile-feedback" class="profile-feedback <?= $feedbackType === 'error' ? 'error' : ($feedbackType === 'success' ? 'success' : '') ?>" style="margin-top:12px;"><?= h($feedback) ?></p>
                   <button class="save-btn" type="submit">Enregistrer les modifications</button>
                 </form>
@@ -714,10 +825,10 @@ $lastSeenLabel = $lastActivity ? formatTimeAgo((string) ($lastActivity['at'] ?? 
                   </form>
                 </section>
 
-                <section class="panel fade-up" id="activity-card">
-                  <h3>Activite recente</h3>
+                <section class="panel fade-up" id="historique-card">
+                  <h3>Historique</h3>
                   <?php if (count($recentActivities) === 0): ?>
-                    <p class="profile-help">Aucune activite recente.</p>
+                    <p class="profile-help">Aucune entree dans l'historique.</p>
                   <?php else: ?>
                     <ul class="activity-list">
                       <?php foreach ($recentActivities as $activity): ?>
@@ -728,13 +839,16 @@ $lastSeenLabel = $lastActivity ? formatTimeAgo((string) ($lastActivity['at'] ?? 
                 </section>
               </div>
 
-              <section class="panel fade-up">
-                <h3>Statistiques</h3>
+              <section class="panel fade-up stats-panel">
+                <div class="stats-head">
+                  <h3>Statistiques</h3>
+                  <span>Vue rapide</span>
+                </div>
                 <div class="stats-grid">
-                  <div class="stat-item"><small>Rendez-vous</small><strong>12</strong><span>Ce mois</span></div>
-                  <div class="stat-item"><small>Reclamations</small><strong>4</strong><span>Total</span></div>
-                  <div class="stat-item"><small>Evenements</small><strong>6</strong><span>Participes</span></div>
-                  <div class="stat-item"><small>Brainstormings</small><strong>3</strong><span>Crees</span></div>
+                  <div class="stat-item" style="--stat-accent:#6b8cff;"><span class="stat-icon">R</span><small>Rendez-vous</small><strong>12</strong><span>Ce mois</span></div>
+                  <div class="stat-item" style="--stat-accent:#ffb454;"><span class="stat-icon">!</span><small>Reclamations</small><strong>4</strong><span>Total</span></div>
+                  <div class="stat-item" style="--stat-accent:#48ec8f;"><span class="stat-icon">E</span><small>Evenements</small><strong>6</strong><span>Participes</span></div>
+                  <div class="stat-item" style="--stat-accent:#ed59b9;"><span class="stat-icon">B</span><small>Brainstormings</small><strong>3</strong><span>Crees</span></div>
                 </div>
               </section>
             </div>
@@ -822,7 +936,6 @@ $lastSeenLabel = $lastActivity ? formatTimeAgo((string) ($lastActivity['at'] ?? 
           const prenom = (form.prenom.value || "").trim();
           const email = (form.email.value || "").trim();
           const telephone = (form.telephone.value || "").trim().replace(/\s+/g, "");
-          const password = form.mot_de_passe.value || "";
 
           const namePattern = /^[A-Za-zï¿½-ï¿½ï¿½-ï¿½ï¿½-ï¿½\s'-]{2,60}$/;
           const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -852,12 +965,6 @@ $lastSeenLabel = $lastActivity ? formatTimeAgo((string) ($lastActivity['at'] ?? 
             return;
           }
 
-          if (password.length > 0 && password.length < 6) {
-            event.preventDefault();
-            showError("Le nouveau mot de passe doit contenir au moins 6 caracteres.");
-            return;
-          }
-
           const file = photoInput && photoInput.files ? photoInput.files[0] : null;
           if (file) {
             const imageError = validateImage(file);
@@ -870,6 +977,30 @@ $lastSeenLabel = $lastActivity ? formatTimeAgo((string) ($lastActivity['at'] ?? 
 
           clearError();
         });
+
+        const navLinks = Array.from(document.querySelectorAll("[data-profile-nav]"));
+
+        function setActiveNav(hash) {
+          navLinks.forEach(function (link) {
+            link.classList.toggle("active", link.getAttribute("href") === hash);
+          });
+        }
+
+        navLinks.forEach(function (link) {
+          link.addEventListener("click", function () {
+            setActiveNav(link.getAttribute("href") || "#profile-info-card");
+          });
+        });
+
+        setActiveNav(window.location.hash || "#profile-info-card");
+        window.addEventListener("hashchange", function () {
+          setActiveNav(window.location.hash || "#profile-info-card");
+        });
+        <?php if ($mobileUrlIsLocal): ?>
+        setTimeout(function () {
+          alert("Acces mobile: pour partager le projet sur telephone, configurez une URL publique (IP LAN).");
+        }, 250);
+        <?php endif; ?>
       })();
     </script>
     <script src="assets/js/main.js"></script>

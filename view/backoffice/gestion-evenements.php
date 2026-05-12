@@ -121,7 +121,7 @@ error_log('ADMIN: Admin connecté ID: ' . $adminId);
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
     <link rel="stylesheet" href="assets/style.css" />
-    <link rel="stylesheet" href="assets/events-admin.css?v=20260508-filters" />
+    <link rel="stylesheet" href="assets/events-admin.css?v=<?= h((string) @filemtime(__DIR__ . '/assets/events-admin.css')) ?>" />
   </head>
   <body data-page="events-admin">
     <div class="overlay" data-overlay></div>
@@ -138,11 +138,11 @@ error_log('ADMIN: Admin connecté ID: ' . $adminId);
               <a class="nav-link" href="index.php" data-nav="home"><span class="nav-icon icon-home"></span><span>Tableau de bord</span></a>
               <a class="nav-link" href="gestion-utilisateurs.php" data-nav="profile"><span class="nav-icon icon-profile"></span><span>Gestion des utilisateurs</span></a>
               <a class="nav-link" href="gestion-brainstormings.php" data-nav="community"><span class="nav-icon icon-community"></span><span>Gestion des brainstormings</span></a>
-              <a class="nav-link" href="gestion-rendezvous.php" data-nav="subscription"><span class="nav-icon icon-card"></span><span>Gestion des rendez-vous</span></a>
-              <a class="nav-link" href="gestion-accompagnements.php" data-nav="chatbot"><span class="nav-icon icon-chat"></span><span>Gestion des accompagnements</span></a>
+              <a class="nav-link" href="gestion-rendezvous.html" data-nav="subscription"><span class="nav-icon icon-card"></span><span>Gestion des rendez-vous</span></a>
+              <a class="nav-link" href="gestion-accompagnements.html" data-nav="chatbot"><span class="nav-icon icon-chat"></span><span>Gestion des accompagnements</span></a>
               <a class="nav-link" href="gestion-evenements.php" data-nav="events"><span class="nav-icon icon-calendar"></span><span>Gestion des événements</span></a>
-              <a class="nav-link" href="gestion-reclamations.php" data-nav="voice"><span class="nav-icon icon-mic"></span><span>Gestion des réclamations</span></a>
-              <a class="nav-link" href="settings.php" data-nav="settings"><span class="nav-icon icon-settings"></span><span>Paramètres</span></a>
+              <a class="nav-link" href="gestion-reclamations.html" data-nav="voice"><span class="nav-icon icon-mic"></span><span>Gestion des réclamations</span></a>
+              <a class="nav-link" href="settings.html" data-nav="settings"><span class="nav-icon icon-settings"></span><span>Paramètres</span></a>
             </div>
           </div>
         </div>
@@ -483,7 +483,7 @@ error_log('ADMIN: Admin connecté ID: ' . $adminId);
                     </div>
                     <div class="meta">Proposé par : <?= h((string) ($modRequest['user_prenom'] ?? '') . ' ' . (string) ($modRequest['user_nom'] ?? '')) ?> (<?= h((string) ($modRequest['user_email'] ?? '')) ?>)</div>
                     <div class="meta">Date demande : <?= h((string) ($modRequest['requested_at'] ?? '')) ?></div>
-
+                    
                     <div style="margin: 15px 0; padding: 12px; background: rgba(255,255,255,0.05); border-radius: 8px;">
                       <div style="font-weight: 600; margin-bottom: 8px; color: var(--text);">Modifications proposées :</div>
                       <?php if (!empty($modRequest['new_name']) && $modRequest['new_name'] !== $modRequest['current_name']): ?>
@@ -502,7 +502,7 @@ error_log('ADMIN: Admin connecté ID: ' . $adminId);
                         <div class="small"><span style="color: #888;">Capacité :</span> <?= (int) $modRequest['current_max'] ?> → <strong><?= (int) $modRequest['new_max'] ?></strong></div>
                       <?php endif; ?>
                     </div>
-
+                    
                     <div class="actions">
                       <button class="btn request-details" type="button">Voir détails</button>
                       <button class="btn approve-modification" type="button" data-request-id="<?= (int) $modRequest['request_id'] ?>">Approuver la modification</button>
@@ -657,7 +657,7 @@ error_log('ADMIN: Admin connecté ID: ' . $adminId);
             <section id="tab-stats" class="panel tab-panel">
               <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
                 <h3 style="margin: 0;">Statistiques événements</h3>
-
+                
                 <!-- Filtres temporels -->
                 <div style="display: flex; gap: 8px;">
                   <button type="button" class="btn period-filter" data-period="day" style="padding: 8px 16px; font-size: 13px;">Jour</button>
@@ -666,12 +666,12 @@ error_log('ADMIN: Admin connecté ID: ' . $adminId);
                   <button type="button" class="btn period-filter" data-period="year" style="padding: 8px 16px; font-size: 13px;">Année</button>
                 </div>
               </div>
-
+              
               <div id="stats-container">
                 <?php if (isset($adminStats['success']) && $adminStats['success']): ?>
                   <!-- Cartes récapitulatives -->
                   <div id="stats-cards" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 16px; margin-bottom: 30px; margin-top: 20px;">
-
+                    
                     <div style="background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%); border-radius: 16px; padding: 20px; color: white; box-shadow: 0 4px 15px rgba(99, 102, 241, 0.3);">
                       <div style="font-size: 13px; opacity: 0.9; margin-bottom: 8px;">Total événements</div>
                       <div id="stat-total-events" style="font-size: 32px; font-weight: 700;"><?= $adminStats['totaux']['total_events'] ?? 0 ?></div>
@@ -760,7 +760,7 @@ error_log('ADMIN: Admin connecté ID: ' . $adminId);
     </div>
 
     <script src="assets/app.js"></script>
-    <script src="assets/events-admin.js?v=20260508-filters"></script>
+    <script src="assets/events-admin.js?v=<?= h((string) @filemtime(__DIR__ . '/assets/events-admin.js')) ?>"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
     <script>
     document.addEventListener('DOMContentLoaded', function() {
@@ -768,7 +768,7 @@ error_log('ADMIN: Admin connecté ID: ' . $adminId);
       const statsDataElement = document.getElementById('stats-data');
       const chartCanvas = document.getElementById('adminStatsChart');
       let adminChart = null;
-
+      
       // Labels pour les périodes
       const periodLabels = {
         'day': 'Évolution quotidienne (30 derniers jours)',
@@ -776,7 +776,7 @@ error_log('ADMIN: Admin connecté ID: ' . $adminId);
         'month': 'Évolution mensuelle (12 derniers mois)',
         'year': 'Évolution annuelle (5 dernières années)'
       };
-
+      
       // Fonction pour créer/mettre à jour le graphique
       function createOrUpdateChart(data, period) {
         const labels = data.map(d => d.label || d.month);
@@ -785,7 +785,7 @@ error_log('ADMIN: Admin connecté ID: ' . $adminId);
         const eventsEnCours = data.map(d => d.events_en_cours);
         const eventsRefuses = data.map(d => d.events_refuses);
         const inscriptions = data.map(d => d.inscriptions);
-
+        
         const chartData = {
           labels: labels,
           datasets: [
@@ -831,7 +831,7 @@ error_log('ADMIN: Admin connecté ID: ' . $adminId);
             }
           ]
         };
-
+        
         if (adminChart) {
           adminChart.data = chartData;
           adminChart.update('active');
@@ -900,7 +900,7 @@ error_log('ADMIN: Admin connecté ID: ' . $adminId);
           });
         }
       }
-
+      
       // Fonction pour mettre à jour les cartes de statistiques
       function updateStatsCards(totaux) {
         document.getElementById('stat-total-events').textContent = totaux.total_events || 0;
@@ -909,7 +909,7 @@ error_log('ADMIN: Admin connecté ID: ' . $adminId);
         document.getElementById('stat-total-refuses').textContent = totaux.total_refuses || 0;
         document.getElementById('stat-total-inscriptions').textContent = totaux.total_inscriptions || 0;
       }
-
+      
       // Chargement initial
       if (statsDataElement && chartCanvas) {
         try {
@@ -919,12 +919,12 @@ error_log('ADMIN: Admin connecté ID: ' . $adminId);
           console.error('Erreur lors du chargement initial:', e);
         }
       }
-
+      
       // Gestion des filtres temporels
       document.querySelectorAll('.period-filter').forEach(button => {
         button.addEventListener('click', async function() {
           const period = this.dataset.period;
-
+          
           // Mettre à jour l'état actif
           document.querySelectorAll('.period-filter').forEach(btn => {
             btn.classList.remove('active');
@@ -934,19 +934,19 @@ error_log('ADMIN: Admin connecté ID: ' . $adminId);
           this.classList.add('active');
           this.style.background = '#6366f1';
           this.style.color = 'white';
-
+          
           // Mettre à jour le titre
           const chartTitle = document.getElementById('chart-title');
           if (chartTitle) {
             chartTitle.textContent = periodLabels[period] || 'Évolution';
           }
-
+          
           // Afficher un indicateur de chargement
           const container = document.getElementById('stats-container');
           if (container) {
             container.style.opacity = '0.6';
           }
-
+          
           try {
             // Appel AJAX pour récupérer les nouvelles données
             const response = await fetch(`gestion-evenements.php?action=get_stats&period=${period}`, {
@@ -955,13 +955,13 @@ error_log('ADMIN: Admin connecté ID: ' . $adminId);
                 'X-Requested-With': 'XMLHttpRequest'
               }
             });
-
+            
             if (!response.ok) {
               throw new Error('Erreur réseau');
             }
-
+            
             const result = await response.json();
-
+            
             if (result.success) {
               // Mettre à jour le graphique
               createOrUpdateChart(result.data, period);

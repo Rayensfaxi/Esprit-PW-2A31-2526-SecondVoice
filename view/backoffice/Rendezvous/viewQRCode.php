@@ -1,15 +1,17 @@
 <?php
-require_once '../../../controller/RendezvousC.php';
+require_once __DIR__ . '/../../../controller/RendezvousHttpController.php';
 
-if (!isset($_GET['id'])) {
-    die("ID de rendez-vous manquant.");
+function h($value): string
+{
+    return htmlspecialchars((string) $value, ENT_QUOTES, 'UTF-8');
 }
 
-$rendezvousC = new RendezvousC();
-$rdv = $rendezvousC->getRendezvousById($_GET['id']);
-
+$detailsViewData = (new RendezvousHttpController())->getDetailsViewDataFromRequest();
+$rdv = $detailsViewData['rdv'];
 if (!$rdv) {
-    die("Rendez-vous introuvable.");
+    http_response_code(404);
+    echo h($detailsViewData['error']);
+    exit;
 }
 ?>
 <!DOCTYPE html>
@@ -98,19 +100,19 @@ if (!$rdv) {
         
         <div class="info-row">
             <span class="info-label">ID</span>
-            <span class="info-value">#<?php echo $rdv->getId(); ?></span>
+            <span class="info-value">#<?php echo (int) $rdv->getId(); ?></span>
         </div>
         <div class="info-row">
             <span class="info-label">Citoyen</span>
-            <span class="info-value">ID #<?php echo $rdv->getIdCitoyen(); ?></span>
+            <span class="info-value">ID #<?php echo (int) $rdv->getIdCitoyen(); ?></span>
         </div>
         <div class="info-row">
             <span class="info-label">Service</span>
-            <span class="info-value"><?php echo $rdv->getService(); ?></span>
+            <span class="info-value"><?php echo h($rdv->getService()); ?></span>
         </div>
         <div class="info-row">
             <span class="info-label">Assistant</span>
-            <span class="info-value"><?php echo $rdv->getAssistant(); ?></span>
+            <span class="info-value"><?php echo h($rdv->getAssistant()); ?></span>
         </div>
         <div class="info-row">
             <span class="info-label">Date</span>
@@ -118,13 +120,13 @@ if (!$rdv) {
         </div>
         <div class="info-row">
             <span class="info-label">Heure</span>
-            <span class="info-value"><?php echo $rdv->getHeureRdv(); ?></span>
+            <span class="info-value"><?php echo h($rdv->getHeureRdv()); ?></span>
         </div>
         <div class="info-row">
             <span class="info-label">Statut</span>
             <span class="info-value">
-                <span class="status status-<?php echo strtolower(str_replace(' ', '-', $rdv->getStatut())); ?>">
-                    <?php echo $rdv->getStatut(); ?>
+                <span class="status status-<?php echo h(strtolower(str_replace(' ', '-', (string) $rdv->getStatut()))); ?>">
+                    <?php echo h($rdv->getStatut()); ?>
                 </span>
             </span>
         </div>
@@ -133,7 +135,7 @@ if (!$rdv) {
         <div style="margin-top: 20px;">
             <span class="info-label" style="display: block; margin-bottom: 8px;">Remarques</span>
             <div style="background: rgba(255,255,255,0.05); padding: 12px; border-radius: 10px; font-size: 0.9rem;">
-                <?php echo nl2br(htmlspecialchars($rdv->getRemarques())); ?>
+                <?php echo nl2br(h($rdv->getRemarques())); ?>
             </div>
         </div>
         <?php endif; ?>

@@ -179,6 +179,23 @@ function renderRequestCards(array $requests, EventController $controller): void
  $action = strtolower(trim((string) ($_REQUEST['action'] ?? '')));
 
 if ($action !== '') {
+    if ($action === 'qr_open') {
+        $eventId = (int) ($_GET['event_id'] ?? 0);
+        $token = trim((string) ($_GET['token'] ?? ''));
+        $expectedToken = $controller->getEventQrToken($eventId);
+        $event = $controller->getEventById($eventId);
+
+        if ($eventId <= 0 || $token === '' || !hash_equals($expectedToken, $token) || !$event) {
+            http_response_code(404);
+            header('Content-Type: text/plain; charset=utf-8');
+            echo 'QR invalide ou evenement introuvable.';
+            exit;
+        }
+
+        header('Location: event-detail.php?id=' . $eventId, true, 302);
+        exit;
+    }
+
     if (in_array($action, ['qr', 'qr_download'], true)) {
         $eventId = (int) ($_GET['event_id'] ?? $_POST['event_id'] ?? 0);
         $svg = $controller->getEventQrSvg($eventId);
@@ -223,13 +240,13 @@ if ($action !== '') {
             case 'create':
                 error_log('=== BACKEND: CRÃ‰ATION Ã‰VÃ‰NEMENT ===');
                 error_log('Données reçues: ' . json_encode($input));
-
+                
                 if (!currentUserIsConnected()) {
                     error_log('ERREUR: Utilisateur non connecté');
                     echo json_encode(['success' => false, 'message' => 'Vous devez être connecté pour créer un événement.']);
                     exit;
                 }
-
+                
                 // Définir le statut selon le type d'utilisateur
                 // Admin â†’ "validé" directement, Utilisateur â†’ "en cours" (demande)
                 $isAdmin = currentUserIsAdmin();
@@ -242,7 +259,7 @@ if ($action !== '') {
 
                 $result = $controller->createEvent($input);
                 error_log('Résultat création: ' . json_encode($result));
-
+                
                 echo json_encode($result);
                 exit;
 
@@ -452,21 +469,21 @@ if ($action !== '') {
     <link rel="icon" type="image/png" sizes="16x16" href="assets/media/favicon-16.png" />
     <link rel="apple-touch-icon" href="assets/media/apple-touch-icon.png" />
     <link rel="shortcut icon" href="assets/media/favicon.png" />
-
+    
     <script>
       const savedTheme = localStorage.getItem("theme");
       const initialTheme =
         savedTheme || (window.matchMedia("(prefers-color-scheme: light)").matches ? "light" : "dark");
       document.documentElement.dataset.theme = initialTheme;
     </script>
-
+    
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=Space+Grotesk:wght@500;700&display=swap" rel="stylesheet" />
-
+    
     <link rel="stylesheet" href="assets/css/style.css" />
     <link rel="stylesheet" href="assets/css/events-front.css?v=20260508-filters" />
-
+    
     <style>
       /* Specific layout tweaks for tabs */
       .tab-panel { display: none; }
@@ -479,7 +496,7 @@ if ($action !== '') {
   </head>
   <body>
     <div class="page-shell">
-
+      
       <header class="site-header">
         <div class="container nav-inner">
           <a class="brand" href="index.php"><img class="brand-logo" src="assets/media/secondvoice-logo.png" alt="SecondVoice logo" /></a>
@@ -568,14 +585,14 @@ if ($action !== '') {
 
         <section class="section">
           <div class="container events-layout">
-
+            
             <!-- Controls Bar -->
             <div class="admin-controls events-toolbar fade-up">
               <div class="events-toolbar-main">
               <div class="search">
                 <input id="events-search" class="field" type="search" placeholder="Rechercher un événement, une date ou un lieu..." aria-label="Rechercher les événements" />
               </div>
-
+              
               <div class="event-filters" aria-label="Filtres des evenements">
                 <select id="event-filter-date" class="field event-filter-control" aria-label="Filtrer par date">
                   <option value="">Toutes les dates</option>
@@ -606,7 +623,7 @@ if ($action !== '') {
               <button class="btn tab tab-toggle" type="button" data-target="#tab-my">Mes inscriptions</button>
               <button class="btn tab tab-toggle" type="button" data-target="#tab-requests">Mes demandes</button>
               <button class="btn tab tab-toggle" type="button" data-target="#tab-stats">Mes statistiques</button>
-
+              
               <?php if ($userId > 0): ?>
                 <button id="btn-show-add-form" class="btn tab tab-toggle" type="button" data-target="#tab-add-form" <?= $userId <= 0 ? 'disabled' : '' ?>>Ajouter un événement</button>
               <?php endif; ?>
@@ -774,10 +791,10 @@ if ($action !== '') {
                     $inscriptions = $userStats['inscriptions'] ?? 0;
                   ?>
                   <div class="stats-container fade-up" style="margin-top: 24px;">
-
+                    
                     <!-- Graphique et chiffres clés -->
                     <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 24px; margin-bottom: 30px;">
-
+                      
                       <!-- Graphique circulaire -->
                       <div style="background: rgba(255, 255, 255, 0.7); backdrop-filter: blur(10px); border-radius: 20px; padding: 30px; box-shadow: 0 8px 32px rgba(99, 102, 241, 0.15); border: 1px solid rgba(255, 255, 255, 0.5);">
                         <h3 style="margin-bottom: 20px; color: #1f2937; font-size: 18px; text-align: center;">Répartition de mes événements</h3>
@@ -804,7 +821,7 @@ if ($action !== '') {
 
                       <!-- Chiffres clés -->
                       <div style="display: flex; flex-direction: column; gap: 16px;">
-
+                        
                         <!-- Événements créés -->
                         <div style="background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%); border-radius: 16px; padding: 24px; color: white; box-shadow: 0 4px 15px rgba(99, 102, 241, 0.3); display: flex; align-items: center; gap: 16px;">
                           <div style="font-size: 40px; background: rgba(255,255,255,0.2); border-radius: 12px; padding: 10px;">📊</div>
@@ -869,7 +886,7 @@ if ($action !== '') {
                     <input type="hidden" name="id" id="evt-id" />
                     <!-- Status is forced in PHP, hidden input here for safety -->
                     <input type="hidden" name="status" id="evt-status" value="en cours" />
-
+                    
                     <div class="mb-3">
                       <label for="evt-name" class="form-label">Titre <span style="color: red; font-weight: bold;">*</span></label>
                       <input type="text" class="field" id="evt-name" name="name" required />
@@ -956,7 +973,7 @@ if ($action !== '') {
     <script>
       // Simple Vanilla JS to handle tabs since Bootstrap is removed
       document.addEventListener('DOMContentLoaded', () => {
-
+        
         // 1. Handle Tab Switching (Consulter / Mes inscriptions)
         const tabToggles = document.querySelectorAll('.tab-toggle');
         const tabPanels = document.querySelectorAll('.tab-panel');
@@ -964,7 +981,7 @@ if ($action !== '') {
         tabToggles.forEach(btn => {
           btn.addEventListener('click', () => {
             const targetId = btn.getAttribute('data-target');
-
+            
             // Remove active from buttons
             tabToggles.forEach(b => b.classList.remove('active'));
             btn.classList.add('active');
@@ -973,7 +990,7 @@ if ($action !== '') {
             tabPanels.forEach(panel => {
               panel.classList.remove('active');
             });
-
+            
             const targetPanel = document.querySelector(targetId);
             if (targetPanel) {
               targetPanel.classList.add('active');
@@ -990,10 +1007,10 @@ if ($action !== '') {
           btnShowAdd.addEventListener('click', () => {
             // Remove active from tab buttons so none look selected
             tabToggles.forEach(b => b.classList.remove('active'));
-
+            
             // Hide all panels
             tabPanels.forEach(panel => panel.classList.remove('active'));
-
+            
             // Show form panel
             tabAddForm.classList.add('active');
           });
@@ -1009,7 +1026,7 @@ if ($action !== '') {
             // Hide form, go back to Consulter
             tabAddForm.classList.remove('active');
             document.getElementById('tab-consult').classList.add('active');
-
+            
             // Reactivate Consulter button
             tabToggles.forEach(b => {
               if(b.getAttribute('data-target') === '#tab-consult') b.classList.add('active');
@@ -1137,13 +1154,13 @@ if ($action !== '') {
       // Graphique doughnut pour les statistiques utilisateur
       const userStatsCanvas = document.getElementById('userStatsChart');
       const userStatsDataElement = document.getElementById('user-stats-data');
-
+      
       if (userStatsCanvas && userStatsDataElement && typeof Chart !== 'undefined') {
         try {
           const statsData = JSON.parse(userStatsDataElement.textContent);
           console.log('[Mes statistiques] Utilisateur connecté:', statsData.user_id);
           console.log('[Mes statistiques] Données PHP reçues:', statsData);
-
+          
           new Chart(userStatsCanvas, {
             type: 'doughnut',
             data: {

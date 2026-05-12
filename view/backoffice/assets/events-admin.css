@@ -331,9 +331,13 @@
   display: flex;
   align-items: center;
   justify-content: center;
+  padding: 24px;
   background: rgba(3, 6, 18, 0.6);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
   opacity: 0;
   pointer-events: none;
+  z-index: 5000;
   transition: opacity .15s;
 }
 
@@ -351,6 +355,15 @@
   box-shadow: var(--shadow);
   position: relative;
   border: 1px solid var(--soft-border);
+  max-height: calc(100vh - 48px);
+  overflow: auto;
+  transform: translateY(10px) scale(.98);
+  transition: transform .15s ease;
+  z-index: 1;
+}
+
+.modal.open .modal-content {
+  transform: translateY(0) scale(1);
 }
 
 .modal-close {
@@ -373,6 +386,7 @@
 .qr-modal-content {
   max-width: 420px;
   text-align: center;
+  isolation: isolate;
 }
 
 .qr-modal-content h3 {

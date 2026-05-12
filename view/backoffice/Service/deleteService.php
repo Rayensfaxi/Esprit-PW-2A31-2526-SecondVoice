@@ -1,16 +1,7 @@
 <?php
-require_once '../../../controller/ServiceC.php';
+declare(strict_types=1);
 
-$serviceC = new ServiceC();
+require_once __DIR__ . '/../../../controller/ServiceHttpController.php';
 
-if (isset($_GET['id'])) {
-    try {
-        $serviceC->deleteService($_GET['id']);
-        header('Location: HomeService.php?success=Service supprimé avec succès.');
-    } catch (Exception $e) {
-        header('Location: HomeService.php?error=' . $e->getMessage());
-    }
-} else {
-    header('Location: HomeService.php?error=ID non spécifié.');
-}
-?>
+(new ServiceHttpController())->handleDelete($_GET);
+

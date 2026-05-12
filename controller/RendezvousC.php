@@ -3,6 +3,57 @@ require_once dirname(__DIR__) . '/config.php';
 require_once dirname(__DIR__) . '/model/Rendezvous.php';
 
 class RendezvousC {
+    private function tableExists(PDO $db, string $tableName): bool
+    {
+        $stmt = $db->prepare('SHOW TABLES LIKE :table_name');
+        $stmt->execute(['table_name' => $tableName]);
+        return (bool) $stmt->fetchColumn();
+    }
+
+    private function ensureSchema(PDO $db): void
+    {
+        if (!$this->tableExists($db, 'service')) {
+            $db->exec(
+                "CREATE TABLE IF NOT EXISTS service (
+                    id INT AUTO_INCREMENT PRIMARY KEY,
+                    nom VARCHAR(255) NOT NULL,
+                    description TEXT NULL,
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci"
+            );
+
+            if ($this->tableExists($db, 'services')) {
+                $db->exec(
+                    "INSERT INTO service (id, nom, description)
+                     SELECT s.id, s.nom, s.description
+                     FROM services s
+                     LEFT JOIN service t ON t.id = s.id
+                     WHERE t.id IS NULL"
+                );
+            }
+        }
+
+        if (!$this->tableExists($db, 'rendezvous')) {
+            $db->exec(
+                "CREATE TABLE IF NOT EXISTS rendezvous (
+                    id INT AUTO_INCREMENT PRIMARY KEY,
+                    id_citoyen INT NOT NULL,
+                    service_id INT NULL,
+                    assistant VARCHAR(255) NOT NULL,
+                    date_rdv DATE NOT NULL,
+                    heure_rdv TIME NOT NULL,
+                    mode VARCHAR(100) NOT NULL,
+                    remarques TEXT NULL,
+                    statut VARCHAR(50) NOT NULL DEFAULT 'En attente',
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    INDEX idx_rdv_citoyen (id_citoyen),
+                    INDEX idx_rdv_service (service_id),
+                    INDEX idx_rdv_date (date_rdv)
+                ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci"
+            );
+        }
+    }
+
     private function mapToRendezvous($row) {
         if (!$row) return null;
         return new Rendezvous(
@@ -37,6 +88,7 @@ class RendezvousC {
 
         $db = Config::getConnexion();
         try {
+            $this->ensureSchema($db);
             $query = $db->prepare($sql);
             $query->execute($params);
             $liste = [];
@@ -85,6 +137,7 @@ class RendezvousC {
 
         $db = Config::getConnexion();
         try {
+            $this->ensureSchema($db);
             $query = $db->prepare($sql);
             $query->execute($params);
             $liste = [];
@@ -104,6 +157,7 @@ class RendezvousC {
                 VALUES (:id_citoyen, :service_id, :assistant, :date_rdv, :heure_rdv, :mode, :remarques, :statut)";
         $db = Config::getConnexion();
         try {
+            $this->ensureSchema($db);
             $query = $db->prepare($sql);
             $query->execute([
                 'id_citoyen' => $rendezvous->getIdCitoyen(),
@@ -124,6 +178,7 @@ class RendezvousC {
         $sql = "DELETE FROM rendezvous WHERE id = :id";
         $db = Config::getConnexion();
         try {
+            $this->ensureSchema($db);
             $query = $db->prepare($sql);
             $query->execute([
                 'id' => $id,
@@ -146,6 +201,7 @@ class RendezvousC {
                 WHERE id = :id";
         $db = Config::getConnexion();
         try {
+            $this->ensureSchema($db);
             $query = $db->prepare($sql);
             $query->execute([
                 'service_id' => $rendezvous->getServiceId(),
@@ -169,6 +225,7 @@ class RendezvousC {
                 WHERE r.id = :id";
         $db = Config::getConnexion();
         try {
+            $this->ensureSchema($db);
             $query = $db->prepare($sql);
             $query->execute(['id' => $id]);
             $row = $query->fetch();
@@ -197,6 +254,7 @@ class RendezvousC {
         $sql = "SELECT COUNT(*) as total FROM rendezvous";
         $db = Config::getConnexion();
         try {
+            $this->ensureSchema($db);
             $query = $db->query($sql);
             $result = $query->fetch();
             return $result['total'];
@@ -212,6 +270,7 @@ class RendezvousC {
                 ORDER BY r.id DESC LIMIT :limit";
         $db = Config::getConnexion();
         try {
+            $this->ensureSchema($db);
             $query = $db->prepare($sql);
             $query->bindValue(':limit', (int)$limit, PDO::PARAM_INT);
             $query->execute();
@@ -239,6 +298,7 @@ class RendezvousC {
         $sql .= " GROUP BY statut";
         $db = Config::getConnexion();
         try {
+            $this->ensureSchema($db);
             $query = $db->prepare($sql);
             $query->execute($params);
             return $query->fetchAll(PDO::FETCH_ASSOC);
@@ -266,6 +326,7 @@ class RendezvousC {
         $sql .= " GROUP BY s.id, s.nom";
         $db = Config::getConnexion();
         try {
+            $this->ensureSchema($db);
             $query = $db->prepare($sql);
             $query->execute($params);
             return $query->fetchAll(PDO::FETCH_ASSOC);
@@ -291,6 +352,7 @@ class RendezvousC {
         $sql .= " GROUP BY date_label ORDER BY date_label ASC";
         $db = Config::getConnexion();
         try {
+            $this->ensureSchema($db);
             $query = $db->prepare($sql);
             $query->execute($params);
             return $query->fetchAll(PDO::FETCH_ASSOC);
@@ -316,6 +378,7 @@ class RendezvousC {
         }
         $db = Config::getConnexion();
         try {
+            $this->ensureSchema($db);
             $query = $db->prepare($sql);
             $query->execute($params);
             return $query->fetch(PDO::FETCH_ASSOC);
@@ -367,6 +430,129 @@ class RendezvousC {
         }
     }
 
+    private function isLocalWebHost(string $host): bool
+    {
+        $host = strtolower(trim($host, "[] \t\n\r\0\x0B"));
+        return $host === 'localhost' || $host === '::1' || preg_match('/^127(?:\.\d{1,3}){3}$/', $host) === 1;
+    }
+
+    private function isUsableIpv4(string $ip): bool
+    {
+        $ip = trim($ip);
+        if (strpos($ip, ':') !== false && preg_match('/^(\d{1,3}(?:\.\d{1,3}){3}):\d+$/', $ip, $matches) === 1) {
+            $ip = $matches[1];
+        }
+
+        return filter_var($ip, FILTER_VALIDATE_IP, FILTER_FLAG_IPV4) !== false
+            && preg_match('/^(?:0|127)\./', $ip) !== 1
+            && $ip !== '255.255.255.255';
+    }
+
+    private function isPrivateIpv4(string $ip): bool
+    {
+        return preg_match('/^(?:10\.|192\.168\.|172\.(?:1[6-9]|2\d|3[0-1])\.)/', $ip) === 1;
+    }
+
+    private function detectLanIpv4(): string
+    {
+        $candidates = [];
+        $addCandidate = function ($value) use (&$candidates): void {
+            $ip = trim((string) $value);
+            if (strpos($ip, ':') !== false && preg_match('/^(\d{1,3}(?:\.\d{1,3}){3}):\d+$/', $ip, $matches) === 1) {
+                $ip = $matches[1];
+            }
+
+            if ($this->isUsableIpv4($ip) && !in_array($ip, $candidates, true)) {
+                $candidates[] = $ip;
+            }
+        };
+
+        $socket = @stream_socket_client('udp://8.8.8.8:80', $errno, $error, 0.2);
+        if (is_resource($socket)) {
+            $localSocketName = stream_socket_get_name($socket, false);
+            fclose($socket);
+            if (is_string($localSocketName)) {
+                $addCandidate($localSocketName);
+            }
+        }
+
+        foreach (['LOCAL_ADDR', 'SERVER_ADDR'] as $serverKey) {
+            $addCandidate($_SERVER[$serverKey] ?? '');
+        }
+
+        if (function_exists('gethostname')) {
+            $hostname = (string) gethostname();
+            if ($hostname !== '') {
+                $addCandidate(gethostbyname($hostname));
+            }
+        }
+
+        foreach ($candidates as $candidate) {
+            if ($this->isPrivateIpv4($candidate)) {
+                return $candidate;
+            }
+        }
+
+        return $candidates[0] ?? '';
+    }
+
+    private function requestHostName(string $hostHeader): string
+    {
+        return (string) (parse_url('http://' . $hostHeader, PHP_URL_HOST) ?: $hostHeader);
+    }
+
+    private function requestHostPort(string $hostHeader, string $scheme): string
+    {
+        $port = parse_url('http://' . $hostHeader, PHP_URL_PORT);
+        if ($port === null) {
+            $serverPort = (int) ($_SERVER['SERVER_PORT'] ?? 0);
+            if ($serverPort > 0 && !(($scheme === 'http' && $serverPort === 80) || ($scheme === 'https' && $serverPort === 443))) {
+                $port = $serverPort;
+            }
+        }
+
+        return $port !== null ? ':' . (string) $port : '';
+    }
+
+    private function encodeUrlPath(string $path): string
+    {
+        $segments = explode('/', $path);
+        $segments = array_map(static function (string $segment): string {
+            return rawurlencode(rawurldecode($segment));
+        }, $segments);
+
+        return implode('/', $segments);
+    }
+
+    private function rendezvousPublicBaseUrl(): string
+    {
+        $https = isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off';
+        $scheme = $https ? 'https' : 'http';
+        $host = (string) ($_SERVER['HTTP_HOST'] ?? 'localhost');
+        $hostName = $this->requestHostName($host);
+
+        if ($this->isLocalWebHost($hostName)) {
+            $lanIp = $this->detectLanIpv4();
+            if ($lanIp !== '') {
+                $host = $lanIp . $this->requestHostPort($host, $scheme);
+            }
+        }
+
+        $scriptName = str_replace('\\', '/', (string) ($_SERVER['SCRIPT_NAME'] ?? ''));
+        $basePath = '';
+        $viewPos = strpos($scriptName, '/view/');
+        if ($viewPos !== false) {
+            $basePath = substr($scriptName, 0, $viewPos);
+        }
+
+        return $scheme . '://' . $host . $this->encodeUrlPath($basePath);
+    }
+
+    public function getRendezvousPublicUrl(int $id): string
+    {
+        return $this->rendezvousPublicBaseUrl() . '/view/backoffice/Rendezvous/viewQRCode.php?id=' . rawurlencode((string) $id);
+    }
+
     public function generateQRCode($id) {
         $rdv = $this->getRendezvousById($id);
         if (!$rdv) return null;
@@ -378,7 +564,7 @@ class RendezvousC {
 
         require_once $libPath;
 
-        $qrDir = dirname(__DIR__) . '/view/backend/assets/qrcodes/';
+        $qrDir = dirname(__DIR__) . '/view/backoffice/assets/qrcodes/';
         if (!file_exists($qrDir)) {
             mkdir($qrDir, 0777, true);
         }
@@ -386,22 +572,12 @@ class RendezvousC {
         $fileName = 'rdv_' . $id . '.svg';
         $filePath = $qrDir . $fileName;
 
-        // URL de redirection pour le scan
-        $protocol = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? "https" : "http";
-        $host = isset($_SERVER['HTTP_HOST']) ? $_SERVER['HTTP_HOST'] : 'localhost';
-        
-        $url = $protocol . "://" . $host . "/Esprit-PW-2A31-2526-SecondVoice/view/backend/Rendezvous/viewQRCode.php?id=" . $id;
-
-        $content = "RDV #" . $id . "\n";
-        $content .= "Service: " . $rdv->getService() . "\n";
-        $content .= "Date: " . $rdv->getDateRdv()->format('d/m/Y') . "\n";
-        $content .= "Heure: " . $rdv->getHeureRdv() . "\n";
-        $content .= "Lien: " . $url;
+        $url = $this->getRendezvousPublicUrl((int) $id);
 
         try {
             // Utilisation de SVG qui ne nécessite pas l'extension GD
-            QRcode::svg($content, $filePath, QR_ECLEVEL_L, 4, 2);
-        } catch (Exception $e) {
+            QRcode::svg($url, $filePath, QR_ECLEVEL_L, 4, 2);
+        } catch (Throwable $e) {
             return null;
         }
 

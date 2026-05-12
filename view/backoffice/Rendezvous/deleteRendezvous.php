@@ -1,12 +1,5 @@
 <?php
-require_once '../../../controller/RendezvousC.php';
+require_once __DIR__ . '/../../../controller/RendezvousHttpController.php';
 
-$rendezvousC = new RendezvousC();
-
-if (isset($_GET['id'])) {
-    $rendezvousC->deleteRendezvous($_GET['id']);
-}
-
-header('Location: HomeRendezvous.php');
-exit;
+(new RendezvousHttpController())->handleDeleteRequest();
 ?>
