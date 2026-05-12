@@ -1,10 +1,10 @@
-<?php
+﻿<?php
 
 session_start();
 
 $role = strtolower((string) ($_SESSION['user_role'] ?? 'client'));
 $canAccessDashboard = isset($_SESSION['user_id']) && in_array($role, ['admin', 'agent'], true);
-$dashboardUrl = $role === 'agent' ? '../backoffice/gestion-accompagnements.php' : '../backoffice/index.php';
+$dashboardUrl = $role === 'agent' ? 'assistant-accompagnements.php' : '../backoffice/index.php';
 
 function h($value): string
 {
@@ -286,6 +286,7 @@ function h($value): string
     <script src="assets/js/main.js"></script>
   </body>
 </html>
+
 
 
 

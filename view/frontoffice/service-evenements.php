@@ -1,5 +1,12 @@
 <?php
 declare(strict_types=1);
+
+$queryString = isset($_SERVER['QUERY_STRING']) && $_SERVER['QUERY_STRING'] !== ''
+    ? ('?' . $_SERVER['QUERY_STRING'])
+    : '';
+header('Location: events.php' . $queryString, true, 307);
+exit;
+
 session_start();
 
 require_once __DIR__ . '/../../config.php';
