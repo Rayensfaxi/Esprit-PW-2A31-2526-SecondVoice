@@ -1,29 +1,12 @@
 -- Structure de la base de données pour le module Accompagnement (Goals et Guides)
-
--- Création de la base de données si elle n'existe pas
-CREATE DATABASE IF NOT EXISTS accompagnement;
-USE accompagnement;
-
--- Table Utilisateurs (Indispensable pour les clefs étrangères)
-CREATE TABLE IF NOT EXISTS utilisateurs (
-    id INT AUTO_INCREMENT PRIMARY KEY,
-    nom VARCHAR(255) NOT NULL,
-    prenom VARCHAR(255) NOT NULL,
-    email VARCHAR(255) NOT NULL UNIQUE,
-    mot_de_passe VARCHAR(255) NOT NULL,
-    telephone VARCHAR(20) DEFAULT NULL,
-    role VARCHAR(50) NOT NULL DEFAULT 'user',
-    statut_compte ENUM('actif', 'inactif', 'bloque') DEFAULT 'actif',
-    date_creation TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-);
-
--- Insertion de comptes de test (le mot de passe est '123456' haché)
--- Hash pour '123456' : $2y$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi (standard Laravel/common)
--- Ou plus simple pour ce test: on peut utiliser password_hash('123456', PASSWORD_DEFAULT)
-INSERT IGNORE INTO utilisateurs (id, nom, prenom, email, mot_de_passe, role, statut_compte) VALUES
-(1, 'Admin', 'SecondVoice', 'admin@secondvoice.com', '$2y$10$f6pXoZzXz8z8z8z8z8z8zue1v5f5f5f5f5f5f5f5f5f5f5f5f5f5f', 'admin', 'actif'),
-(2, 'Assistant', 'Expert', 'assistant@secondvoice.com', '$2y$10$f6pXoZzXz8z8z8z8z8z8zue1v5f5f5f5f5f5f5f5f5f5f5f5f5f5f', 'assistant', 'actif'),
-(3, 'User', 'Citoyen', 'user@secondvoice.com', '$2y$10$f6pXoZzXz8z8z8z8z8z8zue1v5f5f5f5f5f5f5f5f5f5f5f5f5f5f', 'user', 'actif');
+--
+-- Ce fichier installe UNIQUEMENT les tables du module accompagnement sur la
+-- base partagée SecondVoice. Il suppose que la base et la table `utilisateur`
+-- (singulier, convention du projet intégré) existent déjà — créées par
+-- database/install_secondvoice.sql.
+--
+-- Pour une installation complète (toutes les tables du projet + ce module),
+-- exécuter directement database/install_secondvoice.sql à la place.
 
 -- Table Goals (Objectifs/Demandes d'accompagnement)
 CREATE TABLE IF NOT EXISTS goals (
@@ -53,8 +36,8 @@ CREATE TABLE IF NOT EXISTS goals (
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
 
-    FOREIGN KEY (user_id) REFERENCES utilisateurs(id) ON DELETE CASCADE,
-    FOREIGN KEY (selected_assistant_id) REFERENCES utilisateurs(id) ON DELETE RESTRICT
+    FOREIGN KEY (user_id) REFERENCES utilisateur(id) ON DELETE CASCADE,
+    FOREIGN KEY (selected_assistant_id) REFERENCES utilisateur(id) ON DELETE RESTRICT
 );
 
 -- Table Guides (Étapes créées par l'assistant pour un Goal)

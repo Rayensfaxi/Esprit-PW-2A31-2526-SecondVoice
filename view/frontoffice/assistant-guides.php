@@ -23,7 +23,7 @@ $goalCtrl  = new GoalController();
 // Fetch assistant identity for the sidebar profile card
 $assistantInfo = null;
 try {
-    $stmt = Config::getConnexion()->prepare("SELECT nom, prenom, email FROM utilisateurs WHERE id = :id");
+    $stmt = Config::getConnexion()->prepare("SELECT nom, prenom, email FROM utilisateur WHERE id = :id");
     $stmt->execute(['id' => $assistant_id]);
     $assistantInfo = $stmt->fetch(PDO::FETCH_ASSOC);
 } catch (Throwable $e) {}
@@ -584,7 +584,7 @@ unset($_SESSION['flash_ctx']);
   <aside class="sidebar as-aside">
     <div class="as-aside-inner">
 
-      <a href="index.html" class="as-brand-link">
+      <a href="index.php" class="as-brand-link">
         <span class="as-brand-mark">SV</span>
         <div>
           <div class="as-brand-text">SecondVoice</div>
@@ -625,7 +625,7 @@ unset($_SESSION['flash_ctx']);
       <div class="as-aside-spacer"></div>
 
       <div class="as-aside-footer">
-        <a class="as-link-home" href="index.html">🏠 Retour à l'accueil</a>
+        <a class="as-link-home" href="index.php">🏠 Retour à l'accueil</a>
         <a class="as-link-logout" href="logout.php">🚪 Déconnexion</a>
       </div>
     </div>

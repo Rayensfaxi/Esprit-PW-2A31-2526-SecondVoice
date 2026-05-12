@@ -40,7 +40,7 @@ $guideCtrl = new GuideController();
 // Fetch assistant identity for the sidebar profile card
 $assistantInfo = null;
 try {
-    $stmt = Config::getConnexion()->prepare("SELECT nom, prenom, email FROM utilisateurs WHERE id = :id");
+    $stmt = Config::getConnexion()->prepare("SELECT nom, prenom, email FROM utilisateur WHERE id = :id");
     $stmt->execute(['id' => $assistant_id]);
     $assistantInfo = $stmt->fetch(PDO::FETCH_ASSOC);
 } catch (Throwable $e) {}
@@ -626,7 +626,7 @@ $urgencyMap = [
       <aside class="sidebar as-aside">
         <div class="as-aside-inner">
 
-          <a href="index.html" class="as-brand-link">
+          <a href="index.php" class="as-brand-link">
             <span class="as-brand-mark">SV</span>
             <div>
               <div class="as-brand-text">SecondVoice</div>
@@ -662,19 +662,12 @@ $urgencyMap = [
                 <span class="as-nav-sub">Étapes & contenus</span>
               </span>
             </a>
-            <a class="as-nav-link" href="copilote.php">
-              <span class="as-nav-emoji">💬</span>
-              <span class="as-nav-text">
-                <span class="as-nav-title">ChatBot</span>
-                <span class="as-nav-sub">Urgences, stats, modèles</span>
-              </span>
-            </a>
           </nav>
 
           <div class="as-aside-spacer"></div>
 
           <div class="as-aside-footer">
-            <a class="as-link-home" href="index.html">🏠 Retour à l'accueil</a>
+            <a class="as-link-home" href="index.php">🏠 Retour à l'accueil</a>
             <a class="as-link-logout" href="logout.php">🚪 Déconnexion</a>
           </div>
         </div>
@@ -1018,8 +1011,14 @@ $urgencyMap = [
                 e.preventDefault();
                 return;
               }
-              acceptBtn.disabled = true;
-              acceptBtn.textContent = '⏳ Acceptation...';
+              // Defer disable+text update so the form submission actually fires.
+              // Disabling a submit button synchronously inside its click handler
+              // cancels the submit in most browsers, leaving the user staring at
+              // a spinner forever.
+              setTimeout(function () {
+                acceptBtn.disabled = true;
+                acceptBtn.textContent = '⏳ Acceptation...';
+              }, 0);
             });
           }
 

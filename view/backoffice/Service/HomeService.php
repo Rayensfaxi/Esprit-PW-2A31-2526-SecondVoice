@@ -25,6 +25,7 @@
               <a class="nav-link" href="HomeService.php" data-nav="services" style="background: var(--nav-active); color: var(--nav-active-text);"><span class="nav-icon icon-card"></span><span>Gestion des services</span></a>
               <a class="nav-link" href="../Rendezvous/HomeRendezvous.php" data-nav="subscription"><span class="nav-icon icon-card"></span><span>Gestion des rendez-vous</span></a>
               <a class="nav-link" href="../gestion-accompagnements.php" data-nav="chatbot"><span class="nav-icon icon-chat"></span><span>Gestion des accompagnements</span></a>
+              <a class="nav-link" href="../gestion-guides.php" data-nav="images"><span class="nav-icon icon-document"></span><span>Gestion des guides</span></a>
               <a class="nav-link" href="../gestion-documents.php" data-nav="images"><span class="nav-icon icon-image"></span><span>Gestion des documents</span></a>
               <a class="nav-link" href="../gestion-reclamations.php" data-nav="voice"><span class="nav-icon icon-mic"></span><span>Gestion des reclamations</span></a>
               <a class="nav-link" href="../settings.php" data-nav="settings"><span class="nav-icon icon-settings"></span><span>Parametres</span></a>
@@ -43,6 +44,11 @@
           <div class="toolbar-actions">
             <a class="update-button" href="../../frontend/index.php">Revenir</a>
             <button class="icon-button icon-moon" data-theme-toggle aria-label="Switch theme"></button>
+            <?php
+              $userMenuLogoutPath = '../logout.php';
+              $userMenuSettingsPath = '../settings.php';
+              include __DIR__ . '/../partials/user-menu.php';
+            ?>
           </div>
         </div>
 

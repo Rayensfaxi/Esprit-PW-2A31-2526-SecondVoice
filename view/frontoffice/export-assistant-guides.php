@@ -19,7 +19,7 @@ if ($assistant_id <= 0) {
 // Identity for header
 $assistantInfo = null;
 try {
-    $stmt = Config::getConnexion()->prepare("SELECT nom, prenom, email FROM utilisateurs WHERE id = :id");
+    $stmt = Config::getConnexion()->prepare("SELECT nom, prenom, email FROM utilisateur WHERE id = :id");
     $stmt->execute(['id' => $assistant_id]);
     $assistantInfo = $stmt->fetch(PDO::FETCH_ASSOC);
 } catch (Throwable $e) {}

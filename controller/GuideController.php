@@ -157,7 +157,7 @@ class GuideController
 
     public function getAllGuides() {
         $db = Config::getConnexion();
-        $sql = "SELECT g.*, go.description as goal_desc, u.nom FROM guides g JOIN goals go ON g.goal_id = go.id JOIN utilisateurs u ON go.user_id = u.id ORDER BY g.created_at DESC";
+        $sql = "SELECT g.*, go.description as goal_desc, u.nom FROM guides g JOIN goals go ON g.goal_id = go.id JOIN utilisateur u ON go.user_id = u.id ORDER BY g.created_at DESC";
         try {
             $req = $db->prepare($sql);
             $req->execute();
@@ -169,7 +169,7 @@ class GuideController
 
     public function getGuidesByAssistant($assistant_id) {
         $db = Config::getConnexion();
-        $sql = "SELECT g.*, go.description as goal_desc, u.nom FROM guides g JOIN goals go ON g.goal_id = go.id JOIN utilisateurs u ON go.user_id = u.id WHERE go.selected_assistant_id = :aid AND go.admin_validation_status = 'valide' AND go.assistant_validation_status = 'accepte' AND go.status IN ('en_cours', 'termine') ORDER BY g.created_at DESC";
+        $sql = "SELECT g.*, go.description as goal_desc, u.nom FROM guides g JOIN goals go ON g.goal_id = go.id JOIN utilisateur u ON go.user_id = u.id WHERE go.selected_assistant_id = :aid AND go.admin_validation_status = 'valide' AND go.assistant_validation_status = 'accepte' AND go.status IN ('en_cours', 'termine') ORDER BY g.created_at DESC";
         try {
             $req = $db->prepare($sql);
             $req->execute(["aid" => $assistant_id]);
@@ -181,7 +181,7 @@ class GuideController
 
     public function getGuidesByUser($user_id) {
         $db = Config::getConnexion();
-        $sql = "SELECT g.*, go.description as goal_desc, u.nom as assistant_nom FROM guides g JOIN goals go ON g.goal_id = go.id LEFT JOIN utilisateurs u ON go.selected_assistant_id = u.id WHERE go.user_id = :uid ORDER BY g.created_at DESC";
+        $sql = "SELECT g.*, go.description as goal_desc, u.nom as assistant_nom FROM guides g JOIN goals go ON g.goal_id = go.id LEFT JOIN utilisateur u ON go.selected_assistant_id = u.id WHERE go.user_id = :uid ORDER BY g.created_at DESC";
         try {
             $req = $db->prepare($sql);
             $req->execute(["uid" => $user_id]);
@@ -215,8 +215,8 @@ class GuideController
                         a.email        AS assistant_email
                     FROM guides g
                     JOIN goals go ON g.goal_id = go.id
-                    LEFT JOIN utilisateurs u ON go.user_id = u.id
-                    LEFT JOIN utilisateurs a ON go.selected_assistant_id = a.id
+                    LEFT JOIN utilisateur u ON go.user_id = u.id
+                    LEFT JOIN utilisateur a ON go.selected_assistant_id = a.id
                     WHERE g.id = :id";
         try {
             $req = $db->prepare($sqlFull);
@@ -250,8 +250,8 @@ class GuideController
                        a.nom          AS assistant_nom
                 FROM guides g
                 JOIN goals go ON g.goal_id = go.id
-                LEFT JOIN utilisateurs u ON go.user_id = u.id
-                LEFT JOIN utilisateurs a ON go.selected_assistant_id = a.id
+                LEFT JOIN utilisateur u ON go.user_id = u.id
+                LEFT JOIN utilisateur a ON go.selected_assistant_id = a.id
                 WHERE 1=1";
         $params = [];
 

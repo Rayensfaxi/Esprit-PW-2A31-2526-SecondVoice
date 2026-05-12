@@ -39,6 +39,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="assets/css/style.css" />
   <link rel="icon" type="image/png" sizes="32x32" href="assets/media/favicon-32.png" />
   <style>
     :root {
@@ -380,20 +381,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
   </style>
 </head>
 <body>
-
-<header class="site-header">
-  <a href="index.html" class="brand">
-    <span class="brand-mark">SV</span>
-    SecondVoice
-  </a>
-  <nav class="header-nav">
-    <a href="index.html">Accueil</a>
-    <a href="mes-accompagnements.php">Mes accompagnements</a>
-    <a href="smart-guide.php" class="active">🤖 SmartGuide</a>
-    <a href="echome.php">🎙️ Echo Me</a>
-    <a href="profile.php">Mon profil</a>
-  </nav>
-</header>
+<?php
+  $activeNavItem = 'services';
+  include __DIR__ . '/../partials/site-header.php';
+?>
 
 <main class="wrap">
   <section class="hero">

@@ -3,11 +3,14 @@ session_start();
 require_once __DIR__ . '/../../config.php';
 require_once __DIR__ . '/../../controller/GoalController.php';
 
-// Admin check
+// Auth check: admin OR agent — both can manage accompagnements.
+// Matches the integration's back-office convention (see gestion-evenements.php, etc.)
 $_role = strtolower((string)($_SESSION['role'] ?? ''));
 $_userRole = strtolower((string)($_SESSION['user_role'] ?? ''));
-$isAdmin = ($_role === 'admin') || ($_userRole === 'admin');
-if (!$isAdmin) {
+$_effectiveRole = in_array($_role, ['admin', 'agent'], true) ? $_role : $_userRole;
+$isAdmin = $_effectiveRole === 'admin';
+$isAgent = $_effectiveRole === 'agent';
+if (!$isAdmin && !$isAgent) {
   header('Location: ../frontoffice/login.php');
   exit;
 }
@@ -22,6 +25,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $comment  = trim($_POST['comment'] ?? '');
 
     if ($action === 'moderate' && $id > 0 && in_array($decision, ['valide', 'refuse'])) {
+        if (!$isAdmin) {
+            $_SESSION['flash'] = ['type' => 'error', 'message' => "Action reservee aux administrateurs."];
+            header('Location: gestion-accompagnements.php');
+            exit;
+        }
         try {
             $controller->moderateGoalByAdmin($id, $decision, $comment);
             $msg = $decision === 'valide' ? 'validée' : 'refusée';
@@ -368,7 +376,7 @@ $typeLabels = [
     .sv-btn-search {
       display: inline-flex; align-items: center; gap: 6px;
       padding: 9px 18px;
-      background: var(--purple, #635bff); color: #fff;
+      background: var(--purple, #635bff); color: var(--text);
       border: none; border-radius: 10px;
       font-family: inherit; font-size: .85rem; font-weight: 700; cursor: pointer;
     }
@@ -381,32 +389,40 @@ $typeLabels = [
     }
     .sv-btn-reset:hover { background: var(--soft-surface); color: var(--text); }
   </style>
+    <script>
+      // Pre-render theme sync: avoid dark-mode flash by setting data-theme before <body> paints.
+      // Matches view/frontoffice convention; app.js reconciles afterwards via its own logic.
+      try {
+        var savedTheme = localStorage.getItem("intellectai-theme");
+        var initialTheme = savedTheme || (window.matchMedia("(prefers-color-scheme: light)").matches ? "light" : "dark");
+        document.documentElement.dataset.theme = initialTheme;
+      } catch (e) {}
+    </script>
 </head>
 <body data-page="chatbot">
 <div class="overlay" data-overlay></div>
 <div class="shell">
-  <aside class="sidebar">
-    <div class="sidebar-panel">
-      <div class="brand-row">
-        <a class="brand" href="index.php"><img class="brand-logo" src="assets/media/secondvoice-logo.png" alt="SecondVoice" /></a>
-      </div>
-      <div class="sidebar-scroll">
-        <div class="nav-section">
-          <div class="nav-title">Gestion</div>
-          <a class="nav-link" href="index.php" data-nav="home"><span class="nav-icon icon-home"></span><span>Tableau de bord</span></a>
-          <a class="nav-link" href="gestion-utilisateurs.php" data-nav="profile"><span class="nav-icon icon-profile"></span><span>Utilisateurs</span></a>
-          <a class="nav-link" href="gestion-brainstormings.php" data-nav="community"><span class="nav-icon icon-community"></span><span>Brainstormings</span></a>
-          <a class="nav-link" href="gestion-rendezvous.html" data-nav="subscription"><span class="nav-icon icon-card"></span><span>Rendez-vous</span></a>
-          <a class="nav-link" href="gestion-accompagnements.php" data-nav="chatbot"><span class="nav-icon icon-chat"></span><span>Accompagnements</span></a>
-          <a class="nav-link" href="gestion-guides.php" data-nav="images"><span class="nav-icon icon-document"></span><span>Guides</span></a>
-          <a class="nav-link" href="../frontoffice/copilote.php" data-nav="chatbot"><span class="nav-icon icon-chat"></span><span>💬 ChatBot</span></a>
-          <a class="nav-link" href="gestion-documents.html" data-nav="images"><span class="nav-icon icon-image"></span><span>Documents</span></a>
-          <a class="nav-link" href="gestion-reclamations.html" data-nav="voice"><span class="nav-icon icon-mic"></span><span>Réclamations</span></a>
-          <a class="nav-link" href="settings.html" data-nav="settings"><span class="nav-icon icon-settings"></span><span>Paramètres</span></a>
+      <aside class="sidebar">
+        <div class="sidebar-panel">
+          <div class="brand-row">
+            <a class="brand" href="index.php"><img class="brand-logo" src="assets/media/secondvoice-logo.png" alt="SecondVoice logo" /></a>
+          </div>
+          <div class="sidebar-scroll">
+            <div class="nav-section">
+              <div class="nav-title">Gestion</div>
+              <a class="nav-link" href="index.php" data-nav="home"><span class="nav-icon icon-home"></span><span>Tableau de bord</span></a>
+              <a class="nav-link" href="gestion-utilisateurs.php" data-nav="profile"><span class="nav-icon icon-profile"></span><span>Gestion des utilisateurs</span></a>
+              <a class="nav-link" href="gestion-brainstormings.php" data-nav="community"><span class="nav-icon icon-community"></span><span>Gestion des brainstormings</span></a>
+              <a class="nav-link" href="gestion-rendezvous.php" data-nav="subscription"><span class="nav-icon icon-card"></span><span>Gestion des rendez-vous</span></a>
+              <a class="nav-link" href="gestion-accompagnements.php" data-nav="chatbot"><span class="nav-icon icon-chat"></span><span>Gestion des accompagnements</span></a>
+              <a class="nav-link" href="gestion-guides.php" data-nav="images"><span class="nav-icon icon-document"></span><span>Gestion des guides</span></a>
+              <a class="nav-link" href="gestion-evenements.php" data-nav="images"><span class="nav-icon icon-image"></span><span>Gestion des evenements</span></a>
+              <a class="nav-link" href="gestion-reclamations.php" data-nav="voice"><span class="nav-icon icon-mic"></span><span>Gestion des reclamations</span></a>
+              <a class="nav-link" href="settings.php" data-nav="settings"><span class="nav-icon icon-settings"></span><span>Parametres</span></a>
+            </div>
+          </div>
         </div>
-      </div>
-    </div>
-  </aside>
+      </aside>
 
   <main class="page">
     <div class="topbar">
@@ -418,6 +434,7 @@ $typeLabels = [
         <a class="update-button" href="export-gestion-accompagnements.php?<?= htmlspecialchars(http_build_query($_GET)) ?>" target="_blank" rel="noopener">📄 Export PDF</a>
         <a class="update-button" href="gestion-guides.php">📖 Voir les guides</a>
         <button class="icon-button icon-moon" data-theme-toggle aria-label="Thème"></button>
+            <?php include __DIR__ . '/partials/user-menu.php'; ?>
       </div>
     </div>
 
@@ -428,8 +445,6 @@ $typeLabels = [
           <h2 class="section-title">📋 Demandes d'accompagnement</h2>
           <p style="color:var(--muted); font-size:.9rem;">Filtrez les demandes pour examiner chaque dossier et le valider, le refuser ou suivre son évolution.</p>
         </div>
-
-        <?php require __DIR__ . '/../partials/flash.php'; ?>
 
         <?php
         $pieTitle = '📊 Demandes par état de validation (global)';
@@ -707,7 +722,5 @@ document.querySelectorAll('.sv-btn-approve').forEach(function(btn) {
   });
 });
 </script>
-<?php require __DIR__ . '/../partials/confirm-modal.php'; ?>
-<?php require __DIR__ . '/../partials/role-switcher.php'; ?>
 </body>
 </html>

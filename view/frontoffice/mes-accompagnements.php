@@ -1,4 +1,4 @@
-﻿<?php
+<?php
 session_start();
 require_once __DIR__ . '/../../config.php';
 require_once __DIR__ . '/../../controller/GoalController.php';
@@ -164,6 +164,7 @@ $typeLabels = [
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="assets/css/style.css" />
   <link rel="icon" type="image/png" sizes="32x32" href="assets/media/favicon-32.png" />
   <style>
     :root {
@@ -748,21 +749,10 @@ $typeLabels = [
   </style>
 </head>
 <body>
-
-<header class="site-header">
-  <a href="index.html" class="header-brand">
-    <img src="assets/media/secondvoice-logo.png" alt="SecondVoice" onerror="this.style.display='none'" />
-    SecondVoice
-  </a>
-  <nav class="header-nav">
-    <a href="index.html" class="nav-link">Accueil</a>
-    <a href="mes-accompagnements.php" class="nav-link active">Mes accompagnements</a>
-    <a href="service-accompagnement.php" class="nav-link">Nouvelle demande</a>
-    <a href="copilote.php" class="nav-link">💬 ChatBot</a>
-    <a href="echome.php" class="nav-link">🎙️ Echo Me</a>
-    <a href="profile.php" class="nav-link">Mon profil</a>
-  </nav>
-</header>
+<?php
+  $activeNavItem = 'services';
+  include __DIR__ . '/../partials/site-header.php';
+?>
 
 <div class="page-wrapper">
 

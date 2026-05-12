@@ -55,10 +55,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     <style>
       .form-container { background: #fff; padding: 20px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); max-width: 600px; margin: 40px auto; }
       .form-control { width: 100%; padding: 8px; margin-bottom: 10px; border: 1px solid #ddd; border-radius: 4px; }
-      .btn { padding: 8px 16px; border: none; border-radius: 4px; cursor: pointer; color: #fff; font-weight: 500; text-decoration: none; }
+      .btn { padding: 8px 16px; border: none; border-radius: 4px; cursor: pointer; color: var(--text); font-weight: 500; text-decoration: none; }
       .btn-primary { background: #2196f3; }
       .btn-secondary { background: #6c757d; }
     </style>
+    <script>
+      // Pre-render theme sync to avoid dark-mode flash.
+      try {
+        var savedTheme = localStorage.getItem("intellectai-theme");
+        var initialTheme = savedTheme || (window.matchMedia("(prefers-color-scheme: light)").matches ? "light" : "dark");
+        document.documentElement.dataset.theme = initialTheme;
+      } catch (e) {}
+    </script>
   </head>
   <body data-page="chatbot">
     <div class="shell">

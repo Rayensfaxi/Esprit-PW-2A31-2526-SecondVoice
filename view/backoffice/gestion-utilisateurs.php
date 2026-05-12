@@ -14,7 +14,7 @@ if (!in_array(strtolower((string) ($_SESSION['user_role'] ?? 'client')), ['admin
 
 $roleSession = strtolower((string) ($_SESSION['user_role'] ?? 'client'));
 if ($roleSession === 'agent') {
-    header('Location: gestion-accompagnements.php');
+    header('Location: ../frontoffice/assistant-accompagnements.php');
     exit;
 }
 
@@ -358,6 +358,7 @@ if (!$isFormView) {
               <a class="nav-link" href="gestion-brainstormings.php" data-nav="community"><span class="nav-icon icon-community"></span><span>Gestion des brainstormings</span></a>
               <a class="nav-link" href="gestion-rendezvous.php" data-nav="subscription"><span class="nav-icon icon-card"></span><span>Gestion des rendez-vous</span></a>
               <a class="nav-link" href="gestion-accompagnements.php" data-nav="chatbot"><span class="nav-icon icon-chat"></span><span>Gestion des accompagnements</span></a>
+              <a class="nav-link" href="gestion-guides.php" data-nav="images"><span class="nav-icon icon-document"></span><span>Gestion des guides</span></a>
               <a class="nav-link" href="gestion-evenements.php" data-nav="images"><span class="nav-icon icon-image"></span><span>Gestion des evenements</span></a>
               <a class="nav-link" href="gestion-reclamations.php" data-nav="voice"><span class="nav-icon icon-mic"></span><span>Gestion des reclamations</span></a>
               <a class="nav-link" href="settings.php" data-nav="settings"><span class="nav-icon icon-settings"></span><span>Parametres</span></a>
@@ -379,6 +380,7 @@ if (!$isFormView) {
               <a class="update-button" href="../frontoffice/index.php">Revenir</a>
             <?php endif; ?>
             <button class="icon-button icon-moon" data-theme-toggle aria-label="Switch theme"></button>
+            <?php include __DIR__ . '/partials/user-menu.php'; ?>
           </div>
         </div>
 

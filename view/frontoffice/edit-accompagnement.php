@@ -87,23 +87,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
   </head>
   <body>
     <div class="page-shell">
-      <header class="site-header">
-        <div class="container nav-inner">
-          <a class="brand" href="index.html"><img class="brand-logo" src="assets/media/secondvoice-logo.png" alt="SecondVoice" /></a>
-          <div class="nav">
-            <nav>
-              <ul class="nav-links">
-                <li><a href="index.html">Accueil</a></li>
-                <li><a href="service-accompagnement.php">Nouvel Accompagnement</a></li>
-                <li><a class="is-active" href="profile.php">Mon Profil</a></li>
-              </ul>
-            </nav>
-            <div class="header-actions">
-              <a class="btn btn-primary" href="mes-accompagnements.php" style="padding: 10px 20px;">Retour</a>
-            </div>
-          </div>
-        </div>
-      </header>
+<?php
+  $activeNavItem = 'services';
+  include __DIR__ . '/../partials/site-header.php';
+?>
 
       <main>
         <section class="page-hero">

@@ -111,7 +111,7 @@ if ($editGuideId) {
 
     .sv-guide-num {
       width: 32px; height: 32px; border-radius: 50%;
-      background: var(--purple); color: #fff;
+      background: var(--purple); color: var(--text);
       font-size: .8rem; font-weight: 800;
       display: flex; align-items: center; justify-content: center; flex-shrink: 0;
     }
@@ -137,7 +137,7 @@ if ($editGuideId) {
     .sv-btn-edit:hover { background:rgba(99,91,255,.25); }
     .sv-btn-del    { background:rgba(255,107,107,.1); color:#cc3333; border:1px solid rgba(255,107,107,.2); }
     .sv-btn-del:hover { background:rgba(255,107,107,.2); }
-    .sv-btn-save   { background:var(--purple); color:#fff; padding:11px 24px; font-size:.9rem; border:none; box-shadow:0 4px 14px rgba(99,91,255,.35); }
+    .sv-btn-save   { background:var(--purple); color: var(--text); padding:11px 24px; font-size:.9rem; border:none; box-shadow:0 4px 14px rgba(99,91,255,.35); }
     .sv-btn-save:hover { filter:brightness(1.1); transform:translateY(-1px); }
     .sv-btn-cancel { background:var(--soft-surface); color:var(--muted); border:1px solid var(--line); padding:11px 18px; font-size:.9rem; }
     .sv-btn-cancel:hover { background:var(--soft-surface-2); color:var(--text); }
@@ -204,24 +204,39 @@ if ($editGuideId) {
       font-size: .82rem; font-weight: 700; margin-bottom: 14px;
     }
   </style>
+    <script>
+      // Pre-render theme sync to avoid dark-mode flash.
+      try {
+        var savedTheme = localStorage.getItem("intellectai-theme");
+        var initialTheme = savedTheme || (window.matchMedia("(prefers-color-scheme: light)").matches ? "light" : "dark");
+        document.documentElement.dataset.theme = initialTheme;
+      } catch (e) {}
+    </script>
 </head>
 <body data-page="document">
 <div class="overlay" data-overlay></div>
 <div class="shell">
-  <aside class="sidebar">
-    <div class="sidebar-panel">
-      <div class="brand-row">
-        <a class="brand" href="index.php"><img class="brand-logo" src="assets/media/secondvoice-logo.png" alt="SecondVoice" /></a>
-      </div>
-      <div class="sidebar-scroll">
-        <div class="nav-section">
-          <div class="nav-title">Espace Assistant</div>
-          <a class="nav-link" href="assistant-accompagnements.php" data-nav="chatbot"><span class="nav-icon icon-chat"></span><span>Mes Accompagnements</span></a>
-          <a class="nav-link" href="assistant-guides.php" data-nav="document"><span class="nav-icon icon-document"></span><span>Mes Guides</span></a>
+      <aside class="sidebar">
+        <div class="sidebar-panel">
+          <div class="brand-row">
+            <a class="brand" href="index.php"><img class="brand-logo" src="assets/media/secondvoice-logo.png" alt="SecondVoice logo" /></a>
+          </div>
+          <div class="sidebar-scroll">
+            <div class="nav-section">
+              <div class="nav-title">Gestion</div>
+              <a class="nav-link" href="index.php" data-nav="home"><span class="nav-icon icon-home"></span><span>Tableau de bord</span></a>
+              <a class="nav-link" href="gestion-utilisateurs.php" data-nav="profile"><span class="nav-icon icon-profile"></span><span>Gestion des utilisateurs</span></a>
+              <a class="nav-link" href="gestion-brainstormings.php" data-nav="community"><span class="nav-icon icon-community"></span><span>Gestion des brainstormings</span></a>
+              <a class="nav-link" href="gestion-rendezvous.php" data-nav="subscription"><span class="nav-icon icon-card"></span><span>Gestion des rendez-vous</span></a>
+              <a class="nav-link" href="gestion-accompagnements.php" data-nav="chatbot"><span class="nav-icon icon-chat"></span><span>Gestion des accompagnements</span></a>
+              <a class="nav-link" href="gestion-guides.php" data-nav="images"><span class="nav-icon icon-document"></span><span>Gestion des guides</span></a>
+              <a class="nav-link" href="gestion-evenements.php" data-nav="images"><span class="nav-icon icon-image"></span><span>Gestion des evenements</span></a>
+              <a class="nav-link" href="gestion-reclamations.php" data-nav="voice"><span class="nav-icon icon-mic"></span><span>Gestion des reclamations</span></a>
+              <a class="nav-link" href="settings.php" data-nav="settings"><span class="nav-icon icon-settings"></span><span>Parametres</span></a>
+            </div>
+          </div>
         </div>
-      </div>
-    </div>
-  </aside>
+      </aside>
 
   <main class="page">
     <div class="topbar">
@@ -232,6 +247,7 @@ if ($editGuideId) {
       <div class="toolbar-actions">
         <a class="update-button" href="assistant-accompagnements.php">← Missions</a>
         <button class="icon-button icon-moon" data-theme-toggle aria-label="Thème"></button>
+            <?php include __DIR__ . '/partials/user-menu.php'; ?>
       </div>
     </div>
 

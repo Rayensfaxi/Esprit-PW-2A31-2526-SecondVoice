@@ -13,7 +13,7 @@ if (isset($_GET['action']) && $_GET['action'] === 'session-role') {
     $dashboardUrl = '';
     if ($canAccessDashboard) {
         $dashboardUrl = $role === 'agent'
-            ? '../backoffice/gestion-accompagnements.php'
+            ? 'assistant-accompagnements.php'
             : '../backoffice/index.php';
     }
 
@@ -35,6 +35,16 @@ if (isset($_SESSION['pending_admin_user']) && is_array($_SESSION['pending_admin_
 }
 
 if (isset($_SESSION['user_id'])) {
+    // Already logged in — send each role to its own landing page.
+    $existingRole = strtolower((string) ($_SESSION['user_role'] ?? 'client'));
+    if ($existingRole === 'agent') {
+        header('Location: assistant-accompagnements.php');
+        exit;
+    }
+    if ($existingRole === 'admin') {
+        header('Location: ../backoffice/index.php');
+        exit;
+    }
     header('Location: profile.php');
     exit;
 }
@@ -274,6 +284,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             'Connexion',
             $loginMode === 'agent' ? 'Connexion agent au compte.' : "Acces a l'espace utilisateur."
         );
+
+        // Send each role to its proper landing page.
+        // Agents go straight to their back-office workspace; admins are handled
+        // earlier via the face-verify redirect; everyone else (clients) goes to
+        // the public profile page.
+        if ($role === 'agent') {
+            header('Location: assistant-accompagnements.php');
+            exit;
+        }
 
         header('Location: profile.php?status=logged_in');
         exit;

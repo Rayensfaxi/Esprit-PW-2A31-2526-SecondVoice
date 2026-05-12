@@ -35,7 +35,7 @@ if (isset($_GET['action']) && $_GET['action'] == 'delete' && isset($_GET['id']))
 $db = Config::getConnexion();
 $assistants = [];
 try {
-    $stmt = $db->query("SELECT id, nom FROM utilisateurs WHERE LOWER(role) IN ('assistant', 'agent') ORDER BY nom ASC");
+    $stmt = $db->query("SELECT id, nom FROM utilisateur WHERE LOWER(role) IN ('assistant', 'agent') ORDER BY nom ASC");
     $assistants = $stmt ? $stmt->fetchAll(PDO::FETCH_ASSOC) : [];
 } catch (Throwable $e) {}
 
@@ -140,6 +140,7 @@ if (!$isEdit) {
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="assets/css/style.css" />
   <link rel="icon" type="image/png" sizes="32x32" href="assets/media/favicon-32.png" />
   <style>
     :root {
@@ -568,26 +569,15 @@ if (!$isEdit) {
   </style>
 </head>
 <body>
-
-<header class="site-header">
-  <a href="index.html" class="header-brand">
-    <img src="assets/media/secondvoice-logo.png" alt="SecondVoice" onerror="this.style.display='none'" />
-    SecondVoice
-  </a>
-  <nav class="header-nav">
-    <a href="index.html" class="nav-link">Accueil</a>
-    <a href="mes-accompagnements.php" class="nav-link">Mes accompagnements</a>
-    <a href="service-accompagnement.php" class="nav-link active">Nouvelle demande</a>
-    <a href="copilote.php" class="nav-link">💬 ChatBot</a>
-    <a href="echome.php" class="nav-link">🎙️ Echo Me</a>
-    <a href="profile.php" class="nav-link">Mon profil</a>
-  </nav>
-</header>
+<?php
+  $activeNavItem = 'services';
+  include __DIR__ . '/../partials/site-header.php';
+?>
 
 <div class="page-wrapper">
 
   <nav class="breadcrumb">
-    <a href="index.html">Accueil</a>
+    <a href="index.php">Accueil</a>
     <span class="breadcrumb-sep">›</span>
     <a href="mes-accompagnements.php">Mes accompagnements</a>
     <span class="breadcrumb-sep">›</span>

@@ -243,10 +243,15 @@ async function persistProfileWithApi(profile) {
 
 function bindLogout() {
   document.querySelectorAll(".logout-button").forEach((button) => {
+    // Skip buttons inside a real form (type="submit") — let the form POST to logout.php
+    // for a proper server-side session_destroy. We only clear client-side storage here.
+    const insideForm = button.closest("form");
     button.addEventListener("click", () => {
       removeStorageItem(integrationKeys.session);
       removeStorageItem(integrationKeys.profile);
-      redirectToFrontOffice();
+      if (!insideForm) {
+        redirectToFrontOffice();
+      }
     });
   });
 }

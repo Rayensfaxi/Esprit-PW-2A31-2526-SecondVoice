@@ -12,7 +12,7 @@ class GoalController
 
         $db = Config::getConnexion();
         try {
-            $sql = "SELECT id FROM utilisateurs WHERE id = :id LIMIT 1";
+            $sql = "SELECT id FROM utilisateur WHERE id = :id LIMIT 1";
             $req = $db->prepare($sql);
             $req->execute(['id' => $assistantId]);
             return (bool) $req->fetch();
@@ -54,7 +54,7 @@ class GoalController
     {
         $sql = "SELECT g.*, u.nom as assistant_name 
                 FROM goals g 
-                LEFT JOIN utilisateurs u ON g.selected_assistant_id = u.id 
+                LEFT JOIN utilisateur u ON g.selected_assistant_id = u.id 
                 WHERE g.user_id = :user_id";
         $db = Config::getConnexion();
         try {
@@ -71,8 +71,8 @@ class GoalController
     {
         $sql = "SELECT g.*, u.nom as user_name, a.nom as assistant_name 
                 FROM goals g 
-                JOIN utilisateurs u ON g.user_id = u.id 
-                JOIN utilisateurs a ON g.selected_assistant_id = a.id
+                JOIN utilisateur u ON g.user_id = u.id 
+                JOIN utilisateur a ON g.selected_assistant_id = a.id
                 WHERE g.admin_validation_status = 'en_attente'";
         $db = Config::getConnexion();
         try {
@@ -87,7 +87,7 @@ class GoalController
     {
         $sql = "SELECT g.*, u.nom as user_name 
                 FROM goals g 
-                JOIN utilisateurs u ON g.user_id = u.id 
+                JOIN utilisateur u ON g.user_id = u.id 
                 WHERE g.admin_validation_status = 'valide'
                 AND (
                     g.selected_assistant_id = :assistant_id
@@ -268,7 +268,7 @@ class GoalController
 
     public function getAcceptedGoalsForAssistant($assistant_id) {
         $db = Config::getConnexion();
-        $sql = "SELECT g.*, u.nom FROM goals g JOIN utilisateurs u ON g.user_id = u.id WHERE g.selected_assistant_id = :aid AND g.admin_validation_status = 'valide' AND g.assistant_validation_status = 'accepte' AND g.status IN ('en_cours', 'termine')";
+        $sql = "SELECT g.*, u.nom FROM goals g JOIN utilisateur u ON g.user_id = u.id WHERE g.selected_assistant_id = :aid AND g.admin_validation_status = 'valide' AND g.assistant_validation_status = 'accepte' AND g.status IN ('en_cours', 'termine')";
         try {
             $req = $db->prepare($sql);
             $req->execute(['aid' => $assistant_id]);
@@ -300,8 +300,8 @@ class GoalController
     {
         $sql = "SELECT g.*, u.nom AS user_name, a.nom AS assistant_name
                 FROM goals g
-                LEFT JOIN utilisateurs u ON g.user_id = u.id
-                LEFT JOIN utilisateurs a ON g.selected_assistant_id = a.id
+                LEFT JOIN utilisateur u ON g.user_id = u.id
+                LEFT JOIN utilisateur a ON g.selected_assistant_id = a.id
                 WHERE 1=1";
         $params = [];
 
@@ -431,7 +431,7 @@ class GoalController
             $sql = "SELECT u.id, u.nom, u.prenom, u.email,
                            COUNT(g.id) AS handled,
                            SUM(CASE WHEN g.status = 'termine' THEN 1 ELSE 0 END) AS finished
-                    FROM utilisateurs u
+                    FROM utilisateur u
                     LEFT JOIN goals g ON g.selected_assistant_id = u.id
                                       AND g.type = :type
                                       AND g.assistant_validation_status = 'accepte'
@@ -449,7 +449,7 @@ class GoalController
             $fallbackSql = "SELECT u.id, u.nom, u.prenom, u.email,
                                    0 AS handled, 0 AS finished,
                                    COUNT(g.id) AS active
-                            FROM utilisateurs u
+                            FROM utilisateur u
                             LEFT JOIN goals g ON g.selected_assistant_id = u.id
                                               AND g.status IN ('soumis', 'en_cours')
                             WHERE LOWER(u.role) IN ('assistant', 'agent')
@@ -503,8 +503,8 @@ class GoalController
                            u.nom    AS user_nom,    u.prenom AS user_prenom,
                            a.nom    AS assistant_nom, a.prenom AS assistant_prenom
                     FROM goals g
-                    LEFT JOIN utilisateurs u ON g.user_id = u.id
-                    LEFT JOIN utilisateurs a ON g.selected_assistant_id = a.id
+                    LEFT JOIN utilisateur u ON g.user_id = u.id
+                    LEFT JOIN utilisateur a ON g.selected_assistant_id = a.id
                     WHERE g.share_token = :tok
                     LIMIT 1";
             $req = $db->prepare($sql);

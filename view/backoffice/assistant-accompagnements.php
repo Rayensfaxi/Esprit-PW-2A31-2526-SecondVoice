@@ -130,16 +130,16 @@ foreach ($goals as $goalItem) {
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
     <link rel="stylesheet" href="assets/style.css" />
     <style>
-      .content-section { color: #dbe5ff; }
+      .content-section { color: var(--text); }
       .hero {
         background: linear-gradient(120deg, rgba(99,91,255,.24), rgba(76,201,240,.16));
-        border: 1px solid rgba(255,255,255,.09);
+        border: 1px solid var(--line);
         border-radius: 18px;
         padding: 20px;
         margin-bottom: 18px;
       }
-      .hero h2 { margin: 0; font-size: 1.25rem; color: #fff; }
-      .hero p { margin: 8px 0 0; color: #c6d2f2; }
+      .hero h2 { margin: 0; font-size: 1.25rem; color: var(--text); }
+      .hero p { margin: 8px 0 0; color: var(--text); }
 
       .stats-grid {
         display: grid;
@@ -148,17 +148,17 @@ foreach ($goals as $goalItem) {
         margin-top: 16px;
       }
       .stat {
-        background: rgba(10, 16, 34, .62);
-        border: 1px solid rgba(255,255,255,.09);
+        background: var(--soft-surface);
+        border: 1px solid var(--line);
         border-radius: 12px;
         padding: 12px;
       }
-      .stat-label { color: #97a8d3; font-size: .78rem; text-transform: uppercase; letter-spacing: .05em; }
-      .stat-value { margin-top: 4px; color: #fff; font-size: 1.5rem; font-weight: 800; }
+      .stat-label { color: var(--muted); font-size: .78rem; text-transform: uppercase; letter-spacing: .05em; }
+      .stat-value { margin-top: 4px; color: var(--text); font-size: 1.5rem; font-weight: 800; }
 
       .mission-card {
-        background: #10182d;
-        border: 1px solid rgba(255,255,255,.08);
+        background: var(--panel);
+        border: 1px solid var(--line);
         border-radius: 16px;
         margin-bottom: 16px;
         overflow: hidden;
@@ -169,12 +169,12 @@ foreach ($goals as $goalItem) {
         gap: 12px;
         align-items: flex-start;
         padding: 16px 18px 10px;
-        border-bottom: 1px solid rgba(255,255,255,.06);
+        border-bottom: 1px solid var(--line);
       }
-      .mission-title { margin: 4px 0; color: #fff; font-size: 1.05rem; }
-      .mission-meta { color: #9db0dc; font-size: .84rem; }
+      .mission-title { margin: 4px 0; color: var(--text); font-size: 1.05rem; }
+      .mission-meta { color: var(--muted); font-size: .84rem; }
       .mission-body { padding: 14px 18px 18px; }
-      .mission-desc { color: #cfdbff; margin-bottom: 14px; }
+      .mission-desc { color: var(--text); margin-bottom: 14px; }
 
       .chip {
         display: inline-flex;
@@ -190,32 +190,32 @@ foreach ($goals as $goalItem) {
       .chip-cancel  { background: rgba(255,107,107,.2); color: #ff9fa7; }
 
       .panel {
-        background: rgba(255,255,255,.03);
-        border: 1px solid rgba(255,255,255,.08);
+        background: var(--icon-surface);
+        border: 1px solid var(--line);
         border-radius: 12px;
         padding: 12px;
         margin-top: 12px;
       }
-      .panel h4, .panel h5 { color: #eef3ff; margin-top: 0; }
+      .panel h4, .panel h5 { color: var(--text); margin-top: 0; }
 
       .guide-list { margin-top: 8px; }
       .guide-item {
-        background: rgba(8, 13, 27, .78);
-        border: 1px solid rgba(255,255,255,.08);
+        background: var(--soft-surface);
+        border: 1px solid var(--line);
         border-radius: 10px;
         padding: 10px;
         margin-bottom: 10px;
         position: relative;
       }
-      .guide-item h5 { margin: 0 0 6px; color: #fff; }
-      .guide-item p { margin: 0; color: #c8d5f7; }
+      .guide-item h5 { margin: 0 0 6px; color: var(--text); }
+      .guide-item p { margin: 0; color: var(--text); }
 
       .btn {
         padding: 8px 14px;
         border: none;
         border-radius: 9px;
         cursor: pointer;
-        color: #fff;
+        color: var(--text);
         font-weight: 600;
         text-decoration: none;
         display: inline-block;
@@ -229,12 +229,12 @@ foreach ($goals as $goalItem) {
         width: 100%;
         padding: 9px 10px;
         margin-bottom: 10px;
-        border: 1px solid rgba(255,255,255,.16);
+        border: 1px solid var(--line);
         border-radius: 8px;
-        background: rgba(255,255,255,.03);
-        color: #fff;
+        background: var(--icon-surface);
+        color: var(--text);
       }
-      input.form-control::placeholder, textarea.form-control::placeholder { color: #9baed8; }
+      input.form-control::placeholder, textarea.form-control::placeholder { color: var(--muted); }
 
       .toolbar-actions { display: flex; gap: 10px; flex-wrap: wrap; }
 
@@ -252,7 +252,7 @@ foreach ($goals as $goalItem) {
       .confirm-overlay {
         position: fixed;
         inset: 0;
-        background: rgba(5, 9, 20, 0.72);
+        background: var(--soft-surface);
         display: none;
         align-items: center;
         justify-content: center;
@@ -262,20 +262,20 @@ foreach ($goals as $goalItem) {
       .confirm-overlay.open { display: flex; }
       .confirm-modal {
         width: min(460px, 100%);
-        background: #111a30;
-        border: 1px solid rgba(255,255,255,.12);
+        background: var(--panel);
+        border: 1px solid var(--line);
         border-radius: 14px;
         box-shadow: 0 24px 55px rgba(0,0,0,.45);
         padding: 16px;
       }
       .confirm-title {
         margin: 0;
-        color: #fff;
+        color: var(--text);
         font-size: 1.05rem;
       }
       .confirm-text {
         margin: 8px 0 0;
-        color: #c4d2f8;
+        color: var(--text);
         line-height: 1.4;
       }
       .confirm-actions {
@@ -285,8 +285,8 @@ foreach ($goals as $goalItem) {
         gap: 8px;
       }
       .btn-ghost {
-        background: rgba(255,255,255,.08);
-        color: #e8eeff;
+        background: var(--line);
+        color: var(--text);
       }
       @media (max-width: 980px) {
         .stats-grid { grid-template-columns: 1fr 1fr; }
@@ -295,6 +295,14 @@ foreach ($goals as $goalItem) {
         .stats-grid { grid-template-columns: 1fr; }
       }
     </style>
+    <script>
+      // Pre-render theme sync to avoid dark-mode flash.
+      try {
+        var savedTheme = localStorage.getItem("intellectai-theme");
+        var initialTheme = savedTheme || (window.matchMedia("(prefers-color-scheme: light)").matches ? "light" : "dark");
+        document.documentElement.dataset.theme = initialTheme;
+      } catch (e) {}
+    </script>
   </head>
   <body data-page="chatbot">
     <div class="shell">
@@ -305,9 +313,16 @@ foreach ($goals as $goalItem) {
           </div>
           <div class="sidebar-scroll">
             <div class="nav-section">
-              <div class="nav-title">Espace Assistant</div>
-              <a class="nav-link" href="assistant-accompagnements.php" data-nav="chatbot"><span class="nav-icon icon-chat"></span><span>Mes Accompagnements</span></a>
-              <a class="nav-link" href="assistant-guides.php" data-nav="guides"><span class="nav-icon icon-document"></span><span>Gestion des Guides</span></a>
+              <div class="nav-title">Gestion</div>
+              <a class="nav-link" href="index.php" data-nav="home"><span class="nav-icon icon-home"></span><span>Tableau de bord</span></a>
+              <a class="nav-link" href="gestion-utilisateurs.php" data-nav="profile"><span class="nav-icon icon-profile"></span><span>Gestion des utilisateurs</span></a>
+              <a class="nav-link" href="gestion-brainstormings.php" data-nav="community"><span class="nav-icon icon-community"></span><span>Gestion des brainstormings</span></a>
+              <a class="nav-link" href="gestion-rendezvous.php" data-nav="subscription"><span class="nav-icon icon-card"></span><span>Gestion des rendez-vous</span></a>
+              <a class="nav-link" href="gestion-accompagnements.php" data-nav="chatbot"><span class="nav-icon icon-chat"></span><span>Gestion des accompagnements</span></a>
+              <a class="nav-link" href="gestion-guides.php" data-nav="images"><span class="nav-icon icon-document"></span><span>Gestion des guides</span></a>
+              <a class="nav-link" href="gestion-evenements.php" data-nav="images"><span class="nav-icon icon-image"></span><span>Gestion des evenements</span></a>
+              <a class="nav-link" href="gestion-reclamations.php" data-nav="voice"><span class="nav-icon icon-mic"></span><span>Gestion des reclamations</span></a>
+              <a class="nav-link" href="settings.php" data-nav="settings"><span class="nav-icon icon-settings"></span><span>Parametres</span></a>
             </div>
           </div>
         </div>
@@ -319,6 +334,7 @@ foreach ($goals as $goalItem) {
           <div class="toolbar-actions">
             <a class="update-button" href="assistant-guides.php">📖 Voir tous mes guides</a>
             <a class="update-button" href="../frontoffice/logout.php">Déconnexion</a>
+            <?php include __DIR__ . '/partials/user-menu.php'; ?>
           </div>
         </div>
 

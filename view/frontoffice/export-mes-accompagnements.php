@@ -13,7 +13,7 @@ $user_id = (int) $_SESSION['user_id'];
 // Fetch user identity for the document header
 $userInfo = null;
 try {
-    $stmt = Config::getConnexion()->prepare("SELECT nom, prenom, email FROM utilisateurs WHERE id = :id");
+    $stmt = Config::getConnexion()->prepare("SELECT nom, prenom, email FROM utilisateur WHERE id = :id");
     $stmt->execute(['id' => $user_id]);
     $userInfo = $stmt->fetch(PDO::FETCH_ASSOC);
 } catch (Throwable $e) {}
