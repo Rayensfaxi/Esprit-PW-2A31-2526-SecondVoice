@@ -1,7 +1,7 @@
 <?php
 session_start();
-require_once __DIR__ . "/../../config.php";
-require_once __DIR__ . "/../../controller/GuideController.php";
+require_once __DIR__ . '/../../config.php';
+require_once __DIR__ . '../../controller/GuideController.php';
 
 // Auth check: admin OR agent — both can browse guides.
 $_role = strtolower((string)($_SESSION['role'] ?? ''));

@@ -1,7 +1,7 @@
 <?php
 session_start();
 require_once __DIR__ . '/../../config.php';
-require_once __DIR__ . '/../../controller/GoalController.php';
+require_once __DIR__ . '../../controller/GoalController.php';
 
 // Auth check: admin OR agent — both can manage accompagnements.
 // Matches the integration's back-office convention (see gestion-evenements.php, etc.)

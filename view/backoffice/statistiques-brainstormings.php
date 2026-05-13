@@ -20,8 +20,8 @@ if ($roleSession === 'agent') {
 }
 
 require_once __DIR__ . '/../../config.php';
-require_once __DIR__ . '/../../controller/BrainstormingController.php';
-require_once __DIR__ . '/../../controller/IdeaController.php';
+require_once __DIR__ . '../../controller/BrainstormingController.php';
+require_once __DIR__ . '../../controller/IdeaController.php';
 
 new BrainstormingController();
 new IdeaController();

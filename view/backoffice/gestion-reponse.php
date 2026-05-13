@@ -1,12 +1,5 @@
 <?php
-      include '../../controller/reclamationcontroller.php';
-      include '../../controller/prioritecontroller.php';
-      require_once __DIR__ . '/../../model/reclamation.php';
-      $ReclamationController = new ReclamationController();
-      $prioriteController = new PrioriteController();
-      $ordre = $_POST['ordre'] ?? 'date_desc';
-      $search = trim($_POST['search'] ?? '');
-      $Reclamations = $ReclamationController->listReclamations($ordre, $search);
+
 ?>
 
 <!DOCTYPE html>
@@ -14,7 +7,7 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>SecondVoice | Gestion des réclamations</title>
+    <title>SecondVoice | Gestion des réponses</title>
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link
@@ -132,9 +125,9 @@
             >
               =
             </button>
-            <h1 class="page-title">Gestion des réclamations</h1>
+            <h1 class="page-title">Gestion des réponses</h1>
             <div class="page-subtitle">
-              Suivez et gérez toutes les réclamations clients
+              Suivez et gérez toutes les réponses aux réclamations
             </div>
           </div>
           <div class="toolbar-actions">
@@ -174,13 +167,13 @@
                   </div>
                 </div>
                 <div class="profile-menu-list">
-                  <!--<a
+                  <a
                     class="menu-link"
                     href="gestion-utilisateurs.php"
                   >
                     <span class="menu-icon icon-profile"></span>
                     <span>Gestion des utilisateurs</span>
-                  </a>-->
+                  </a>
                   <a class="menu-link" href="settings.php">
                     <span class="menu-icon icon-settings"></span>
                     <span>Paramètres</span>
@@ -201,146 +194,170 @@
           </div>
         </div>
 
-        <!--<div class="tabs-menu">
-          <a href="gestion-reclamations.php" class="tab-button active"
+        <div class="tabs-menu">
+          <a href="gestion-reclamations.php" class="tab-button"
             >Réclamations</a
           >
-          <a href="gestion-reponse.php" class="tab-button">Réponses</a>
+          <a href="gestion-reponse.php" class="tab-button active">Réponses</a>
           <a href="gestion-justification.php" class="tab-button"
             >Justifications</a
           >
-        </div>-->
+        </div>
 
         <div class="page-grid users-page">
           <section class="users-hero">
             <div class="users-header">
               <div>
-                <h2 class="section-title">Liste des réclamations</h2>
+                <h2 class="section-title">Liste des réponses</h2>
                 <p class="helper">
-                  Consultez, filtrez et gérez toutes les réclamations soumises
-                  par les clients.
+                  Consultez et gérez toutes les réponses envoyées aux
+                  réclamations.
                 </p>
               </div>
-              <!--<div class="users-actions">
+              <div class="users-actions">
                 <button class="ghost-button" type="button">Exporter</button>
-                <a href="form-reclamation.php" class="action-button"
-                  >Nouvelle réclamation</a
+                <a href="form-reponse.php" class="action-button"
+                  >Nouvelle réponse</a
                 >
-              </div>-->
+              </div>
             </div>
 
-            <form method="POST" action="" class="users-filters">
+            <div class="users-filters">
               <div class="filter-field">
-                <label for="reclamation-search">Recherche</label>
+                <label for="reponse-search">Recherche</label>
                 <input
-                  id="reclamation-search"
-                  name="search"
+                  id="reponse-search"
                   type="search"
-                  placeholder="ID, nom client ou description..."
-                  value="<?= htmlspecialchars($search) ?>"
+                  placeholder="Rechercher par contenu..."
                 />
               </div>
               <div class="filter-field">
-                <label for="reclamation-ordre">Trier par</label>
-                <select id="reclamation-ordre" name="ordre" onchange="this.form.submit()">
-                  <option value="date_desc" <?= $ordre === 'date_desc' ? 'selected' : '' ?>>Date ↓ (récent)</option>
-                  <option value="date_asc" <?= $ordre === 'date_asc' ? 'selected' : '' ?>>Date ↑ (ancien)</option>
-                  <option value="statut" <?= $ordre === 'statut' ? 'selected' : '' ?>>Statut (en cours d'abord)</option>
-                  <option value="id_desc" <?= $ordre === 'id_desc' ? 'selected' : '' ?>>ID ↓</option>
-                  <option value="id_asc" <?= $ordre === 'id_asc' ? 'selected' : '' ?>>ID ↑</option>
+                <label for="reponse-reclamation">Réclamation liée</label>
+                <select id="reponse-reclamation">
+                  <option>Tout</option>
+                  <option>#REC-001</option>
+                  <option>#REC-002</option>
+                  <option>#REC-003</option>
+                  <option>#REC-004</option>
                 </select>
               </div>
-              <button type="submit" class="ghost-button">Rechercher</button>
-            </form>
-              <!--<div class="filter-field">
-                <label for="reclamation-date">Date</label>
-                <select id="reclamation-date">
+              <div class="filter-field">
+                <label for="reponse-user">Utilisateur</label>
+                <select id="reponse-user">
+                  <option>Tout</option>
+                  <option>Admin #1</option>
+                  <option>Agent #2</option>
+                </select>
+              </div>
+              <div class="filter-field">
+                <label for="reponse-date">Date</label>
+                <select id="reponse-date">
                   <option>Ce mois</option>
                   <option>30 jours</option>
                   <option>7 jours</option>
                   <option>Aujourd'hui</option>
                 </select>
-              </div>-->
+              </div>
             </div>
           </section>
-          
+
           <section class="table-card">
             <table class="table users-table">
               <thead>
                 <tr>
-                  <th>Priorité</th>
-                  <th>ID</th>
-                  <th>Description</th>
-                  <th>Client</th>
-                  <th>Statut</th>
-                  <th>Date de création</th>
+                  <th>ID Réponse</th>
+                  <th>Réclamation liée</th>
+                  <th>Contenu</th>
+                  <th>Envoyée par</th>
+                  <th>Date de réponse</th>
                   <th>Actions</th>
                 </tr>
               </thead>
               <tbody>
-                  <?php if (count($Reclamations) > 0): ?>
-                      <?php foreach ($Reclamations as $Reclamation): 
-                          $niveau = $Reclamation->priorite_niveau ?? 'moyenne';
-                          $score = $Reclamation->priorite_score ?? 50;
-                          $raison = $Reclamation->priorite_raison ?? '';
-                          
-                          $badgeClass = 'priority-' . $niveau;
-                          
-                          $emoji = [
-                              'critique' => '🔴',
-                              'haute' => '🟠',
-                              'moyenne' => '🔵',
-                              'faible' => '🟢'
-                          ][$niveau] ?? '⚪';
-                      ?>
-                      <tr>
-                          <td>
-                              <div class="<?= htmlspecialchars($badgeClass) ?> priority-badge">
-                                  <span><?= $emoji ?></span>
-                                  <span><?= strtoupper(htmlspecialchars($niveau)) ?></span>
-                                  <span class="priority-score">(<?= (int)$score ?>)</span>
-                              </div>
-                              <?php if (!empty($raison)): ?>
-                                  <div style="font-size: 11px; color: var(--muted); margin-top: 4px;">
-                                      <?= htmlspecialchars(substr($raison, 0, 40)) ?>...
-                                  </div>
-                              <?php endif; ?>
-                          </td>
-                          <td><strong>#<?= htmlspecialchars($Reclamation->getId_reclamation()) ?></strong></td>
-                          <td><?= htmlspecialchars($Reclamation->getDescription()) ?></td>
-                          <td>
-                              <div class="user-cell">
-                                  <span class="user-avatar">
-                                      <?= strtoupper(substr(htmlspecialchars($Reclamation->client_nom ?? 'I'), 0, 1)) ?>
-                                  </span>
-                                  <div>
-                                      <strong><?= htmlspecialchars($Reclamation->client_nom ?? 'Inconnu') ?></strong>
-                                      <span>User #<?= (int)$Reclamation->getId_user() ?></span>
-                                  </div>
-                              </div>
-                          </td>
-                          <td>
-                              <span class="status-pill en-cours">
-                                  <?= htmlspecialchars($Reclamation->getStatut()) ?>
-                              </span>
-                          </td>
-                          <td><?= htmlspecialchars($Reclamation->getDate_creation()) ?></td>
-                          <td>
-                              <div class="table-actions">
-                                  <a href="reponse-assist.php?reclamation=<?= (int)$Reclamation->getId_reclamation() ?>" class="ghost-button">Répondre</a>
-                                  <a href="justification-ajout.php?reclamation=<?= (int)$Reclamation->getId_reclamation() ?>" class="ghost-button">justif+</a>
-                                  <a href="gestion-justifications.php?reclamation=<?= (int)$Reclamation->getId_reclamation() ?>" class="ghost-button">justifl</a>
-                              </div>
-                          </td>
-                      </tr>
-                      <?php endforeach; ?>
-                  <?php else: ?>
-                      <tr>
-                          <td colspan="7" class="text-center" style="padding: 40px; color: var(--muted);">
-                              Aucune réclamation trouvée.
-                          </td>
-                      </tr>
-                  <?php endif; ?>
+                <tr>
+                  <td><strong>#REP-001</strong></td>
+                  <td>#REC-001</td>
+                  <td>
+                    Nous avons bien reçu votre demande et nous traitons votre
+                    problème de facturation...
+                  </td>
+                  <td>
+                    <div class="user-cell">
+                      <span class="user-avatar">AD</span>
+                      <div>
+                        <strong>Admin Principal</strong>
+                        <span>User #1</span>
+                      </div>
+                    </div>
+                  </td>
+                  <td>14/04/2026 11:45</td>
+                  <td>
+                    <div class="table-actions">
+                      <a href="form-reponse.php?id=1" class="ghost-button"
+                        >Modifier</a
+                      >
+                      <button class="ghost-button" type="button">
+                        Supprimer
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+                <tr>
+                  <td><strong>#REP-002</strong></td>
+                  <td>#REC-002</td>
+                  <td>
+                    Votre réclamation a été résolue. Le service client est
+                    maintenant disponible 24/7...
+                  </td>
+                  <td>
+                    <div class="user-cell">
+                      <span class="user-avatar">AG</span>
+                      <div>
+                        <strong>Agent Support</strong>
+                        <span>User #5</span>
+                      </div>
+                    </div>
+                  </td>
+                  <td>13/04/2026 10:30</td>
+                  <td>
+                    <div class="table-actions">
+                      <a href="form-reponse.php?id=2" class="ghost-button"
+                        >Modifier</a
+                      >
+                      <button class="ghost-button" type="button">
+                        Supprimer
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+                <tr>
+                  <td><strong>#REP-003</strong></td>
+                  <td>#REC-003</td>
+                  <td>
+                    Nous avons contacté le transporteur. Votre colis arrivera
+                    demain avant 18h...
+                  </td>
+                  <td>
+                    <div class="user-cell">
+                      <span class="user-avatar">AG</span>
+                      <div>
+                        <strong>Agent Support</strong>
+                        <span>User #5</span>
+                      </div>
+                    </div>
+                  </td>
+                  <td>12/04/2026 16:00</td>
+                  <td>
+                    <div class="table-actions">
+                      <a href="form-reponse.php?id=3" class="ghost-button"
+                        >Modifier</a
+                      >
+                      <button class="ghost-button" type="button">
+                        Supprimer
+                      </button>
+                    </div>
+                  </td>
+                </tr>
               </tbody>
             </table>
           </section>

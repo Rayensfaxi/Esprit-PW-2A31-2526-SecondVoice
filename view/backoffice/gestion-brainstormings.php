@@ -18,8 +18,8 @@ if ($roleSession === 'agent') {
     exit;
 }
 
-require_once __DIR__ . '/../../controller/BrainstormingController.php';
-require_once __DIR__ . '/../../controller/VoteController.php';
+require_once __DIR__ . '../../controller/BrainstormingController.php';
+require_once __DIR__ . '../../controller/VoteController.php';
 
 function h($value): string
 {

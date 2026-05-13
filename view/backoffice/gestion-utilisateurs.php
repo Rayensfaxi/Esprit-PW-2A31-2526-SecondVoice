@@ -18,7 +18,7 @@ if ($roleSession === 'agent') {
     exit;
 }
 
-require_once __DIR__ . '/../../controller/UtilisateurController.php';
+require_once __DIR__ . '../../controller/UtilisateurController.php';
 
 function h($value): string
 {

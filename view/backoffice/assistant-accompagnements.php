@@ -8,8 +8,8 @@ if (!headers_sent()) {
 
 session_start();
 require_once __DIR__ . '/../../config.php';
-require_once __DIR__ . '/../../controller/GoalController.php';
-require_once __DIR__ . '/../../controller/GuideController.php';
+require_once __DIR__ . '../../controller/GoalController.php';
+require_once __DIR__ . './../controller/GuideController.php';
 
 function redirect_with_notice(string $path, string $type, string $message): void
 {

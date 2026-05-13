@@ -17,7 +17,7 @@ if (!in_array(strtolower((string) ($_SESSION['user_role'] ?? 'client')), ['admin
     exit;
 }
 
-require_once __DIR__ . '/../../controller/EventController.php';
+require_once __DIR__ . '../../controller/EventController.php';
 
 $autoload = __DIR__ . '/../../vendor/autoload.php';
 $dompdfAutoload = __DIR__ . '/../../vendor/dompdf/dompdf/autoload.inc.php';

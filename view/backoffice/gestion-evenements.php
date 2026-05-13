@@ -12,7 +12,7 @@ if (!in_array(strtolower((string) ($_SESSION['user_role'] ?? 'client')), ['admin
     exit;
 }
 
-require_once __DIR__ . '/../../controller/EventController.php';
+require_once __DIR__ . '../../controller/EventController.php';
 
 function h(?string $value): string
 {

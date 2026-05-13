@@ -8,8 +8,8 @@ if (!headers_sent()) {
 
 session_start();
 require_once __DIR__ . '/../../config.php';
-require_once __DIR__ . '/../../controller/GuideController.php';
-require_once __DIR__ . '/../../controller/GoalController.php';
+require_once __DIR__ . '../../controller/GuideController.php';
+require_once __DIR__ . '../../controller/GoalController.php';
 
 $_role = strtolower((string)($_SESSION['role'] ?? $_SESSION['user_role'] ?? ''));
 $isAssistant = in_array($_role, ['assistant', 'agent']);

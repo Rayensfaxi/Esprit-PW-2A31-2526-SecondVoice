@@ -1,7 +1,7 @@
 <?php
 session_start();
 require_once __DIR__ . '/../../config.php';
-require_once __DIR__ . '/../../controller/GoalController.php';
+require_once __DIR__ . '../../controller/GoalController.php';
 
 $_role     = strtolower((string) ($_SESSION['role']      ?? ''));
 $_userRole = strtolower((string) ($_SESSION['user_role'] ?? ''));

@@ -1,7 +1,7 @@
 <?php
 declare(strict_types=1);
 
-require_once __DIR__ . '/../../controller/EventController.php';
+require_once __DIR__ .'../../controller/EventController.php';
 
 function event_reg_h(?string $value): string
 {
