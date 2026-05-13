@@ -1,8 +1,12 @@
 <?php
       include '../../../controller/reclamationcontroller.php';
+      include '../../../controller/prioritecontroller.php';
       require_once __DIR__ . '/../../../model/reclamation.php';
       $ReclamationController = new ReclamationController();
-      $Reclamations = $ReclamationController->listReclamations();
+      $prioriteController = new PrioriteController();
+      $ordre = $_POST['ordre'] ?? 'date_desc';
+      $search = trim($_POST['search'] ?? '');
+      $Reclamations = $ReclamationController->listReclamations($ordre, $search);
 ?>
 
 <!DOCTYPE html>
@@ -217,34 +221,38 @@
                   par les clients.
                 </p>
               </div>
-              <div class="users-actions">
+              <!--<div class="users-actions">
                 <button class="ghost-button" type="button">Exporter</button>
-                <!--<a href="form-reclamation.php" class="action-button"
+                <a href="form-reclamation.php" class="action-button"
                   >Nouvelle réclamation</a
-                >-->
-              </div>
+                >
+              </div>-->
             </div>
 
-            <div class="users-filters">
+            <form method="POST" action="" class="users-filters">
               <div class="filter-field">
                 <label for="reclamation-search">Recherche</label>
                 <input
                   id="reclamation-search"
+                  name="search"
                   type="search"
-                  placeholder="Rechercher par ID ou description..."
+                  placeholder="ID, nom client ou description..."
+                  value="<?= htmlspecialchars($search) ?>"
                 />
               </div>
               <div class="filter-field">
-                <label for="reclamation-statut">Statut</label>
-                <select id="reclamation-statut">
-                  <option>Tout</option>
-                  <option>En attente</option>
-                  <option>En cours</option>
-                  <option>Résolue</option>
-                  <option>Rejetée</option>
+                <label for="reclamation-ordre">Trier par</label>
+                <select id="reclamation-ordre" name="ordre" onchange="this.form.submit()">
+                  <option value="date_desc" <?= $ordre === 'date_desc' ? 'selected' : '' ?>>Date ↓ (récent)</option>
+                  <option value="date_asc" <?= $ordre === 'date_asc' ? 'selected' : '' ?>>Date ↑ (ancien)</option>
+                  <option value="statut" <?= $ordre === 'statut' ? 'selected' : '' ?>>Statut (en cours d'abord)</option>
+                  <option value="id_desc" <?= $ordre === 'id_desc' ? 'selected' : '' ?>>ID ↓</option>
+                  <option value="id_asc" <?= $ordre === 'id_asc' ? 'selected' : '' ?>>ID ↑</option>
                 </select>
               </div>
-              <div class="filter-field">
+              <button type="submit" class="ghost-button">Rechercher</button>
+            </form>
+              <!--<div class="filter-field">
                 <label for="reclamation-date">Date</label>
                 <select id="reclamation-date">
                   <option>Ce mois</option>
@@ -252,7 +260,7 @@
                   <option>7 jours</option>
                   <option>Aujourd'hui</option>
                 </select>
-              </div>
+              </div>-->
             </div>
           </section>
           
@@ -260,6 +268,7 @@
             <table class="table users-table">
               <thead>
                 <tr>
+                  <th>Priorité</th>
                   <th>ID</th>
                   <th>Description</th>
                   <th>Client</th>
@@ -269,50 +278,69 @@
                 </tr>
               </thead>
               <tbody>
-              <?php if (count($Reclamations) > 0): ?> <?php foreach ($Reclamations as $Reclamation): ?>
-                <tr>
-                  <td><strong><?= htmlspecialchars($Reclamation->getId_reclamation()) ?></strong></td>
-                  <td><?= htmlspecialchars($Reclamation->getDescription()) ?></td>
-                  <td>
-                    <div class="user-cell">
-                      <span class="user-avatar">AS</span>
-                      <div>
-                        <strong>Amira Selmi</strong>
-                        <span>User #124</span>
-                      </div>
-                    </div>
-                  </td>
-                  <td><span class="status-pill en-cours"><?= htmlspecialchars($Reclamation->getStatut()) ?></span></td>
-                  <td><?= htmlspecialchars($Reclamation->getDate_creation()) ?></td>
-                  <td>
-                    <div class="table-actions">
-                    <!--  <a href="form-reclamation.php?id=1" class="ghost-button"
-                        >Modifier</a
-                      >-->
-                      <a
-                        href="reponse-assist.php?reclamation=<?=$Reclamation->getId_reclamation() ?>"
-                        class="ghost-button"
-                        >Répondre</a
-                      >
-                      <a
-                        href="justification-ajout.php?reclamation=<?=$Reclamation->getId_reclamation() ?>"
-                        class="ghost-button"
-                        >justif+</a
-                      >
-                      <a href="gestion-justifications.php?reclamation=<?=$Reclamation->getId_reclamation() ?>"
-                        class="ghost-button"
-                        >justifl</a
-                      >
-                    </div>
-                  </td>
-                </tr>
-                <?php endforeach; ?> <?php else: ?>
-                <tr>
-                  <td colspan="6" class="text-center">
-                    Aucune livre trouvée.
-                  </td>
-                </tr>
-                <?php endif; ?>
+                  <?php if (count($Reclamations) > 0): ?>
+                      <?php foreach ($Reclamations as $Reclamation): 
+                          $niveau = $Reclamation->priorite_niveau ?? 'moyenne';
+                          $score = $Reclamation->priorite_score ?? 50;
+                          $raison = $Reclamation->priorite_raison ?? '';
+                          
+                          $badgeClass = 'priority-' . $niveau;
+                          
+                          $emoji = [
+                              'critique' => '🔴',
+                              'haute' => '🟠',
+                              'moyenne' => '🔵',
+                              'faible' => '🟢'
+                          ][$niveau] ?? '⚪';
+                      ?>
+                      <tr>
+                          <td>
+                              <div class="<?= htmlspecialchars($badgeClass) ?> priority-badge">
+                                  <span><?= $emoji ?></span>
+                                  <span><?= strtoupper(htmlspecialchars($niveau)) ?></span>
+                                  <span class="priority-score">(<?= (int)$score ?>)</span>
+                              </div>
+                              <?php if (!empty($raison)): ?>
+                                  <div style="font-size: 11px; color: var(--muted); margin-top: 4px;">
+                                      <?= htmlspecialchars(substr($raison, 0, 40)) ?>...
+                                  </div>
+                              <?php endif; ?>
+                          </td>
+                          <td><strong>#<?= htmlspecialchars($Reclamation->getId_reclamation()) ?></strong></td>
+                          <td><?= htmlspecialchars($Reclamation->getDescription()) ?></td>
+                          <td>
+                              <div class="user-cell">
+                                  <span class="user-avatar">
+                                      <?= strtoupper(substr(htmlspecialchars($Reclamation->client_nom ?? 'I'), 0, 1)) ?>
+                                  </span>
+                                  <div>
+                                      <strong><?= htmlspecialchars($Reclamation->client_nom ?? 'Inconnu') ?></strong>
+                                      <span>User #<?= (int)$Reclamation->getId_user() ?></span>
+                                  </div>
+                              </div>
+                          </td>
+                          <td>
+                              <span class="status-pill en-cours">
+                                  <?= htmlspecialchars($Reclamation->getStatut()) ?>
+                              </span>
+                          </td>
+                          <td><?= htmlspecialchars($Reclamation->getDate_creation()) ?></td>
+                          <td>
+                              <div class="table-actions">
+                                  <a href="reponse-assist.php?reclamation=<?= (int)$Reclamation->getId_reclamation() ?>" class="ghost-button">Répondre</a>
+                                  <a href="justification-ajout.php?reclamation=<?= (int)$Reclamation->getId_reclamation() ?>" class="ghost-button">justif+</a>
+                                  <a href="gestion-justifications.php?reclamation=<?= (int)$Reclamation->getId_reclamation() ?>" class="ghost-button">justifl</a>
+                              </div>
+                          </td>
+                      </tr>
+                      <?php endforeach; ?>
+                  <?php else: ?>
+                      <tr>
+                          <td colspan="7" class="text-center" style="padding: 40px; color: var(--muted);">
+                              Aucune réclamation trouvée.
+                          </td>
+                      </tr>
+                  <?php endif; ?>
               </tbody>
             </table>
           </section>

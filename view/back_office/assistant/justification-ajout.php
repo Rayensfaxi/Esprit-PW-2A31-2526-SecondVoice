@@ -8,10 +8,13 @@ if (!isset($_SESSION['user_id'])) {
 
 include_once '../../../controller/justificationcontroller.php';
 include_once '../../../controller/reclamationcontroller.php';
+include_once '../../../controller/reponsecontroller.php';        // ← AJOUTÉ
+include_once '../../../controller/aicontroller.php';
 require_once __DIR__ . '/../../../model/justification.php';
 
 $justificationController = new JustificationController();
 $reclamationController = new ReclamationController();
+$reponseController = new ReponseController();                      // ← AJOUTÉ
 
 $error = "";
 $success = "";
@@ -24,13 +27,40 @@ if (!$reclamation) {
     exit;
 }
 
-// Traitement du formulaire
+// ✅ GÉNÉRATION IA (avec chat history)
+$aiJustification = '';
+if (isset($_GET['generate_ai']) && $_GET['generate_ai'] === '1') {
+    $aiController = new AIController();
+    
+    // Récupérer les réponses du chat
+    $reponses = $reponseController->getReponsesByReclamation($id_reclamation);
+    
+    // Transformer en texte
+    $chatHistory = "";
+    foreach ($reponses as $reponse) {
+        $role = ($reponse->getId_user() == $reclamation->getId_user()) ? 'Client' : 'Assistant';
+        $chatHistory .= "$role: " . $reponse->getContenu() . "\n";
+    }
+    
+    // Ancien statut
+    $ancienStatut = $_SESSION['ancien_statut'] ?? null;
+    
+    $aiJustification = $aiController->generateJustification(
+        $reclamation->getDescription(),
+        $reclamation->getStatut(),
+        $ancienStatut,
+        $chatHistory  // ← ENVOYÉ À L'IA
+    );
+}
+
+// ✅ TRAITEMENT POST
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $contenu = trim($_POST['contenu']);
     $nouveau_statut = $_POST['statut'] ?? $reclamation->getStatut();
     
     if (!empty($contenu)) {
-        // Ajouter la justification
+        $_SESSION['ancien_statut'] = $reclamation->getStatut();
+        
         $justification = new Justification();
         $justification->setContenu($contenu);
         $justification->setDate_justification(date('Y-m-d H:i:s'));
@@ -38,14 +68,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         
         $result = $justificationController->addJustification($justification);
         
-        // Changer le statut de la réclamation
         if ($nouveau_statut !== $reclamation->getStatut()) {
             $reclamationController->changeStatut($id_reclamation, $nouveau_statut);
         }
         
         if ($result) {
             $success = "Justification ajoutée et statut mis à jour !";
-            // Rafraîchir la réclamation
             $reclamation = $reclamationController->getReclamationById($id_reclamation);
         } else {
             $error = "Erreur lors de l'ajout.";
@@ -55,7 +83,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 }
 
-// Liste des statuts disponibles
 $statuts = ['en_attente', 'en_cours', 'resolu', 'rejete'];
 ?>
 
@@ -208,6 +235,23 @@ select.form-control option {
     background: var(--bg-card);
     color: var(--text);
 }
+.btn-ai {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    border: none;
+    padding: 12px 24px;
+    border-radius: 10px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s;
+    font-family: inherit;
+    font-size: 14px;
+}
+
+.btn-ai:hover {
+    transform: scale(1.02);
+    box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);
+}
     </style>
 </head>
 <body data-page="voice">
@@ -270,34 +314,44 @@ select.form-control option {
                     </div>
 
                     <form method="POST" action="">
-    <!-- Info réclamation -->
-    <div class="info-box">
-        <h4>Réclamation #<?= $id_reclamation ?></h4>
-        <p>Statut actuel : <strong><?= htmlspecialchars($reclamation->getStatut()) ?></strong></p>
-        <p><?= htmlspecialchars(substr($reclamation->getDescription(), 0, 150)) ?>...</p>
-    </div>
+                        <!-- Info réclamation -->
+                        <div class="info-box">
+                            <h4>Réclamation #<?= $id_reclamation ?></h4>
+                            <p>Statut actuel : <strong><?= htmlspecialchars($reclamation->getStatut()) ?></strong></p>
+                            <p><?= htmlspecialchars(substr($reclamation->getDescription(), 0, 150)) ?>...</p>
+                        </div>
 
-    <!-- ✅ LISTE DÉROULANTE STATUT -->
-    <div class="form-group">
-        <label for="statut">Changer le statut</label>
-        <select class="form-control" name="statut" id="statut" style="min-height: auto; height: 48px;">
-            <?php foreach ($statuts as $statut): ?>
-                <option value="<?= $statut ?>" <?= $reclamation->getStatut() === $statut ? 'selected' : '' ?>>
-                    <?= ucfirst(str_replace('_', ' ', $statut)) ?>
-                </option>
-            <?php endforeach; ?>
-        </select>
-    </div>
+                        <!-- ✅ BOUTON IA -->
+                        <div class="form-group">
+                            <button type="button" class="btn-ai" onclick="window.location.href='justification-ajout.php?reclamation=<?= $id_reclamation ?>&generate_ai=1'">
+                                🤖 Générer avec IA
+                            </button>
+                            <?php if (!empty($aiJustification)): ?>
+                                <span style="color: #10b981; font-size: 13px; margin-left: 10px;">✅ Générée !</span>
+                            <?php endif; ?>
+                        </div>
 
-    <!-- Contenu justification -->
-    <div class="form-group">
-        <label for="contenu">Contenu de la justification</label>
-        <textarea class="form-control" name="contenu" id="contenu" placeholder="Expliquez votre décision..." ></textarea>
-    </div>
+                        <!-- ✅ TEXTAREA AVEC IA PRÉ-REMPLI -->
+                        <div class="form-group">
+                            <label for="contenu">Contenu de la justification</label>
+                            <textarea class="form-control" name="contenu" id="contenu" placeholder="Expliquez votre décision..."><?= htmlspecialchars($aiJustification) ?></textarea>
+                        </div>
 
-    <button type="submit" class="btn-submit">💾 Enregistrer</button>
-    <a href="gestion-reclamations.php" class="btn-cancel">❌ Annuler</a>
-</form>
+                        <!-- Statut -->
+                        <div class="form-group">
+                            <label for="statut">Changer le statut</label>
+                            <select class="form-control" name="statut" id="statut">
+                                <?php foreach ($statuts as $statut): ?>
+                                    <option value="<?= $statut ?>" <?= $reclamation->getStatut() === $statut ? 'selected' : '' ?>>
+                                        <?= ucfirst(str_replace('_', ' ', $statut)) ?>
+                                    </option>
+                                <?php endforeach; ?>
+                            </select>
+                        </div>
+
+                        <button type="submit" class="btn-submit">💾 Enregistrer</button>
+                        <a href="gestion-reclamations.php" class="btn-cancel">❌ Annuler</a>
+                    </form>
                 </div>
             </div>
         </main>

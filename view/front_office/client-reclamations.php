@@ -49,7 +49,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
     exit;
 }*/
 
-$reclamations = $reclamationController->getReclamationsByUserAndStatut($id_user, 'en_attente');
+$reclamations = $reclamationController->getReclamationsByUser($id_user);
+
+
 ?>
 
 <!DOCTYPE html>
@@ -72,6 +74,17 @@ $reclamations = $reclamationController->getReclamationsByUserAndStatut($id_user,
     <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=Space+Grotesk:wght@500;700&display=swap" rel="stylesheet" />
     <link rel="stylesheet" href="../assets/css/style.css" />
     <link rel="stylesheet" href="../assets/css/reclamations-list.css" />
+    <style>
+        .reclamation-item.done {
+    opacity: 0.6;
+    order: 2; /* Les met en bas si tu utilises flex/grid */
+}
+
+.reclamation-item.active {
+    order: 1; /* Les met en haut */
+    border-left: 3px solid var(--primary);
+}
+    </style>
 </head>
 <body>
     <div class="page-shell">
@@ -134,8 +147,9 @@ $reclamations = $reclamationController->getReclamationsByUserAndStatut($id_user,
                     <?php else: ?>
                         <?php foreach ($reclamations as $reclamation): 
                             // Vérifier s'il y a des réponses pour cette réclamation
-                            /*$reponses = $reponseController->getReponsesByReclamation($reclamation->getId_reclamation());
-                            $hasResponses = count($reponses) > 0;*/
+                            $reponses = $reponseController->getReponsesByReclamation($reclamation->getId_reclamation());
+                            $hasResponses = count($reponses) > 0;
+                            $isEnCours = $reclamation->getStatut() === 'en_cours';
                             
                             // Tronquer la description (1ère ligne + ...)
                             $description = $reclamation->getDescription();
@@ -178,11 +192,11 @@ $reclamations = $reclamationController->getReclamationsByUserAndStatut($id_user,
                             
                                 <!-- Bouton réponse -->
                                 <?php if ($hasResponses): ?>
-                                    <a href="client-reponse.php?id_reclamation=<?= $reclamation->getId_reclamation() ?>" 
-                                       class="response-btn response-btn--active">
+                                    <a href="client-reponse.php?reclamation=<?= $reclamation->getId_reclamation() ?>" 
+                                        class="response-btn response-btn--active">
                                         <span class="response-icon">💬</span>
                                         <span class="response-text">Voir les réponses</span>
-                                        <span class="response-count"><?= count($reponses) ?></span>
+                                    
                                     </a>
                                 <?php else: ?>
                                     <button class="response-btn response-btn--empty" disabled>
@@ -212,4 +226,4 @@ $reclamations = $reclamationController->getReclamationsByUserAndStatut($id_user,
 
     <script src="../assets/js/main.js"></script>
 </body>
-</html>
+</html>*/

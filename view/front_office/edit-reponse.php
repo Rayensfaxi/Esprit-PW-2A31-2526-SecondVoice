@@ -6,8 +6,8 @@ if (!isset($_SESSION['user_id'])) {
     exit;
 }
 
-include '../../../controller/reponsecontroller.php';
-require_once __DIR__ . '/../../../model/reponse.php';
+include '../../controller/reponsecontroller.php';
+require_once __DIR__ . '/../../model/reponse.php';
 
 $reponseController = new ReponseController();
 
@@ -18,7 +18,7 @@ $reponse = $reponseController->getReponseById($id_reponse);
 
 // Vérifier que la réponse existe et appartient à l'utilisateur
 if (!$reponse || $reponse->getId_user() != $_SESSION['user_id']) {
-    header('Location: reponse-assist.php?reclamation=' . $id_reclamation);
+    header('Location: client-reponse.php?reclamation=' . $id_reclamation);
     exit;
 }
 
@@ -27,7 +27,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     
     if (!empty($contenu)) {
         $reponseController->updateReponse($id_reponse, $contenu);
-        header('Location: reponse-assist.php?reclamation=' . $id_reclamation);
+        header('Location: client-reponse.php?reclamation=' . $id_reclamation);
         exit;
     }
 }
@@ -38,7 +38,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 <head>
     <meta charset="UTF-8" />
     <title>Modifier Réponse | SecondVoice</title>
-    <link rel="stylesheet" href="../../assets/style.css" />
+    <link rel="stylesheet" href="../assets/style.css" />
     <style>
         .edit-page {
             max-width: 600px;
@@ -94,7 +94,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 <textarea class="edit-textarea" name="contenu" required><?= htmlspecialchars($reponse->getContenu()) ?></textarea>
                 <div class="edit-actions">
                     <button type="submit" class="btn-save">💾 Enregistrer</button>
-                    <a href="reponse-assist.php?reclamation=<?= $id_reclamation ?>" class="btn-cancel">❌ Annuler</a>
+                    <a href="client-reponse.php?reclamation=<?= $id_reclamation ?>" class="btn-cancel">❌ Annuler</a>
                 </div>
             </form>
         </div>

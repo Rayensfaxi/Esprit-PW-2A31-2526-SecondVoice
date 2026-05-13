@@ -1,10 +1,10 @@
 <?php
 session_start();
 
-if (!isset($_SESSION['user_id'])) {
+/*if (!isset($_SESSION['user_id'])) {
     header('Location: login.php');
     exit;
-}
+}*/
 
 include '../../../controller/justificationcontroller.php';
 include '../../../controller/reclamationcontroller.php';

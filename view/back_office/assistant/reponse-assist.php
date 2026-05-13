@@ -6,7 +6,14 @@ if (!isset($_SESSION['user_id'])) {
     exit;
 }
 
-$id_reclamation = isset($_GET['reclamation']) ? (int)$_GET['reclamation'] : 0;
+// Récupération de l'ID réclamation
+$id_reclamation = isset($_GET['reclamation']) ? (int)$_GET['reclamation'] : 
+                 (isset($_POST['id_reclamation']) ? (int)$_POST['id_reclamation'] : 0);
+
+if ($id_reclamation === 0) {
+    header('Location: gestion-reclamations.php?error=no_reclamation');
+    exit;
+}
 
 include_once '../../../controller/reclamationcontroller.php';
 include_once '../../../controller/reponsecontroller.php';
@@ -16,7 +23,43 @@ require_once __DIR__ . '/../../../model/reponse.php';
 $reclamationController = new ReclamationController();
 $reponseController = new ReponseController();
 
-// ✅ TRAITEMENT POST
+// ✅ RÉCUPÉRATION DES DONNÉES (AVANT l'IA)
+$reclamation = $reclamationController->getReclamationById($id_reclamation);
+$reponses = $reponseController->getReponsesByReclamation($id_reclamation);
+
+// Vérifier que la réclamation existe
+if (!$reclamation) {
+    header('Location: gestion-reclamations.php?error=reclamation_not_found');
+    exit;
+}
+$suggestedReply = '';
+$summary = '';
+if (!empty($reponses)) {
+// ✅ RÉSUMÉ IA (APRÈS récupération des données)
+
+
+    include_once '../../../controller/aicontroller.php';
+    $aiController = new AIController();
+    $summary = $aiController->summarizeChat($reponses, $reclamation->getId_user());
+    $lastMessage = end($reponses);
+    if ($lastMessage && $lastMessage->getId_user() == $reclamation->getId_user()) {
+        // Construire l'historique pour le contexte
+        $conversation = "";
+        foreach (array_slice($reponses, -5) as $msg) { // Derniers 5 messages
+            $role = ($msg->getId_user() == $_SESSION['user_id']) ? 'Assistant' : 'Client';
+            $conversation .= "$role: " . $msg->getContenu() . "\n";
+        }
+        
+        $suggestedReply = $aiController->suggestReply(
+            $conversation,
+            $lastMessage->getContenu()
+        );
+    }
+} else {
+    $summary = "Aucune conversation pour le moment.";
+}
+
+// ✅ TRAITEMENT POST - AJOUT RÉPONSE
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['message'])) {
     $message = trim($_POST['message']);
     
@@ -28,24 +71,28 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['message'])) {
         $reponse->setId_user($_SESSION['user_id']);
         
         $reponseController->addReponse($reponse);
-        
-        // Changer le statut
         $reclamationController->changeStatut($id_reclamation, 'en_cours');
+
         
-        // Redirection pour éviter le double envoi
+        
         header('Location: reponse-assist.php?reclamation=' . $id_reclamation);
         exit;
     }
 }
 
-$reclamation = $reclamationController->getReclamationById($id_reclamation);
-
-if (!$reclamation) {
-    header('Location: gestion-reclamations.php');
+// ✅ TRAITEMENT GET - SUPPRESSION RÉPONSE
+if ($_SERVER['REQUEST_METHOD'] === 'GET' && isset($_GET['delete_reponse'])) {
+    $id_reponse = (int)$_GET['delete_reponse'];
+    
+    $reponse = $reponseController->getReponseById($id_reponse);
+    
+    if ($reponse && $reponse->getId_user() == $_SESSION['user_id']) {
+        $reponseController->deleteReponse($id_reponse);
+    }
+    
+    header('Location: reponse-assist.php?reclamation=' . $id_reclamation);
     exit;
 }
-
-$reponses = $reponseController->getReponsesByReclamation($id_reclamation);
 ?>
 
 <!DOCTYPE html>
@@ -153,13 +200,14 @@ $reponses = $reponseController->getReponsesByReclamation($id_reclamation);
             border: 1px solid var(--border);
             overflow: hidden;
             width: 100%;
-            min-height: 400px;
+            min-height: 0; /* ← CORRIGÉ pour scroll */
         }
         
         .chat-header {
             padding: 16px 24px;
             border-bottom: 1px solid var(--border);
             background: var(--surface);
+            flex-shrink: 0; /* ← Ne pas rétrécir */
         }
         
         .chat-header h3 {
@@ -175,6 +223,81 @@ $reponses = $reponseController->getReponsesByReclamation($id_reclamation);
         }
         
         /* ============================================
+           RÉSUMÉ IA - COLLAPSIBLE
+           ============================================ */
+        
+        .ai-summary-box {
+            background: linear-gradient(135deg, rgba(102, 126, 234, 0.1) 0%, rgba(118, 75, 162, 0.1) 100%);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            margin: 12px 24px 0;
+            overflow: hidden;
+            transition: all 0.3s ease;
+            flex-shrink: 0; /* ← Ne pas rétrécir */
+        }
+        
+        .ai-summary-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 12px 16px;
+            cursor: pointer;
+            background: var(--surface);
+            border-bottom: 1px solid transparent;
+            transition: all 0.2s;
+        }
+        
+        .ai-summary-header:hover {
+            background: var(--surface-2);
+        }
+        
+        .ai-summary-header.active {
+            border-bottom-color: var(--border);
+        }
+        
+        .ai-summary-title {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 14px;
+            font-weight: 600;
+            color: var(--primary);
+            margin: 0;
+        }
+        
+        .ai-summary-toggle {
+            background: none;
+            border: none;
+            color: var(--text-secondary);
+            cursor: pointer;
+            padding: 4px;
+            border-radius: 6px;
+            transition: all 0.2s;
+            font-size: 12px;
+        }
+        
+        .ai-summary-toggle:hover {
+            background: var(--surface);
+            color: var(--text);
+        }
+        
+        .ai-summary-content {
+            padding: 16px;
+            font-size: 13px;
+            line-height: 1.6;
+            color: var(--text);
+            display: none; /* ← Caché par défaut */
+        }
+        
+        .ai-summary-content.active {
+            display: block;
+        }
+        
+        .ai-summary-content p {
+            margin: 0;
+        }
+        
+        /* ============================================
            MESSAGES - BULLES INVERSEES
            Assistant (vous) → DROITE
            Client → GAUCHE
@@ -187,8 +310,7 @@ $reponses = $reponseController->getReponsesByReclamation($id_reclamation);
             display: flex;
             flex-direction: column;
             gap: 16px;
-            width: 100%;
-            align-items: stretch;
+            min-height: 0; /* ← CORRIGÉ pour scroll */
         }
         
         .message {
@@ -284,6 +406,7 @@ $reponses = $reponseController->getReponsesByReclamation($id_reclamation);
             border-top: 1px solid var(--border);
             background: var(--surface);
             width: 100%;
+            flex-shrink: 0; /* ← Ne pas rétrécir */
         }
         
         .chat-form {
@@ -390,6 +513,85 @@ $reponses = $reponseController->getReponsesByReclamation($id_reclamation);
                 max-width: 85%;
             }
         }
+                /* ===== SUGGESTION IA ===== */
+                .ai-suggestion-box {
+            background: linear-gradient(135deg, rgba(16, 185, 129, 0.1) 0%, rgba(5, 150, 105, 0.1) 100%);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            margin-bottom: 20px;
+            overflow: hidden;
+            transition: all 0.3s ease;
+        }
+        
+        .ai-suggestion-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 12px 16px;
+            cursor: pointer;
+            background: var(--surface);
+            border-bottom: 1px solid transparent;
+            transition: all 0.2s;
+        }
+        
+        .ai-suggestion-header:hover {
+            background: var(--surface-2);
+        }
+        
+        .ai-suggestion-header.active {
+            border-bottom-color: var(--border);
+        }
+        
+        .ai-suggestion-title {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 14px;
+            font-weight: 600;
+            color: #10b981;
+            margin: 0;
+        }
+        
+        .ai-suggestion-toggle {
+            background: none;
+            border: none;
+            color: var(--text-secondary);
+            cursor: pointer;
+            padding: 4px;
+            border-radius: 6px;
+            transition: all 0.2s;
+            font-size: 12px;
+        }
+        
+        .ai-suggestion-content {
+            padding: 16px;
+            font-size: 13px;
+            line-height: 1.6;
+            color: var(--text);
+            display: none;
+        }
+        
+        .ai-suggestion-content.active {
+            display: block;
+        }
+        
+        .btn-use-suggestion {
+            margin-top: 12px;
+            background: #10b981;
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 8px;
+            font-weight: 600;
+            cursor: pointer;
+            font-size: 13px;
+            transition: all 0.2s;
+        }
+        
+        .btn-use-suggestion:hover {
+            background: #059669;
+            transform: scale(1.02);
+        }
     </style>
 </head>
 <body data-page="voice">
@@ -478,6 +680,36 @@ $reponses = $reponseController->getReponsesByReclamation($id_reclamation);
                         <p><?= htmlspecialchars(substr($reclamation->getDescription(), 0, 100)) ?><?= strlen($reclamation->getDescription()) > 100 ? '...' : '' ?></p>
                     </div>
 
+                    <!-- Résumé IA Collapsible -->
+                    <div class="ai-summary-box">
+                        <div class="ai-summary-header" onclick="toggleSummary(this)">
+                            <h4 class="ai-summary-title">
+                                <span>🤖</span>
+                                <span>Résumé IA</span>
+                            </h4>
+                            <button class="ai-summary-toggle" type="button" aria-label="Afficher/Masquer">
+                                <span class="toggle-icon">▼</span>
+                            </button>
+                        </div>
+                        <div class="ai-summary-content">
+                            <p><?= nl2br(htmlspecialchars($summary)) ?></p>
+                        </div>
+                    </div>
+                                        <!-- Suggestion IA de réponse -->
+                                        <?php if (!empty($suggestedReply)): ?>
+                    <!--<div class="ai-suggestion-box">
+                        <div class="ai-suggestion-header" onclick="toggleSuggestion(this)">
+                            <h4 class="ai-suggestion-title">
+                                <span>💡</span>
+                                <span>Réponse suggérée</span>
+                            </h4>
+                            <button class="ai-suggestion-toggle" type="button">
+                                <span class="toggle-icon">▼</span>
+                            </button>
+                        </div>
+                        
+                    </div>-->
+                    <?php endif; ?>
                     <!-- Messages -->
                     <div class="chat-messages" id="chatMessages">
                         <?php if (empty($reponses)): ?>
@@ -487,7 +719,6 @@ $reponses = $reponseController->getReponsesByReclamation($id_reclamation);
                             </div>
                         <?php else: ?>
                             <?php foreach ($reponses as $reponse): 
-                                // Déduire le type depuis l'ID utilisateur
                                 $type = ($reponse->getId_user() == $_SESSION['user_id']) ? 'assistant' : 'user';
                                 $avatar = $type === 'assistant' ? 'SV' : 'CL';
                                 $canEdit = ($reponse->getId_user() == $_SESSION['user_id']);
@@ -501,10 +732,12 @@ $reponses = $reponseController->getReponsesByReclamation($id_reclamation);
                                             <?= date('H:i', strtotime($reponse->getDate_reponse())) ?>
                                             
                                             <?php if ($canEdit): ?>
-                                                <a href="edit-reponse.php?id=<?= $reponse->getId_reponse() ?>&reclamation=<?= $id_reclamation ?>" 
-                                                   style="margin-left: 10px; color: var(--primary); font-size: 11px; text-decoration: none;">
-                                                   ✏️ Modifier
-                                                </a>
+                                                <span class="message__actions">
+                                                    <a href="edit-reponse.php?id=<?= $reponse->getId_reponse() ?>&reclamation=<?= $id_reclamation ?>">✏️ Modifier</a>
+                                                    <a href="reponse-assist.php?reclamation=<?= $id_reclamation ?>&delete_reponse=<?= $reponse->getId_reponse() ?>" 
+                                                       style="margin-left: 10px; color: #dc2626; font-size: 11px; text-decoration: none;"
+                                                       onclick="return confirm('Supprimer cette réponse ?')">🗑️ Supprimer</a>
+                                                </span>
                                             <?php endif; ?>
                                         </span>
                                     </div>
@@ -517,7 +750,12 @@ $reponses = $reponseController->getReponsesByReclamation($id_reclamation);
                     <!-- Input -->
                     <div class="chat-input-container">
                         <form class="chat-form" method="POST" action="">
+                            <input type="hidden" name="id_reclamation" value="<?= $id_reclamation ?>">
+                            
                             <div class="chat-input-wrapper">
+                            <button type="button" class="btn-use-suggestion" onclick="useSuggestion('<?= htmlspecialchars(addslashes($suggestedReply), ENT_QUOTES) ?>')">
+                            🤖 
+                            </button>
                                 <textarea class="chat-input" name="message" placeholder="Écrivez votre réponse..." rows="1" required></textarea>
                                 <button type="submit" class="chat-submit" aria-label="Envoyer">
                                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -525,9 +763,6 @@ $reponses = $reponseController->getReponsesByReclamation($id_reclamation);
                                         <polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>
                                     </svg>
                                 </button>
-                            </div>
-                            <div class="chat-hint">
-                                Appuyez sur <kbd>Entrée</kbd> pour envoyer, <kbd>Shift + Entrée</kbd> pour une nouvelle ligne
                             </div>
                         </form>
                     </div>
@@ -538,6 +773,21 @@ $reponses = $reponseController->getReponsesByReclamation($id_reclamation);
 
     <script src="../../assets/app.js"></script>
     <script>
+        // Toggle résumé IA
+        function toggleSummary(header) {
+            const content = header.nextElementSibling;
+            const icon = header.querySelector('.toggle-icon');
+            
+            header.classList.toggle('active');
+            content.classList.toggle('active');
+            
+            if (content.classList.contains('active')) {
+                icon.textContent = '▲';
+            } else {
+                icon.textContent = '▼';
+            }
+        }
+        
         // Auto-resize textarea
         const textarea = document.querySelector('.chat-input');
         textarea.addEventListener('input', function() {
@@ -545,7 +795,7 @@ $reponses = $reponseController->getReponsesByReclamation($id_reclamation);
             this.style.height = Math.min(this.scrollHeight, 120) + 'px';
         });
         
-        // Envoyer avec Entrée, nouvelle ligne avec Shift+Entrée
+        // Envoyer avec Entrée
         textarea.addEventListener('keydown', function(e) {
             if (e.key === 'Enter' && !e.shiftKey) {
                 e.preventDefault();
@@ -553,9 +803,32 @@ $reponses = $reponseController->getReponsesByReclamation($id_reclamation);
             }
         });
         
-        // Scroll to bottom
+        // Scroll to bottom des messages
         const messagesContainer = document.getElementById('chatMessages');
         messagesContainer.scrollTop = messagesContainer.scrollHeight;
+                // Toggle suggestion
+                function toggleSuggestion(header) {
+            const content = header.nextElementSibling;
+            const icon = header.querySelector('.toggle-icon');
+            
+            header.classList.toggle('active');
+            content.classList.toggle('active');
+            
+            if (content.classList.contains('active')) {
+                icon.textContent = '▲';
+            } else {
+                icon.textContent = '▼';
+            }
+        }
+        
+        // Utiliser la suggestion dans le textarea
+        function useSuggestion(text) {
+            const textarea = document.querySelector('.chat-input');
+            textarea.value = text;
+            textarea.focus();
+            textarea.style.height = 'auto';
+            textarea.style.height = Math.min(textarea.scrollHeight, 120) + 'px';
+        }
     </script>
 </body>
 </html>
